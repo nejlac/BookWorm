@@ -40,6 +40,10 @@ namespace BookWorm.Services
 
         public async Task<ReadingChallengeResponse> CreateAsync(ReadingChallengeCreateUpdateRequest request)
         {
+            if (await _context.ReadingChallenges.AnyAsync(rc => rc.UserId == request.UserId && rc.Year == request.Year))
+            {
+                throw new InvalidOperationException("A reading challenge for this user and year already exists.");
+            }
             var challenge = new ReadingChallenge
             {
                 UserId = request.UserId,

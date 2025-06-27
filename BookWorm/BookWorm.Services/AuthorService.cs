@@ -42,6 +42,10 @@ namespace BookWorm.Services
 
         public async Task<AuthorResponse> CreateAsync(AuthorCreateUpdateRequest request)
         {
+            if (await _context.Authors.AnyAsync(a => a.Name == request.Name && a.DateOfBirth == request.DateOfBirth))
+            {
+                throw new InvalidOperationException("An author with this name and date of birth already exists.");
+            }
             var author = new Author
             {
                 Name = request.Name,
@@ -66,7 +70,10 @@ namespace BookWorm.Services
             var author = await _context.Authors.FindAsync(id);
             if (author == null)
                 return null;
-
+            if (await _context.Authors.AnyAsync(a => a.Name == request.Name && a.DateOfBirth == request.DateOfBirth && a.Id != id))
+            {
+                throw new InvalidOperationException("An author with this name and date of birth already exists.");
+            }
             author.Name = request.Name;
             author.Biography = request.Biography;
             author.DateOfBirth = request.DateOfBirth;

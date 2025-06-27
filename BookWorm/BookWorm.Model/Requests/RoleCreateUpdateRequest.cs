@@ -9,13 +9,14 @@ namespace BookWorm.Model.Requests
 {
     public  class RoleCreateUpdateRequest
     {
-         
-        [Required]
-        [MaxLength(50)]
+
+        [Required(ErrorMessage = "Name is required.")]
+        [MaxLength(50, ErrorMessage = "Name must not exceed 50 characters.")]
         public string Name { get; set; } = string.Empty;
 
-        [MaxLength(200)]
+        [MaxLength(200, ErrorMessage = "Description must not exceed 200 characters.")]
         public string Description { get; set; } = string.Empty;
+
 
         public bool IsActive { get; set; } = true;
     }

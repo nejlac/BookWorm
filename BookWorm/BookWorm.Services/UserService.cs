@@ -240,7 +240,6 @@ namespace BookWorm.Services
 
             var response = MapToResponse(user);
 
-            // Add roles to the response
             response.Roles = user.UserRoles
                 .Where(ur => ur.Role.IsActive)
                 .Select(ur => new RoleResponse
@@ -254,7 +253,7 @@ namespace BookWorm.Services
             return response;
         }
 
-       /* public async Task<UserResponse?> AuthenticateAsync(UserLoginRequest request)
+       public async Task<UserResponse?> AuthenticateAsync(UserLoginRequest request)
         {
             var user = await _context.Users
                 .Include(u => u.UserRoles)
@@ -267,13 +266,12 @@ namespace BookWorm.Services
             if (!VerifyPassword(request.Password!, user.PasswordHash, user.PasswordSalt))
                 return null;
 
-            // Update last login time
-            user.LastLoginAt = DateTime.UtcNow;
+            
+            user.LastLoginAt = DateTime.Now;
             await _context.SaveChangesAsync();
 
             var response = MapToResponse(user);
 
-            // Add roles to the response
             response.Roles = user.UserRoles
                 .Where(ur => ur.Role.IsActive)
                 .Select(ur => new RoleResponse
@@ -292,6 +290,6 @@ namespace BookWorm.Services
             var hash = Convert.FromBase64String(passwordHash);
             var hashBytes = new Rfc2898DeriveBytes(password, salt, Iterations).GetBytes(KeySize);
             return hash.SequenceEqual(hashBytes);
-        }*/
+        }
     }
 

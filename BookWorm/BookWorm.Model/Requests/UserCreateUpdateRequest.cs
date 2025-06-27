@@ -7,41 +7,53 @@ using System.Threading.Tasks;
 
 namespace BookWorm.Model.Requests
 {
-    public  class UserCreateUpdateRequest
+    public class UserCreateUpdateRequest : IValidatableObject
     {
-        [Required]
-        [MaxLength(50)]
+        [Required(ErrorMessage = "First name is required.")]
+        [MaxLength(50, ErrorMessage = "First name must not exceed 50 characters.")]
         public string FirstName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(50)]
+        [Required(ErrorMessage = "Last name is required.")]
+        [MaxLength(50, ErrorMessage = "Last name must not exceed 50 characters.")]
         public string LastName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(100)]
-        [EmailAddress]
+        [Required(ErrorMessage = "Email is required.")]
+        [MaxLength(100, ErrorMessage = "Email must not exceed 100 characters.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(100)]
+        [Required(ErrorMessage = "Username is required.")]
+        [MaxLength(100, ErrorMessage = "Username must not exceed 100 characters.")]
         public string Username { get; set; } = string.Empty;
 
-        
-        [MaxLength(20)]
-        [Phone]
+        [MaxLength(20, ErrorMessage = "Phone number must not exceed 20 characters.")]
+        [Phone(ErrorMessage = "Invalid phone number format.")]
         public string? PhoneNumber { get; set; }
+
+        [Required(ErrorMessage = "Country is required.")]
         public int CountryId { get; set; }
-        public int Age { get; set; }   
+
+        [Range(13, 100, ErrorMessage = "Age must be between 13 and 100.")]
+        public int Age { get; set; }
 
         public bool IsActive { get; set; } = true;
 
-
-        
-        [MinLength(8)]
-        [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$", ErrorMessage = "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.")]
+        [Required(ErrorMessage = "Password is required.")]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
+        [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$",
+            ErrorMessage = "Password must contain uppercase, lowercase, number, and special character.")]
         public string? Password { get; set; }
 
 
         public List<int> RoleIds { get; set; } = new List<int>();
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+
+            if (RoleIds == null || RoleIds.Count == 0)
+            {
+                yield return new ValidationResult("At least one role must be selected.", new[] { nameof(RoleIds) });
+            }
+        }
     }
 }

@@ -16,6 +16,6 @@ namespace BookWorm.Services
         Task<UserResponse> CreateAsync(UserCreateUpdateRequest request);
         Task<UserResponse?> UpdateAsync(int id, UserCreateUpdateRequest request);
         Task<bool> DeleteAsync(int id);
-        //Task<UserResponse?> AuthenticateAsync(UserLoginRequest request);
+        Task<UserResponse?> AuthenticateAsync(UserLoginRequest request);
     }
 }

@@ -6,13 +6,15 @@ namespace BookWorm.Model.Requests
 {
     public class ReadingChallengeCreateUpdateRequest
     {
-        [Required]
+        [Required(ErrorMessage = "UserId is required.")]
         public int UserId { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Goal is required.")]
+        [Range(1, 1000, ErrorMessage = "Goal must be greater than 0 and less than 1000")]
         public int Goal { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Year is required.")]
+        [Range(1900, 2100, ErrorMessage = "Year must be a valid year between 1900 and 2100.")]
         public int Year { get; set; }
 
         public List<int> BookIds { get; set; } = new List<int>();
