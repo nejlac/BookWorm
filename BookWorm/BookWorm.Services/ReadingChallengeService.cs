@@ -2,130 +2,56 @@ using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services.DataBase;
+using BookWorm.Services;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BookWorm.Model.Exceptions;
 
 namespace BookWorm.Services
 {
-    public class ReadingChallengeService : IReadingChallengeService
+    public class ReadingChallengeService : BaseCRUDService<ReadingChallengeResponse, ReadingChallengeSearchObject, ReadingChallenge, ReadingChallengeCreateUpdateRequest, ReadingChallengeCreateUpdateRequest>, IReadingChallengeService
     {
         private readonly BookWormDbContext _context;
+        private readonly ILogger<ReadingChallengeService> _logger;
 
-        public ReadingChallengeService(BookWormDbContext context)
+        public ReadingChallengeService(BookWormDbContext context, IMapper mapper, ILogger<ReadingChallengeService> logger) : base(context, mapper)
         {
             _context = context;
+            _logger = logger;
         }
 
-        public async Task<List<ReadingChallengeResponse>> GetAsync(ReadingChallengeSearchObject search)
+        protected override IQueryable<ReadingChallenge> ApplyFilter(IQueryable<ReadingChallenge> query, ReadingChallengeSearchObject search)
         {
-            var query = _context.ReadingChallenges.Include(rc => rc.User).Include(rc => rc.ReadingChallengeBooks).ThenInclude(rcb => rcb.Book).AsQueryable();
             if (search.UserId.HasValue)
                 query = query.Where(rc => rc.UserId == search.UserId);
             if (search.Year.HasValue)
                 query = query.Where(rc => rc.Year == search.Year);
             if (search.IsCompleted.HasValue)
                 query = query.Where(rc => rc.IsCompleted == search.IsCompleted);
-            var challenges = await query.ToListAsync();
-            return challenges.Select(MapToResponse).ToList();
+
+            query = query.Include(rc => rc.User).Include(rc => rc.ReadingChallengeBooks).ThenInclude(rcb => rcb.Book);
+            return query;
         }
 
-        public async Task<ReadingChallengeResponse?> GetByIdAsync(int id)
-        {
-            var challenge = await _context.ReadingChallenges.Include(rc => rc.User).Include(rc => rc.ReadingChallengeBooks).ThenInclude(rcb => rcb.Book).FirstOrDefaultAsync(rc => rc.Id == id);
-            return challenge != null ? MapToResponse(challenge) : null;
-        }
-
-        public async Task<ReadingChallengeResponse> CreateAsync(ReadingChallengeCreateUpdateRequest request)
-        {
-            if (await _context.ReadingChallenges.AnyAsync(rc => rc.UserId == request.UserId && rc.Year == request.Year))
-            {
-                throw new InvalidOperationException("A reading challenge for this user and year already exists.");
-            }
-            var challenge = new ReadingChallenge
-            {
-                UserId = request.UserId,
-                Goal = request.Goal,
-                Year = request.Year,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-            _context.ReadingChallenges.Add(challenge);
-            await _context.SaveChangesAsync();
-            if (request.BookIds != null && request.BookIds.Count > 0)
-            {
-                foreach (var bookId in request.BookIds)
-                {
-                    if (await _context.Books.AnyAsync(b => b.Id == bookId))
-                    {
-                        var rcb = new ReadingChallengeBook { ReadingChallengeId = challenge.Id, BookId = bookId, CompletedAt = DateTime.Now };
-                        _context.ReadingChallengeBooks.Add(rcb);
-                    }
-                }
-                await _context.SaveChangesAsync();
-            }
-            var bookCount = await _context.ReadingChallengeBooks.CountAsync(rcb => rcb.ReadingChallengeId == challenge.Id);
-            challenge.NumberOfBooksRead = bookCount;
-            challenge.IsCompleted = bookCount >= challenge.Goal;
-            await _context.SaveChangesAsync();
-            return await GetReadingChallengeResponseWithBooksAsync(challenge.Id);
-        }
-
-        public async Task<ReadingChallengeResponse?> UpdateAsync(int id, ReadingChallengeCreateUpdateRequest request)
-        {
-            var challenge = await _context.ReadingChallenges.FindAsync(id);
-            if (challenge == null)
-                return null;
-            challenge.Goal = request.Goal;
-            challenge.Year = request.Year;
-            challenge.UpdatedAt = DateTime.Now;
-            var existingBooks = await _context.ReadingChallengeBooks.Where(rcb => rcb.ReadingChallengeId == id).ToListAsync();
-            _context.ReadingChallengeBooks.RemoveRange(existingBooks);
-            if (request.BookIds != null && request.BookIds.Count > 0)
-            {
-                foreach (var bookId in request.BookIds)
-                {
-                    if (await _context.Books.AnyAsync(b => b.Id == bookId))
-                    {
-                        var rcb = new ReadingChallengeBook { ReadingChallengeId = challenge.Id, BookId = bookId, CompletedAt = DateTime.Now };
-                        _context.ReadingChallengeBooks.Add(rcb);
-                    }
-                }
-            }
-            await _context.SaveChangesAsync();
-            var bookCount = await _context.ReadingChallengeBooks.CountAsync(rcb => rcb.ReadingChallengeId == challenge.Id);
-            challenge.NumberOfBooksRead = bookCount;
-            challenge.IsCompleted = bookCount >= challenge.Goal;
-            await _context.SaveChangesAsync();
-            return await GetReadingChallengeResponseWithBooksAsync(challenge.Id);
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var challenge = await _context.ReadingChallenges.FindAsync(id);
-            if (challenge == null)
-                return false;
-            _context.ReadingChallenges.Remove(challenge);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        private ReadingChallengeResponse MapToResponse(ReadingChallenge challenge)
+        protected override ReadingChallengeResponse MapToResponse(ReadingChallenge entity)
         {
             return new ReadingChallengeResponse
             {
-                Id = challenge.Id,
-                UserId = challenge.UserId,
-                UserName = challenge.User?.Username ?? string.Empty,
-                Goal = challenge.Goal,
-                NumberOfBooksRead = challenge.NumberOfBooksRead,
-                Year = challenge.Year,
-                CreatedAt = challenge.CreatedAt,
-                UpdatedAt = challenge.UpdatedAt,
-                IsCompleted = challenge.IsCompleted,
-                Books = challenge.ReadingChallengeBooks.Select(rcb => new ReadingChallengeBookResponse
+                Id = entity.Id,
+                UserId = entity.UserId,
+                UserName = entity.User?.Username ?? string.Empty,
+                Goal = entity.Goal,
+                NumberOfBooksRead = entity.NumberOfBooksRead,
+                Year = entity.Year,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                IsCompleted = entity.IsCompleted,
+                Books = entity.ReadingChallengeBooks.Select(rcb => new ReadingChallengeBookResponse
                 {
                     BookId = rcb.BookId,
                     Title = rcb.Book?.Title ?? string.Empty,
@@ -134,12 +60,145 @@ namespace BookWorm.Services
             };
         }
 
-        private async Task<ReadingChallengeResponse> GetReadingChallengeResponseWithBooksAsync(int challengeId)
+        protected override async Task BeforeInsert(ReadingChallenge entity, ReadingChallengeCreateUpdateRequest request)
         {
-            var challenge = await _context.ReadingChallenges.Include(rc => rc.User).Include(rc => rc.ReadingChallengeBooks).ThenInclude(rcb => rcb.Book).FirstOrDefaultAsync(rc => rc.Id == challengeId);
-            if (challenge == null)
-                throw new InvalidOperationException("ReadingChallenge not found");
-            return MapToResponse(challenge);
+           
+            if (await _context.ReadingChallenges.AnyAsync(rc => 
+                rc.UserId == request.UserId && 
+                rc.Year == request.Year))
+            {
+                throw new ReadingChallengeException($"A reading challenge for user and year {request.Year} already exists.");
+            }
+
+            if (request.Goal < 1 || request.Goal > 1000)
+            {
+                throw new ReadingChallengeException("Goal must be between 1 and 1000.");
+            }
+
+            
+            if (request.Year < 2000 || request.Year > DateTime.Now.Year+1)
+            {
+                throw new ReadingChallengeException("Year must be between 2000 and the following year from now.");
+            }
+
+          
+            entity.NumberOfBooksRead = 0;
+            entity.IsCompleted = false;
+            entity.CreatedAt = DateTime.Now;
+            entity.UpdatedAt = DateTime.Now;
+        }
+
+        protected override async Task BeforeUpdate(ReadingChallenge entity, ReadingChallengeCreateUpdateRequest request)
+        {
+            if (await _context.ReadingChallenges.AnyAsync(rc => 
+                rc.Id != entity.Id &&
+                rc.UserId == request.UserId && 
+                rc.Year == request.Year))
+            {
+                throw new ReadingChallengeException($"A reading challenge for user and year {request.Year} already exists.");
+            }
+
+           
+            if (request.Goal < 1 || request.Goal > 1000)
+            {
+                throw new ReadingChallengeException("Goal must be between 1 and 1000.");
+            }
+
+
+            if (request.Year < 2000 || request.Year > DateTime.Now.Year + 1)
+            {
+                throw new ReadingChallengeException("Year must be between 2000 and the following year from now.");
+            }
+
+            entity.UpdatedAt = DateTime.Now;
+        }
+
+        public override async Task<ReadingChallengeResponse?> GetByIdAsync(int id)
+        {
+            var entity = await _context.ReadingChallenges
+                .Include(rc => rc.User)
+                .Include(rc => rc.ReadingChallengeBooks)
+                .ThenInclude(rcb => rcb.Book)
+                .FirstOrDefaultAsync(rc => rc.Id == id);
+            
+            if (entity == null)
+                return null;
+
+            return MapToResponse(entity);
+        }
+
+        public override async Task<ReadingChallengeResponse> CreateAsync(ReadingChallengeCreateUpdateRequest request)
+        {
+            var result = await base.CreateAsync(request);
+            
+            if (request.BookIds != null && request.BookIds.Count > 0)
+            {
+                await AddBooksToChallenge(result.Id, request.BookIds);
+                await UpdateChallengeProgress(result.Id);
+            }
+            
+            return await GetByIdAsync(result.Id) ?? result;
+        }
+
+        public override async Task<ReadingChallengeResponse?> UpdateAsync(int id, ReadingChallengeCreateUpdateRequest request)
+        {
+            var result = await base.UpdateAsync(id, request);
+            
+            if (result != null)
+            {
+               
+                await UpdateBooksInChallenge(id, request.BookIds ?? new List<int>());
+                await UpdateChallengeProgress(id);
+                
+                return await GetByIdAsync(id) ?? result;
+            }
+            
+            return result;
+        }
+
+        private async Task AddBooksToChallenge(int challengeId, List<int> bookIds)
+        {
+            foreach (var bookId in bookIds)
+            {
+                if (await _context.Books.AnyAsync(b => b.Id == bookId))
+                {
+                    var rcb = new ReadingChallengeBook 
+                    { 
+                        ReadingChallengeId = challengeId, 
+                        BookId = bookId, 
+                        CompletedAt = DateTime.Now 
+                    };
+                    _context.ReadingChallengeBooks.Add(rcb);
+                }
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task UpdateBooksInChallenge(int challengeId, List<int> newBookIds)
+        {
+           
+            var existingBooks = await _context.ReadingChallengeBooks
+                .Where(rcb => rcb.ReadingChallengeId == challengeId)
+                .ToListAsync();
+            _context.ReadingChallengeBooks.RemoveRange(existingBooks);
+            
+           
+            await AddBooksToChallenge(challengeId, newBookIds);
+        }
+
+        private async Task UpdateChallengeProgress(int challengeId)
+        {
+            var challenge = await _context.ReadingChallenges.FindAsync(challengeId);
+            if (challenge != null)
+            {
+                var bookCount = await _context.ReadingChallengeBooks
+                    .CountAsync(rcb => rcb.ReadingChallengeId == challengeId);
+                
+                challenge.NumberOfBooksRead = bookCount;
+                challenge.IsCompleted = bookCount >= challenge.Goal;
+                
+                await _context.SaveChangesAsync();
+            }
         }
     }
 } 

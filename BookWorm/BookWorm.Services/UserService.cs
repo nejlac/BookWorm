@@ -1,9 +1,11 @@
-﻿using BookWorm.Model.Requests;
+﻿using BookWorm.Model.Exceptions;
+using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services;
 using BookWorm.Services.DataBase;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,10 +22,11 @@ namespace BookWorm.Services
         private const int SaltSize = 16;
         private const int KeySize = 32;
         private const int Iterations = 10000;
-
-        public UserService(BookWormDbContext context)
+        private readonly ILogger<UserService> _logger;
+    public UserService(BookWormDbContext context, ILogger<UserService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<List<UserResponse>> GetAsync(UserSearchObject search)
@@ -81,12 +84,14 @@ namespace BookWorm.Services
             
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             {
-                throw new InvalidOperationException("A user with this email already exists.");
+            _logger.LogInformation("User is trying to register with existing email.");
+            throw new UserException("The username or email is already in use.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
-                throw new InvalidOperationException("A user with this username already exists.");
+            _logger.LogInformation("User is trying to register with existing username.");
+            throw new UserException("The username or email is already in use.");
             }
 
             var user = new User
@@ -144,12 +149,14 @@ namespace BookWorm.Services
 
             if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.Id != id))
             {
-                throw new InvalidOperationException("A user with this email already exists.");
+                _logger.LogInformation("User is trying to update with existing email.");
+                throw new UserException("The username or email is already in use.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username && u.Id != id))
             {
-                throw new InvalidOperationException("A user with this username already exists.");
+                _logger.LogInformation("User is trying to update with existing username.");
+                throw new UserException("The username or email is already in use.");
             }
 
             user.FirstName = request.FirstName;
@@ -236,7 +243,7 @@ namespace BookWorm.Services
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
-                throw new InvalidOperationException("User not found");
+                throw new UserException("User not found");
 
             var response = MapToResponse(user);
 

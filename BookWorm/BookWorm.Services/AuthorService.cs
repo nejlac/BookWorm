@@ -2,132 +2,90 @@ using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services.DataBase;
+using BookWorm.Services;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BookWorm.Model.Exceptions;
+
 
 namespace BookWorm.Services
 {
-    public class AuthorService : IAuthorService
+    public class AuthorService : BaseCRUDService<AuthorResponse, AuthorSearchObject, Author, AuthorCreateUpdateRequest, AuthorCreateUpdateRequest>, IAuthorService
     {
         private readonly BookWormDbContext _context;
+        private readonly ILogger<AuthorService> _logger;
 
-        public AuthorService(BookWormDbContext context)
+        public AuthorService(BookWormDbContext context, IMapper mapper, ILogger<AuthorService> logger):base (context,mapper)
         {
             _context = context;
+            _logger = logger;
         }
 
-        public async Task<List<AuthorResponse>> GetAsync(AuthorSearchObject search)
+       
+        protected override IQueryable<DataBase.Author> ApplyFilter(IQueryable<DataBase.Author> query, AuthorSearchObject search)
         {
-            var query = _context.Authors.Include(a => a.Country).Include(a => a.Books).AsQueryable();
-
             if (!string.IsNullOrEmpty(search.Name))
                 query = query.Where(a => a.Name.Contains(search.Name));
             if (search.CountryId.HasValue)
                 query = query.Where(a => a.CountryId == search.CountryId);
             if (!string.IsNullOrEmpty(search.FTS))
                 query = query.Where(a => a.Name.Contains(search.FTS) || a.Biography.Contains(search.FTS));
-
-            var authors = await query.ToListAsync();
-            return authors.Select(MapToResponse).ToList();
+            
+            
+            query = query.Include(a => a.Country).Include(a => a.Books);
+            return query;
         }
 
-        public async Task<AuthorResponse?> GetByIdAsync(int id)
-        {
-            var author = await _context.Authors.Include(a => a.Country).Include(a => a.Books).FirstOrDefaultAsync(a => a.Id == id);
-            return author != null ? MapToResponse(author) : null;
-        }
+       
 
-        public async Task<AuthorResponse> CreateAsync(AuthorCreateUpdateRequest request)
+        protected override async Task BeforeInsert(Author entity, AuthorCreateUpdateRequest request)
         {
-            if (await _context.Authors.AnyAsync(a => a.Name == request.Name && a.DateOfBirth == request.DateOfBirth))
+            
+            if (await _context.Authors.AnyAsync(a => 
+                a.Name.ToLower().Trim() == request.Name.ToLower().Trim() && 
+                a.DateOfBirth.Date == request.DateOfBirth.Date))
             {
-                throw new InvalidOperationException("An author with this name and date of birth already exists.");
+                throw new AuthorException($"An author with the name '{request.Name}' and date of birth '{request.DateOfBirth:yyyy-MM-dd}' already exists.");
             }
-            var author = new Author
-            {
-                Name = request.Name,
-                Biography = request.Biography,
-                DateOfBirth = request.DateOfBirth,
-                DateOfDeath = request.DateOfDeath,
-                CountryId = request.CountryId,
-                Website = request.Website,
-                PhotoUrl = request.PhotoUrl,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-
-            _context.Authors.Add(author);
-            await _context.SaveChangesAsync();
-
-            return await GetAuthorResponseWithBooksAsync(author.Id);
+            
+           
+            entity.CreatedAt = DateTime.Now;
+            entity.UpdatedAt = DateTime.Now;
         }
 
-        public async Task<AuthorResponse?> UpdateAsync(int id, AuthorCreateUpdateRequest request)
+        protected override async Task BeforeUpdate(Author entity, AuthorCreateUpdateRequest request)
         {
-            var author = await _context.Authors.FindAsync(id);
-            if (author == null)
+            
+            if (await _context.Authors.AnyAsync(a => 
+                a.Id != entity.Id &&
+                a.Name.ToLower().Trim() == request.Name.ToLower().Trim() && 
+                a.DateOfBirth.Date == request.DateOfBirth.Date))
+            {
+                throw new AuthorException($"An author with the name '{request.Name}' and date of birth '{request.DateOfBirth:yyyy-MM-dd}' already exists.");
+            }
+            
+          
+            entity.UpdatedAt = DateTime.Now;
+        }
+
+        public override async Task<AuthorResponse?> GetByIdAsync(int id)
+        {
+            var entity = await _context.Authors
+                .Include(a => a.Country)
+                .Include(a => a.Books)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            
+            if (entity == null)
                 return null;
-            if (await _context.Authors.AnyAsync(a => a.Name == request.Name && a.DateOfBirth == request.DateOfBirth && a.Id != id))
-            {
-                throw new InvalidOperationException("An author with this name and date of birth already exists.");
-            }
-            author.Name = request.Name;
-            author.Biography = request.Biography;
-            author.DateOfBirth = request.DateOfBirth;
-            author.DateOfDeath = request.DateOfDeath;
-            author.CountryId = request.CountryId;
-            author.Website = request.Website;
-            author.PhotoUrl = request.PhotoUrl;
-            author.UpdatedAt = DateTime.Now;
 
-            await _context.SaveChangesAsync();
-            return await GetAuthorResponseWithBooksAsync(author.Id);
+            return MapToResponse(entity);
         }
 
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var author = await _context.Authors.FindAsync(id);
-            if (author == null)
-                return false;
-
-            _context.Authors.Remove(author);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        private AuthorResponse MapToResponse(Author author)
-        {
-            return new AuthorResponse
-            {
-                Id = author.Id,
-                Name = author.Name,
-                Biography = author.Biography,
-                DateOfBirth = author.DateOfBirth,
-                DateOfDeath = author.DateOfDeath,
-                CountryId = author.CountryId,
-                CountryName = author.Country?.Name ?? string.Empty,
-                PhotoUrl = author.PhotoUrl,
-                CreatedAt = author.CreatedAt,
-                UpdatedAt = author.UpdatedAt,
-                Books = author.Books.Select(b => new AuthorBookResponse
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    PublicationYear = b.PublicationYear,
-                    PageCount = b.PageCount
-                }).ToList()
-            };
-        }
-
-        private async Task<AuthorResponse> GetAuthorResponseWithBooksAsync(int authorId)
-        {
-            var author = await _context.Authors.Include(a => a.Country).Include(a => a.Books).FirstOrDefaultAsync(a => a.Id == authorId);
-            if (author == null)
-                throw new InvalidOperationException("Author not found");
-            return MapToResponse(author);
-        }
+      
     }
 } 

@@ -14,7 +14,6 @@ namespace BookWorm.Model.Requests
         public int Goal { get; set; }
 
         [Required(ErrorMessage = "Year is required.")]
-        [Range(1900, 2100, ErrorMessage = "Year must be a valid year between 1900 and 2100.")]
         public int Year { get; set; }
 
         public List<int> BookIds { get; set; } = new List<int>();

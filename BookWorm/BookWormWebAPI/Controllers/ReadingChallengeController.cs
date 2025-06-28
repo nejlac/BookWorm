@@ -2,6 +2,7 @@ using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,53 +11,45 @@ namespace BookWormWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReadingChallengeController : ControllerBase
+    public class ReadingChallengeController : BaseCRUDController<ReadingChallengeResponse, ReadingChallengeSearchObject, ReadingChallengeCreateUpdateRequest, ReadingChallengeCreateUpdateRequest>
     {
-        private readonly IReadingChallengeService _readingChallengeService;
-
-        public ReadingChallengeController(IReadingChallengeService readingChallengeService)
+        public ReadingChallengeController(IReadingChallengeService readingChallengeService) : base(readingChallengeService)
         {
-            _readingChallengeService = readingChallengeService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<ReadingChallengeResponse>>> Get([FromQuery] ReadingChallengeSearchObject? search = null)
+        [Authorize(Roles = "Admin,User")]
+        public override async Task<PagedResult<ReadingChallengeResponse>> Get([FromQuery] ReadingChallengeSearchObject? search = null)
         {
-            return await _readingChallengeService.GetAsync(search ?? new ReadingChallengeSearchObject());
+            return await base.Get(search);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ReadingChallengeResponse>> GetById(int id)
+        [Authorize(Roles = "Admin,User")]
+        public override async Task<ReadingChallengeResponse?> GetById(int id)
         {
-            var challenge = await _readingChallengeService.GetByIdAsync(id);
-            if (challenge == null)
-                return NotFound();
-            return challenge;
+            return await base.GetById(id);
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReadingChallengeResponse>> Create(ReadingChallengeCreateUpdateRequest request)
+        [Authorize(Roles = "User")]
+        public override async Task<ReadingChallengeResponse> Create([FromBody] ReadingChallengeCreateUpdateRequest request)
         {
-            var createdChallenge = await _readingChallengeService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = createdChallenge.Id }, createdChallenge);
+            return await base.Create(request);
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ReadingChallengeResponse>> Update(int id, ReadingChallengeCreateUpdateRequest request)
+        [Authorize(Roles = "User")]
+        public override async Task<ReadingChallengeResponse?> Update(int id, [FromBody] ReadingChallengeCreateUpdateRequest request)
         {
-            var updatedChallenge = await _readingChallengeService.UpdateAsync(id, request);
-            if (updatedChallenge == null)
-                return NotFound();
-            return updatedChallenge;
+            return await base.Update(id, request);
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [Authorize(Roles = "User")]
+        public override async Task<bool> Delete(int id)
         {
-            var deleted = await _readingChallengeService.DeleteAsync(id);
-            if (!deleted)
-                return NotFound();
-            return NoContent();
+            return await base.Delete(id);
         }
     }
 } 

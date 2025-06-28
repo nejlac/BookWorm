@@ -1,3 +1,4 @@
+using BookWorm.Model.Exceptions;
 using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
@@ -48,8 +49,15 @@ namespace BookWorm.Services
         {
             if (await _context.Books.AnyAsync(b => b.Title == request.Title && b.AuthorId == request.AuthorId))
             {
-                throw new InvalidOperationException("A book with this title and author already exists.");
+                throw new BookException("A book with this title and author already exists.");
             }
+
+            
+            if (request.GenreIds == null || request.GenreIds.Count == 0)
+            {
+                throw new BookException("At least one genre must be selected for the book.");
+            }
+
             var book = new Book
             {
                 Title = request.Title,
@@ -86,8 +94,15 @@ namespace BookWorm.Services
                 return null;
             if (await _context.Books.AnyAsync(b => b.Title == request.Title && b.AuthorId == request.AuthorId && b.Id != id))
             {
-                throw new InvalidOperationException("A book with this title and author already exists.");
+                throw new BookException("A book with this title and author already exists.");
             }
+
+            
+            if (request.GenreIds == null || request.GenreIds.Count == 0)
+            {
+                throw new BookException("At least one genre must be selected for the book.");
+            }
+
             book.Title = request.Title;
             book.AuthorId = request.AuthorId;
             book.Description = request.Description;
@@ -145,7 +160,7 @@ namespace BookWorm.Services
         {
             var book = await _context.Books.Include(b => b.Author).Include(b => b.BookGenres).ThenInclude(bg => bg.Genre).FirstOrDefaultAsync(b => b.Id == bookId);
             if (book == null)
-                throw new InvalidOperationException("Book not found");
+                throw new BookException("Book not found");
             return MapToResponse(book);
         }
     }

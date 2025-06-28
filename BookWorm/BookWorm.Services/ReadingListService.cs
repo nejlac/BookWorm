@@ -1,3 +1,4 @@
+using BookWorm.Model.Exceptions;
 using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
@@ -121,7 +122,7 @@ namespace BookWorm.Services
         {
             var list = await _context.ReadingLists.Include(rl => rl.User).Include(rl => rl.ReadingListBooks).ThenInclude(rlb => rlb.Book).FirstOrDefaultAsync(rl => rl.Id == listId);
             if (list == null)
-                throw new InvalidOperationException("ReadingList not found");
+                throw new ReadingListException("ReadingList not found");
             return MapToResponse(list);
         }
     }

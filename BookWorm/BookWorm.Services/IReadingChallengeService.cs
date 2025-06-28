@@ -6,12 +6,7 @@ using System.Threading.Tasks;
 
 namespace BookWorm.Services
 {
-    public interface IReadingChallengeService
+    public interface IReadingChallengeService : ICRUDService<ReadingChallengeResponse, ReadingChallengeSearchObject, ReadingChallengeCreateUpdateRequest, ReadingChallengeCreateUpdateRequest>
     {
-        Task<List<ReadingChallengeResponse>> GetAsync(ReadingChallengeSearchObject search);
-        Task<ReadingChallengeResponse?> GetByIdAsync(int id);
-        Task<ReadingChallengeResponse> CreateAsync(ReadingChallengeCreateUpdateRequest request);
-        Task<ReadingChallengeResponse?> UpdateAsync(int id, ReadingChallengeCreateUpdateRequest request);
-        Task<bool> DeleteAsync(int id);
     }
 } 

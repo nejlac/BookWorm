@@ -2,27 +2,31 @@ using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services.DataBase;
+using BookWorm.Services;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BookWorm.Model.Exceptions;
 
 namespace BookWorm.Services
 {
-    public class BookReviewService : IBookReviewService
+    public class BookReviewService : BaseCRUDService<BookReviewResponse, BookReviewSearchObject, BookReview, BookReviewCreateUpdateRequest, BookReviewCreateUpdateRequest>, IBookReviewService
     {
         private readonly BookWormDbContext _context;
+        private readonly ILogger<BookReviewService> _logger;
 
-        public BookReviewService(BookWormDbContext context)
+        public BookReviewService(BookWormDbContext context, IMapper mapper, ILogger<BookReviewService> logger) : base(context, mapper)
         {
             _context = context;
+            _logger = logger;
         }
 
-        public async Task<List<BookReviewResponse>> GetAsync(BookReviewSearchObject search)
+        protected override IQueryable<BookReview> ApplyFilter(IQueryable<BookReview> query, BookReviewSearchObject search)
         {
-            var query = _context.BookReviews.Include(br => br.User).Include(br => br.Book).AsQueryable();
-
             if (search.UserId.HasValue)
                 query = query.Where(br => br.UserId == search.UserId);
             if (search.BookId.HasValue)
@@ -32,81 +36,66 @@ namespace BookWorm.Services
             if (search.IsChecked.HasValue)
                 query = query.Where(br => br.isChecked == search.IsChecked);
 
-            var reviews = await query.ToListAsync();
-            return reviews.Select(MapToResponse).ToList();
+           
+            query = query.Include(br => br.User).Include(br => br.Book);
+            return query;
         }
 
-        public async Task<BookReviewResponse?> GetByIdAsync(int id)
-        {
-            var review = await _context.BookReviews.Include(br => br.User).Include(br => br.Book).FirstOrDefaultAsync(br => br.Id == id);
-            return review != null ? MapToResponse(review) : null;
-        }
-
-        public async Task<BookReviewResponse> CreateAsync(BookReviewCreateUpdateRequest request)
-        {
-            var review = new BookReview
-            {
-                UserId = request.UserId,
-                BookId = request.BookId,
-                Review = request.Review,
-                Rating = request.Rating,
-                isChecked = request.IsChecked,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.BookReviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            return await GetBookReviewResponseWithDetailsAsync(review.Id);
-        }
-
-        public async Task<BookReviewResponse?> UpdateAsync(int id, BookReviewCreateUpdateRequest request)
-        {
-            var review = await _context.BookReviews.FindAsync(id);
-            if (review == null)
-                return null;
-
-            review.Review = request.Review;
-            review.Rating = request.Rating;
-            review.isChecked = request.IsChecked;
-
-            await _context.SaveChangesAsync();
-            return await GetBookReviewResponseWithDetailsAsync(review.Id);
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var review = await _context.BookReviews.FindAsync(id);
-            if (review == null)
-                return false;
-
-            _context.BookReviews.Remove(review);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        private BookReviewResponse MapToResponse(BookReview review)
+        protected override BookReviewResponse MapToResponse(BookReview entity)
         {
             return new BookReviewResponse
             {
-                Id = review.Id,
-                UserId = review.UserId,
-                UserName = review.User?.Username ?? string.Empty,
-                BookId = review.BookId,
-                BookTitle = review.Book?.Title ?? string.Empty,
-                Review = review.Review ?? string.Empty,
-                Rating = review.Rating,
-                IsChecked = review.isChecked,
-                CreatedAt = review.CreatedAt
+                Id = entity.Id,
+                UserId = entity.UserId,
+                UserName = entity.User?.Username ?? string.Empty,
+                BookId = entity.BookId,
+                BookTitle = entity.Book?.Title ?? string.Empty,
+                Review = entity.Review ?? string.Empty,
+                Rating = entity.Rating,
+                IsChecked = entity.isChecked,
+                CreatedAt = entity.CreatedAt
             };
         }
 
-        private async Task<BookReviewResponse> GetBookReviewResponseWithDetailsAsync(int reviewId)
+        protected override async Task BeforeInsert(BookReview entity, BookReviewCreateUpdateRequest request)
         {
-            var review = await _context.BookReviews.Include(br => br.User).Include(br => br.Book).FirstOrDefaultAsync(br => br.Id == reviewId);
-            if (review == null)
-                throw new InvalidOperationException("BookReview not found");
-            return MapToResponse(review);
+            if (await _context.BookReviews.AnyAsync(br => 
+                br.UserId == request.UserId && 
+                br.BookId == request.BookId))
+            {
+                throw new BookReviewException($"User has already reviewed this book. Only one review per user per book is allowed.");
+            }
+
+           
+            if (request.Rating < 1 || request.Rating > 5)
+            {
+                throw new BookReviewException("Rating must be between 1 and 5.");
+            }
+
+           
+            entity.CreatedAt = DateTime.Now;
+        }
+
+        protected override async Task BeforeUpdate(BookReview entity, BookReviewCreateUpdateRequest request)
+        {
+            
+            if (request.Rating < 1 || request.Rating > 5)
+            {
+                throw new BookReviewException("Rating must be between 1 and 5.");
+            }
+        }
+
+        public override async Task<BookReviewResponse?> GetByIdAsync(int id)
+        {
+            var entity = await _context.BookReviews
+                .Include(br => br.User)
+                .Include(br => br.Book)
+                .FirstOrDefaultAsync(br => br.Id == id);
+            
+            if (entity == null)
+                return null;
+
+            return MapToResponse(entity);
         }
     }
 } 
