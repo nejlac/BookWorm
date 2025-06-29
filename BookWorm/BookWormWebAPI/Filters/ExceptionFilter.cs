@@ -32,10 +32,17 @@ namespace BookWormWebAPI.Filters
                 context.ModelState.AddModelError("challengeError", context.Exception.Message);
                 context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
-            else if (context.Exception is BookException)
+            else if (context.Exception is BookException bookException)
             {
-                context.ModelState.AddModelError("BookError", context.Exception.Message);
-                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                context.ModelState.AddModelError("BookError", bookException.Message);
+                if (bookException.IsPermissionError)
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                }
+                else
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                }
             }
             else if (context.Exception is AuthorException)
             {

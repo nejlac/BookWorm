@@ -1,4 +1,5 @@
 using BookWorm.Services;
+using BookWorm.Services.BookStateMachine;
 using BookWorm.Services.DataBase;
 using BookWormWebAPI.Filters;
 using Mapster;
@@ -16,6 +17,14 @@ builder.Services.AddTransient<IReadingListService, ReadingListService>();
 builder.Services.AddTransient<IAuthorService, AuthorService>();
 builder.Services.AddTransient<IBookReviewService, BookReviewService>();
 builder.Services.AddTransient<IReadingChallengeService, ReadingChallengeService>();
+builder.Services.AddTransient<IUserRoleService, UserRoleService>();
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddTransient<BaseBookState>();
+builder.Services.AddTransient<SubmittedBookState>();
+builder.Services.AddTransient<AcceptedBookState>();
+builder.Services.AddTransient<DeclinedBookState>();
 
 builder.Services.AddMapster();
 
@@ -82,6 +91,7 @@ if (app.Environment.IsDevelopment())
     
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

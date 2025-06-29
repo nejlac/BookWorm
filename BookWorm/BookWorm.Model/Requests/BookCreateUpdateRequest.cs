@@ -25,8 +25,9 @@ namespace BookWorm.Model.Requests
 
         public byte[]? CoverImageUrl { get; set; }
 
-
         public List<int> GenreIds { get; set; } = new List<int>();
+
+        public int? CreatedByUserId { get; set; }
 
     
      public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

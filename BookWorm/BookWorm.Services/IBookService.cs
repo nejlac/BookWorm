@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace BookWorm.Services
 {
-    public interface IBookService
+    public interface IBookService : ICRUDService<BookResponse, BookSearchObject, BookCreateUpdateRequest, BookCreateUpdateRequest>
     {
-        Task<List<BookResponse>> GetAsync(BookSearchObject search);
-        Task<BookResponse?> GetByIdAsync(int id);
-        Task<BookResponse> CreateAsync(BookCreateUpdateRequest request);
-        Task<BookResponse?> UpdateAsync(int id, BookCreateUpdateRequest request);
-        Task<bool> DeleteAsync(int id);
+       
+        Task<BookResponse?> AcceptBookAsync(int id);
+        Task<BookResponse?> DeclineBookAsync(int id);
     }
 } 

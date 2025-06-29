@@ -11,54 +11,50 @@ namespace BookWormWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class BookController : ControllerBase
+    [Authorize(Roles = "Admin,User")]
+    public class BookController : BaseCRUDController<BookResponse, BookSearchObject, BookCreateUpdateRequest, BookCreateUpdateRequest>
     {
         private readonly IBookService _bookService;
 
-        public BookController(IBookService bookService)
+        public BookController(IBookService bookService) : base(bookService)
         {
             _bookService = bookService;
         }
 
-        [HttpGet]
-        
-        public async Task<ActionResult<List<BookResponse>>> Get([FromQuery] BookSearchObject? search = null)
+        // Override GET endpoints to allow anonymous access for viewing books
+        [HttpGet("")]
+        [AllowAnonymous]
+        public override async Task<PagedResult<BookResponse>> Get([FromQuery] BookSearchObject? search = null)
         {
             return await _bookService.GetAsync(search ?? new BookSearchObject());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<BookResponse>> GetById(int id)
+        [AllowAnonymous]
+        public override async Task<BookResponse?> GetById(int id)
         {
-            var book = await _bookService.GetByIdAsync(id);
+            return await _bookService.GetByIdAsync(id);
+        }
+
+        // State transition endpoints
+        [HttpPost("{id}/accept")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<BookResponse>> AcceptBook(int id)
+        {
+            var book = await _bookService.AcceptBookAsync(id);
             if (book == null)
                 return NotFound();
             return book;
         }
 
-        [HttpPost]
-        public async Task<ActionResult<BookResponse>> Create(BookCreateUpdateRequest request)
+        [HttpPost("{id}/decline")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<BookResponse>> DeclineBook(int id)
         {
-            var createdBook = await _bookService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = createdBook.Id }, createdBook);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<ActionResult<BookResponse>> Update(int id, BookCreateUpdateRequest request)
-        {
-            var updatedBook = await _bookService.UpdateAsync(id, request);
-            if (updatedBook == null)
+            var book = await _bookService.DeclineBookAsync(id);
+            if (book == null)
                 return NotFound();
-            return updatedBook;
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
-        {
-            var deleted = await _bookService.DeleteAsync(id);
-            if (!deleted)
-                return NotFound();
-            return NoContent();
+            return book;
         }
     }
 } 

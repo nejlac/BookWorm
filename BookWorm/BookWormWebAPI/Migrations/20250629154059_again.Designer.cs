@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookWormWebAPI.Migrations
 {
     [DbContext(typeof(BookWormDbContext))]
-    [Migration("20250625204752_init")]
-    partial class init
+    [Migration("20250629154059_again")]
+    partial class again
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,11 +85,19 @@ namespace BookWormWebAPI.Migrations
                     b.Property<int>("AuthorId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BookState")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<byte[]>("CoverImageUrl")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -113,6 +121,8 @@ namespace BookWormWebAPI.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Books");
                 });
@@ -238,6 +248,9 @@ namespace BookWormWebAPI.Migrations
                     b.Property<int>("Goal")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("NumberOfBooksRead")
                         .HasColumnType("int");
 
@@ -294,6 +307,11 @@ namespace BookWormWebAPI.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
@@ -509,7 +527,13 @@ namespace BookWormWebAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BookWorm.Services.DataBase.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId");
+
                     b.Navigation("Author");
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("BookWorm.Services.DataBase.BookGenre", b =>

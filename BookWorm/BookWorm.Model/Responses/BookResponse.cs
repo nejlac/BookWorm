@@ -15,6 +15,9 @@ namespace BookWorm.Model.Responses
         public byte[]? CoverImageUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string BookState { get; set; } = string.Empty;
+        public int? CreatedByUserId { get; set; }
+        public string CreatedByUserName { get; set; } = string.Empty;
         public List<string> Genres { get; set; } = new List<string>();
     }
 } 

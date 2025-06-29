@@ -8,7 +8,18 @@ namespace BookWorm.Model.Exceptions
 {
     public class BookException : Exception
     {
-        public BookException(string message) : base(message) { }
+        public bool IsPermissionError { get; }
+
+        public BookException(string message) : base(message)
+        {
+            IsPermissionError = false;
+        }
+
+        public BookException(string message, bool isPermissionError) : base(message)
+        {
+            IsPermissionError = isPermissionError;
+        }
+
         public BookException(string message, Exception inner) : base(message, inner) { }
     }
 }

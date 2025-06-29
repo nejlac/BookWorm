@@ -3,7 +3,11 @@ using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services.DataBase;
+using BookWorm.Services.BookStateMachine;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MapsterMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,19 +15,23 @@ using System.Threading.Tasks;
 
 namespace BookWorm.Services
 {
-    public class BookService : IBookService
+    public class BookService : BaseCRUDService<BookResponse, BookSearchObject, Book, BookCreateUpdateRequest, BookCreateUpdateRequest>, IBookService
     {
         private readonly BookWormDbContext _context;
+        private readonly ILogger<BookService> _logger;
+        private readonly IUserRoleService _userRoleService;
+        private readonly BaseBookState _baseBookState;
 
-        public BookService(BookWormDbContext context)
+        public BookService(BookWormDbContext context, IMapper mapper, ILogger<BookService> logger, IUserRoleService userRoleService, BaseBookState baseBookState) : base(context, mapper)
         {
             _context = context;
+            _logger = logger;
+            _userRoleService = userRoleService;
+            _baseBookState = baseBookState;
         }
 
-        public async Task<List<BookResponse>> GetAsync(BookSearchObject search)
+        protected override IQueryable<Book> ApplyFilter(IQueryable<Book> query, BookSearchObject search)
         {
-            var query = _context.Books.Include(b => b.Author).Include(b => b.BookGenres).ThenInclude(bg => bg.Genre).AsQueryable();
-
             if (!string.IsNullOrEmpty(search.Title))
                 query = query.Where(b => b.Title.Contains(search.Title));
             if (!string.IsNullOrEmpty(search.Author))
@@ -34,98 +42,136 @@ namespace BookWorm.Services
                 query = query.Where(b => b.PublicationYear == search.PublicationYear);
             if (search.RPageCount.HasValue)
                 query = query.Where(b => b.PageCount == search.RPageCount);
+            if (!string.IsNullOrEmpty(search.FTS))
+                query = query.Where(b => b.Title.Contains(search.FTS) || b.Description.Contains(search.FTS) || b.Author.Name.Contains(search.FTS));
 
-            var books = await query.ToListAsync();
-            return books.Select(MapToResponse).ToList();
+            query = query.Include(b => b.Author)
+                        .Include(b => b.BookGenres)
+                        .ThenInclude(bg => bg.Genre)
+                        .Include(b => b.CreatedByUser);
+            return query;
         }
 
-        public async Task<BookResponse?> GetByIdAsync(int id)
+        public override async Task<BookResponse> CreateAsync(BookCreateUpdateRequest request)
         {
-            var book = await _context.Books.Include(b => b.Author).Include(b => b.BookGenres).ThenInclude(bg => bg.Genre).FirstOrDefaultAsync(b => b.Id == id);
-            return book != null ? MapToResponse(book) : null;
-        }
-
-        public async Task<BookResponse> CreateAsync(BookCreateUpdateRequest request)
-        {
-            if (await _context.Books.AnyAsync(b => b.Title == request.Title && b.AuthorId == request.AuthorId))
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
             {
-                throw new BookException("A book with this title and author already exists.");
+                throw new BookException("User not authenticated.");
             }
 
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
             
-            if (request.GenreIds == null || request.GenreIds.Count == 0)
+           
+            request.CreatedByUserId = currentUserId.Value;
+            
+           
+            BaseBookState baseState;
+            if (isAdmin)
             {
-                throw new BookException("At least one genre must be selected for the book.");
+                baseState = _baseBookState.GetBookState("Accepted");
             }
-
-            var book = new Book
+            else
             {
-                Title = request.Title,
-                AuthorId = request.AuthorId,
-                Description = request.Description,
-                PublicationYear = request.PublicationYear,
-                PageCount = request.PageCount,
-                CoverImageUrl = request.CoverImageUrl ?? new byte[0],
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-            _context.Books.Add(book);
-            await _context.SaveChangesAsync();
-
-            if (request.GenreIds != null && request.GenreIds.Count > 0)
-            {
-                foreach (var genreId in request.GenreIds)
-                {
-                    if (await _context.Genres.AnyAsync(g => g.Id == genreId))
-                    {
-                        var bookGenre = new BookGenre { BookId = book.Id, GenreId = genreId };
-                        _context.BookGenres.Add(bookGenre);
-                    }
-                }
-                await _context.SaveChangesAsync();
+                baseState = _baseBookState.GetBookState("Submitted");
             }
-            return await GetBookResponseWithGenresAsync(book.Id);
+            
+            return await baseState.CreateAsync(request);
         }
 
-        public async Task<BookResponse?> UpdateAsync(int id, BookCreateUpdateRequest request)
+        public override async Task<BookResponse?> UpdateAsync(int id, BookCreateUpdateRequest request)
         {
             var book = await _context.Books.FindAsync(id);
             if (book == null)
                 return null;
-            if (await _context.Books.AnyAsync(b => b.Title == request.Title && b.AuthorId == request.AuthorId && b.Id != id))
+
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
             {
-                throw new BookException("A book with this title and author already exists.");
+                throw new BookException("User not authenticated.");
             }
 
-            
-            if (request.GenreIds == null || request.GenreIds.Count == 0)
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
             {
-                throw new BookException("At least one genre must be selected for the book.");
+                throw new BookException("Only admin can edit books.", true);
             }
 
-            book.Title = request.Title;
-            book.AuthorId = request.AuthorId;
-            book.Description = request.Description;
-            book.PublicationYear = request.PublicationYear;
-            book.PageCount = request.PageCount;
-            book.CoverImageUrl = request.CoverImageUrl ?? book.CoverImageUrl;
-            book.UpdatedAt = DateTime.Now;
+            var baseState = _baseBookState.GetBookState(book.BookState);
+            return await baseState.UpdateAsync(id, request);
+        }
 
-            var existingBookGenres = await _context.BookGenres.Where(bg => bg.BookId == id).ToListAsync();
-            _context.BookGenres.RemoveRange(existingBookGenres);
-            if (request.GenreIds != null && request.GenreIds.Count > 0)
+        public override async Task<BookResponse?> GetByIdAsync(int id)
+        {
+            var book = await _context.Books
+                .Include(b => b.Author)
+                .Include(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
+                .Include(b => b.CreatedByUser)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (book == null)
+                return null;
+
+         
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (currentUserId.HasValue)
             {
-                foreach (var genreId in request.GenreIds)
+                var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+                if (!isAdmin && book.BookState != "Accepted")
                 {
-                    if (await _context.Genres.AnyAsync(g => g.Id == genreId))
-                    {
-                        var bookGenre = new BookGenre { BookId = book.Id, GenreId = genreId };
-                        _context.BookGenres.Add(bookGenre);
-                    }
+                    return null; 
                 }
             }
-            await _context.SaveChangesAsync();
-            return await GetBookResponseWithGenresAsync(book.Id);
+
+            return MapToResponse(book);
+        }
+
+        public override async Task<PagedResult<BookResponse>> GetAsync(BookSearchObject search)
+        {
+            var query = _context.Set<Book>().AsQueryable();
+            query = ApplyFilter(query, search);
+
+           
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (currentUserId.HasValue)
+            {
+                var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+                if (!isAdmin)
+                {
+                    query = query.Where(b => b.BookState == "Accepted");
+                }
+            }
+            else
+            {
+               
+                query = query.Where(b => b.BookState == "Accepted");
+            }
+
+            int? totalCount = null;
+            if (search.IncludeTotalCount)
+            {
+                totalCount = await query.CountAsync();
+            }
+
+            if (!search.RetrieveAll)
+            {
+                if (search.Page.HasValue)
+                {
+                    query = query.Skip(search.Page.Value * search.PageSize.Value);
+                }
+                if (search.PageSize.HasValue)
+                {
+                    query = query.Take(search.PageSize.Value);
+                }
+            }
+
+            var list = await query.ToListAsync();
+            return new PagedResult<BookResponse>
+            {
+                Items = list.Select(MapToResponse).ToList(),
+                TotalCount = totalCount
+            };
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -133,12 +179,71 @@ namespace BookWorm.Services
             var book = await _context.Books.FindAsync(id);
             if (book == null)
                 return false;
+
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+            {
+                throw new BookException("User not authenticated.");
+            }
+
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
+            {
+                throw new BookException("Only admin can delete books.", true);
+            }
+
+            await BeforeDelete(book);
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        private BookResponse MapToResponse(Book book)
+      
+        public async Task<BookResponse?> AcceptBookAsync(int id)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+                return null;
+
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+            {
+                throw new BookException("User not authenticated.");
+            }
+
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
+            {
+                throw new BookException("Only admin can accept books.", true);
+            }
+
+            var baseState = _baseBookState.GetBookState(book.BookState);
+            return await baseState.AcceptAsync(id);
+        }
+
+        public async Task<BookResponse?> DeclineBookAsync(int id)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+                return null;
+
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+            {
+                throw new BookException("User not authenticated.");
+            }
+
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
+            {
+                throw new BookException("Only admin can decline books.", true);
+            }
+
+            var baseState = _baseBookState.GetBookState(book.BookState);
+            return await baseState.DeclineAsync(id);
+        }
+
+        protected override BookResponse MapToResponse(Book book)
         {
             return new BookResponse
             {
@@ -152,16 +257,11 @@ namespace BookWorm.Services
                 CoverImageUrl = book.CoverImageUrl,
                 CreatedAt = book.CreatedAt,
                 UpdatedAt = book.UpdatedAt,
-                Genres = book.BookGenres.Select(bg => bg.Genre.Name).ToList()
+                BookState = book.BookState,
+                CreatedByUserId = book.CreatedByUserId,
+                CreatedByUserName = book.CreatedByUser?.Username ?? string.Empty,
+                Genres = book.BookGenres?.Select(bg => bg.Genre.Name).ToList() ?? new List<string>()
             };
-        }
-
-        private async Task<BookResponse> GetBookResponseWithGenresAsync(int bookId)
-        {
-            var book = await _context.Books.Include(b => b.Author).Include(b => b.BookGenres).ThenInclude(bg => bg.Genre).FirstOrDefaultAsync(b => b.Id == bookId);
-            if (book == null)
-                throw new BookException("Book not found");
-            return MapToResponse(book);
         }
     }
 } 
