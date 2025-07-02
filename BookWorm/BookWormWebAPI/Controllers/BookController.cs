@@ -21,16 +21,16 @@ namespace BookWormWebAPI.Controllers
             _bookService = bookService;
         }
 
-        // Override GET endpoints to allow anonymous access for viewing books
+        
         [HttpGet("")]
-        [AllowAnonymous]
+       
         public override async Task<PagedResult<BookResponse>> Get([FromQuery] BookSearchObject? search = null)
         {
             return await _bookService.GetAsync(search ?? new BookSearchObject());
         }
 
         [HttpGet("{id}")]
-        [AllowAnonymous]
+       
         public override async Task<BookResponse?> GetById(int id)
         {
             return await _bookService.GetByIdAsync(id);
