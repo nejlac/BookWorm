@@ -15,7 +15,7 @@ class _MasterScreenState extends State<MasterScreen> {
       body: Row(
         children: [
           Container(
-            width: 300,
+            width: 220,
             decoration: BoxDecoration(
               color: Theme.of(context).drawerTheme.backgroundColor ?? Colors.grey[200],
               border: const Border(

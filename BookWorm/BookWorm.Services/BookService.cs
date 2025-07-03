@@ -44,6 +44,8 @@ namespace BookWorm.Services
                 query = query.Where(b => b.PageCount == search.RPageCount);
             if (!string.IsNullOrEmpty(search.FTS))
                 query = query.Where(b => b.Title.Contains(search.FTS) || b.Description.Contains(search.FTS) || b.Author.Name.Contains(search.FTS));
+            if(!string.IsNullOrEmpty(search.Status))
+                query = query.Where(b => b.BookState == search.Status);
 
             query = query.Include(b => b.Author)
                         .Include(b => b.BookGenres)

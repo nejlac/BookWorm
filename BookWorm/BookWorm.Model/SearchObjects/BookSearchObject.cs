@@ -13,5 +13,6 @@ namespace BookWorm.Model.SearchObjects
         public int? GenreId { get; set; }
         public int? PublicationYear { get; set; }
         public int? RPageCount { get; set; }
+        public string? Status { get; set; }
     }
 }

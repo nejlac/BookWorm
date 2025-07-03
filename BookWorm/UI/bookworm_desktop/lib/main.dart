@@ -1,11 +1,19 @@
 import 'dart:ui';
 import 'package:bookworm_desktop/providers/auth_provider.dart';
 import 'package:bookworm_desktop/providers/book_provider.dart';
+import 'package:bookworm_desktop/providers/logged_book_provider.dart';
+import 'package:bookworm_desktop/providers/genre_provider.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const LoginPageApp());
+ runApp(MultiProvider(providers: [
+    ChangeNotifierProvider<BookProvider>(
+        create: (context) => LoggedBookProvider()),
+    ChangeNotifierProvider<GenreProvider>(
+        create: (context) => GenreProvider()),
+  ], child: const LoginPageApp()));
 }
 
 class LoginPageApp extends StatelessWidget {
