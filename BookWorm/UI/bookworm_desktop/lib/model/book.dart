@@ -5,6 +5,7 @@ part 'book.g.dart';
 class Book {
   final int id;
   final String title;
+  final int authorId;
   final String authorName;
   final String description;
    final int publicationYear;
@@ -15,6 +16,7 @@ class Book {
   Book({
     this.id = 0,
     this.title = '',
+    this.authorId = 0,
     this.authorName = '',
     this.bookState = 'Accepted',
     this.publicationYear = 0,

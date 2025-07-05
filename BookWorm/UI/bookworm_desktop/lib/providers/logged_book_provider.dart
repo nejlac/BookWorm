@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+/*import 'dart:developer' as developer;
 
 import 'package:bookworm_desktop/model/book.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
@@ -31,4 +31,4 @@ class LoggedBookProvider extends BookProvider {
       rethrow;
     }
   }
-}
+}*/

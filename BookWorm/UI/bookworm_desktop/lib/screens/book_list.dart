@@ -3,6 +3,7 @@ import 'package:bookworm_desktop/model/book.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
 import 'package:bookworm_desktop/providers/book_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
+import 'package:bookworm_desktop/screens/book_details.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -68,7 +69,8 @@ class _BookListState extends State<BookList> {
       var loadedGenres = await genreProvider.getAllGenres();
       debugPrint('Loaded genres: ' + loadedGenres.toString());
       setState(() {
-        genres = [{'id': null, 'name': 'All'}, ...loadedGenres];
+        genres = [{'id': null, 'name': 'All'}];
+        genres.addAll(loadedGenres.map((g) => {'id': g.id, 'name': g.name}));
         if (selectedGenre == null) selectedGenre = genres.first;
       });
     } catch (e) {
@@ -92,10 +94,60 @@ class _BookListState extends State<BookList> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
+            _buildAddBookButton(),
             _buildSearch(),
             _buildResultView(),
             _buildPaginationControls(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddBookButton() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BookDetails(book: null, isEditMode: true),
+                    ),
+                  );
+                  
+                  // Refresh the book list if book was added successfully
+                  if (result == true) {
+                    _fetchAllBooks();
+                  }
+                },
+                icon: Icon(Icons.add, color: Colors.white),
+                label: Text(
+                  'Add New Book',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF4CAF50), // Green color for add
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -192,8 +244,8 @@ class _BookListState extends State<BookList> {
                     contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   ),
                   style: const TextStyle(fontSize: 14, color: Color(0xFF4E342E)),
-                  dropdownColor: Color(0xFFFFF8E1), // light yellow for dropdown background
-                  menuMaxHeight: 300, // limit dropdown height
+                  dropdownColor: Color(0xFFFFF8E1), 
+                  menuMaxHeight: 300, 
                 ),
               ),
               const SizedBox(width: 12),
@@ -328,15 +380,30 @@ class _BookListState extends State<BookList> {
                   DataCell(IconButton(
                     icon: const Icon(Icons.info_outline, color: Color(0xFF8D6748)),
                     onPressed: () {
-                      // Implement details view
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetails(book: e, isEditMode: false,),
+                        ),
+                      );
                     },
                     splashRadius: 20,
                     tooltip: 'Details',
                   )),
                   DataCell(IconButton(
                     icon: const Icon(Icons.edit, color: Color(0xFF8D6748)),
-                    onPressed: () {
-                      // Implement edit functionality
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetails(book: e, isEditMode: true,),
+                        ),
+                      );
+                      
+                      // Refresh the book list if edit was successful
+                      if (result == true) {
+                        _fetchAllBooks();
+                      }
                     },
                     splashRadius: 20,
                     tooltip: 'Edit',
@@ -351,9 +418,32 @@ class _BookListState extends State<BookList> {
                           content: const Text('Are you sure you want to delete this book?'),
                           actions: [
                             TextButton(
-                              onPressed: () {
-                                //bookProvider.delete(e.id);
-                                //Navigator.pop(context);
+                              onPressed: () async {
+                                try {
+                                  await bookProvider.delete(e.id);
+                                  Navigator.pop(context);
+                                  // Refresh the book list after successful deletion
+                                  _fetchAllBooks();
+                                } catch (error) {
+                                  // Show error message if deletion fails
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(Icons.error, color: Colors.white),
+                                          SizedBox(width: 12),
+                                          Text("Failed to delete book: ${error.toString()}"),
+                                        ],
+                                      ),
+                                      backgroundColor: Color(0xFFF44336),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
                               child: const Text('Delete'),
                             ),

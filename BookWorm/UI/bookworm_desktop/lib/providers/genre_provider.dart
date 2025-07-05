@@ -1,3 +1,4 @@
+import 'package:bookworm_desktop/model/genre.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -18,27 +19,25 @@ class GenreProvider extends ChangeNotifier {
     };
   }
 
-  Future<List<Map<String, dynamic>>> getAllGenres() async {
+  Future<List<Genre>> getAllGenres() async {
     final url = "$_baseUrl/Genre";
     final uri = Uri.parse(url);
     final response = await http.get(uri, headers: createHeaders());
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       debugPrint('Genre API response: ' + data.toString());
+
       if (data is Map && data.containsKey('items')) {
         final items = data['items'];
-        if (items is List && items.isNotEmpty && items.first is Map && items.first.containsKey('name')) {
-          return List<Map<String, dynamic>>.from(items);
+        if (items is List) {
+          return List<Genre>.from(items.map((e) => Genre.fromJson(e)));
         } else {
           return [];
         }
       }
+
       if (data is List) {
-        if (data.isNotEmpty && data.first is Map && data.first.containsKey('name')) {
-          return List<Map<String, dynamic>>.from(data);
-        } else {
-          return [];
-        }
+        return List<Genre>.from(data.map((e) => Genre.fromJson(e)));
       } else {
         throw Exception("Unexpected genre response format");
       }

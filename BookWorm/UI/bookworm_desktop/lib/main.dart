@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:bookworm_desktop/providers/auth_provider.dart';
 import 'package:bookworm_desktop/providers/book_provider.dart';
-import 'package:bookworm_desktop/providers/logged_book_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
+import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,9 +10,11 @@ import 'package:provider/provider.dart';
 void main() {
  runApp(MultiProvider(providers: [
     ChangeNotifierProvider<BookProvider>(
-        create: (context) => LoggedBookProvider()),
+        create: (context) => BookProvider()),
     ChangeNotifierProvider<GenreProvider>(
         create: (context) => GenreProvider()),
+    ChangeNotifierProvider<AuthorProvider>(
+        create: (context) => AuthorProvider()),
   ], child: const LoginPageApp()));
 }
 
