@@ -6,17 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 abstract class BaseProvider<T> with ChangeNotifier {
-  static String? _baseUrl;
+  static String? baseUrl;
   String _endpoint = "";
 
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
-    _baseUrl = const String.fromEnvironment("baseUrl",
+    baseUrl = const String.fromEnvironment("baseUrl",
         defaultValue: "https://localhost:7031/api/");
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {
-    var url = "$_baseUrl$_endpoint";
+    var url = "$baseUrl$_endpoint";
 
     if (filter != null) {
       var queryString = getQueryString(filter);
@@ -44,7 +44,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Future<T> insert(dynamic request) async {
-    var url = "$_baseUrl$_endpoint";
+    var url = "$baseUrl$_endpoint";
     var uri = Uri.parse(url);
     var headers = createHeaders();
 
@@ -60,7 +60,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Future<T> update(int id, [dynamic request]) async {
-    var url = "$_baseUrl$_endpoint/$id";
+    var url = "$baseUrl$_endpoint/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
 
@@ -123,7 +123,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
   }
 
   Future<void> delete(int id) async {
-    var url = "$_baseUrl$_endpoint/$id";
+    var url = "$baseUrl$_endpoint/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
 

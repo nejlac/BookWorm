@@ -69,10 +69,127 @@ class _BookDetails extends State<BookDetails> {
   Widget build(BuildContext context) {
     return MasterScreen(
       title: widget.isEditMode ? "Edit Book" : "Book Details",
-      child: Column(children: [
-        _buildForm(),
-        if (widget.isEditMode) _buildSaveButton(),
-      ],),
+      child: Column(
+        children: [
+          _buildForm(),
+          if (widget.isEditMode)
+            _buildSaveButton(),
+          if (!widget.isEditMode)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: widget.book?.bookState == "Accepted" ? null : () async {
+                      try {
+                        await bookProvider.acceptBook(widget.book!.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 12),
+                                Text("Book accepted!"),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFF4CAF50),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                        Navigator.of(context).pop(true);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.white),
+                                SizedBox(width: 12),
+                                Text("Failed to accept book: "+e.toString()),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFFF44336),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: Icon(Icons.check, color: Colors.white),
+                    label: Text("Accept"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF4CAF50),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
+                  SizedBox(width: 24),
+                  ElevatedButton.icon(
+                    onPressed: widget.book?.bookState == "Declined" ? null : () async {
+                      try {
+                        await bookProvider.declineBook(widget.book!.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 12),
+                                Text("Book declined!"),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFF4CAF50),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                        Navigator.of(context).pop(true);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.white),
+                                SizedBox(width: 12),
+                                Text("Failed to decline book: "+e.toString()),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFFF44336),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: Icon(Icons.close, color: Colors.white),
+                    label: Text("Decline"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFC62828),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
   
@@ -86,8 +203,8 @@ class _BookDetails extends State<BookDetails> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFFFFF8E1), // Light cream
-                Color(0xFFFFF3E0), // Light orange
+                Color(0xFFFFF8E1), 
+                Color(0xFFFFF3E0), 
               ],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -105,13 +222,13 @@ class _BookDetails extends State<BookDetails> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with book icon
+             
               Row(
                 children: [
                                      Container(
                      padding: EdgeInsets.all(12),
                      decoration: BoxDecoration(
-                       color: Color(0xFF8D6E63), // Brown
+                       color: Color(0xFF8D6E63), 
                        borderRadius: BorderRadius.circular(12),
                      ),
                      child: Icon(
@@ -133,67 +250,99 @@ class _BookDetails extends State<BookDetails> {
               ),
               SizedBox(height: 24),
               
-                                           // Title field
-              _buildStyledField(
+                                          
+              FormBuilderTextField(
                 name: "title",
-                label: "📖 Title",
-                icon: Icons.title,
-                color: Color(0xFF8D6E63), // Brown
+                decoration: InputDecoration(
+                  labelText: "📖 Title",
+                  prefixIcon: Icon(Icons.title, color: Color(0xFF8D6E63)),
+                ),
                 readOnly: !widget.isEditMode,
+                validator: (val) {
+                  if (val == null || val.isEmpty) return "Title is required";
+                  if (val.length > 255) return "Title must be at most 255 characters";
+                  return null;
+                },
               ),
               SizedBox(height: 16),
               
-              // Author field
-              widget.isEditMode ? _buildAuthorDropdown() : _buildStyledField(
+             
+              widget.isEditMode ? _buildAuthorDropdown() : FormBuilderTextField(
                 name: "authorName",
-                label: "✍️ Author",
-                icon: Icons.person,
-                color: Color(0xFFA1887F), // Light brown
+                decoration: InputDecoration(
+                  labelText: "✍️ Author",
+                  prefixIcon: Icon(Icons.person, color: Color(0xFFA1887F)),
+                ),
                 readOnly: true,
+                validator: (_) => null,
               ),
               SizedBox(height: 16),
               
-              // Description field
-              _buildStyledField(
+             
+              FormBuilderTextField(
                 name: "description",
-                label: "📝 Description",
-                icon: Icons.description,
-                color: Color(0xFFBCAAA4), // Lighter brown
+                decoration: InputDecoration(
+                  labelText: "📝 Description",
+                  prefixIcon: Icon(Icons.description, color: Color(0xFFBCAAA4)),
+                ),
                 maxLines: 3,
                 readOnly: !widget.isEditMode,
+                validator: (val) {
+                  if (val == null || val.isEmpty) return "Description is required";
+                  if (val.length > 1000) return "Description must be at most 1000 characters";
+                  return null;
+                },
               ),
               SizedBox(height: 16),
               
-              // Genres field
-              widget.isEditMode ? _buildGenresDropdown() : _buildStyledField(
+            
+              widget.isEditMode ? _buildGenresDropdown() : FormBuilderTextField(
                 name: "genres",
-                label: "🏷️ Genres",
-                icon: Icons.category,
-                color: Color(0xFFD7CCC8), // Very light brown
-                readOnly: true, // Always read-only as it's a list
+                decoration: InputDecoration(
+                  labelText: "🏷️ Genres",
+                  prefixIcon: Icon(Icons.category, color: Color(0xFFD7CCC8)),
+                ),
+                readOnly: true,
+                validator: (_) => null,
               ),
                SizedBox(height: 16),
                
-               // Publication Year and Page Count in a row
+              
                Row(
                  children: [
                    Expanded(
-                     child: _buildStyledField(
+                     child: FormBuilderTextField(
                        name: "publicationYear",
-                       label: "📅 Publication Year",
-                       icon: Icons.calendar_today,
-                       color: Color(0xFF6D4C41), // Dark brown
+                       decoration: InputDecoration(
+                         labelText: "📅 Publication Year",
+                         prefixIcon: Icon(Icons.calendar_today, color: Color(0xFF6D4C41)),
+                       ),
                        readOnly: !widget.isEditMode,
+                       validator: (val) {
+                         if (val == null || val.isEmpty) return "Publication year is required";
+                         final year = int.tryParse(val);
+                         if (year == null) return "Invalid year";
+                         if (year > DateTime.now().year) return "Year cannot be in the future";
+                         return null;
+                       },
                      ),
                    ),
                    SizedBox(width: 16),
                    Expanded(
-                     child: _buildStyledField(
+                     child: FormBuilderTextField(
                        name: "pageCount",
-                       label: "📄 Pages",
-                       icon: Icons.pages,
-                       color: Color(0xFF795548), // Medium brown
+                       decoration: InputDecoration(
+                         labelText: "📄 Pages",
+                         prefixIcon: Icon(Icons.pages, color: Color(0xFF795548)),
+                       ),
                        readOnly: !widget.isEditMode,
+                       validator: (val) {
+                         if (val == null || val.isEmpty) return "Page count is required";
+                         final count = int.tryParse(val);
+                         if (count == null) return "Invalid page count";
+                         if (count <= 0) return "Page count must be positive";
+                         return null;
+                       },
                      ),
                    ),
                  ],
@@ -268,7 +417,7 @@ class _BookDetails extends State<BookDetails> {
            ),
            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
          ),
-         items: authors?.items?.map((author) => 
+         items: authors?.items?.map((author) =>
            DropdownMenuItem<int>(
              value: author.id,
              child: Text(author.name),
@@ -281,6 +430,12 @@ class _BookDetails extends State<BookDetails> {
                formKey.currentState?.fields['authorName']?.didChange(selectedAuthor.name);
              }
            }
+         },
+         validator: (value) {
+           if (value == null || value == 0) {
+             return "Please select an author";
+           }
+           return null;
          },
        ),
      );
@@ -320,46 +475,23 @@ class _BookDetails extends State<BookDetails> {
        );
      }
      
-     return Container(
-       decoration: BoxDecoration(
-         color: Color(0xFFFFFBFE),
-         borderRadius: BorderRadius.circular(12),
-         border: Border.all(color: Color(0xFFD7CCC8).withOpacity(0.4)),
-         boxShadow: [
-           BoxShadow(
-             color: Colors.brown.withOpacity(0.08),
-             spreadRadius: 1,
-             blurRadius: 4,
-             offset: Offset(0, 2),
-           ),
-         ],
+     return FormBuilderFilterChip(
+       name: "genres",
+       decoration: InputDecoration(
+         labelText: "🏷️ Genres",
        ),
-       child: FormBuilderFilterChip(
-         name: "genres",
-         decoration: InputDecoration(
-           labelText: "🏷️ Genres",
-           prefixIcon: Icon(Icons.category, color: Color(0xFFD7CCC8)),
-           border: OutlineInputBorder(
-             borderRadius: BorderRadius.circular(12),
-             borderSide: BorderSide.none,
-           ),
-           filled: true,
-           fillColor: Colors.transparent,
-           labelStyle: TextStyle(
-             color: Color(0xFFD7CCC8),
-             fontWeight: FontWeight.w600,
-           ),
-           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-         ),
-         options: genres?.items?.map((genre) => 
-           FormBuilderChipOption(
-             value: genre.name,
-             child: Text(genre.name),
-           )
-         ).toList() ?? [],
-         selectedColor: Color(0xFFD7CCC8).withOpacity(0.3),
-         checkmarkColor: Color(0xFF8D6E63),
-       ),
+       options: genres?.items?.map((genre) =>
+         FormBuilderChipOption(
+           value: genre.name,
+           child: Text(genre.name),
+         )
+       ).toList() ?? [],
+       selectedColor: Color(0xFFD7CCC8).withOpacity(0.3),
+       checkmarkColor: Color(0xFF8D6E63),
+       validator: (val) {
+         if (val == null || val.isEmpty) return "Select at least one genre";
+         return null;
+       },
      );
    }
    
@@ -373,7 +505,7 @@ class _BookDetails extends State<BookDetails> {
    }) {
      return Container(
        decoration: BoxDecoration(
-         color: Color(0xFFFFFBFE), // Very light cream
+         color: Color(0xFFFFFBFE),
          borderRadius: BorderRadius.circular(12),
          border: Border.all(color: color.withOpacity(0.4)),
          boxShadow: [
@@ -486,12 +618,12 @@ class _BookDetails extends State<BookDetails> {
          "genreIds": selectedGenreIds,
        };
        
-       // Check if this is a new book (insert) or existing book (update)
+      
        if (widget.book == null) {
-         // Insert new book
+        
          await bookProvider.insert(request);
          
-         // Show success message
+         
          ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(
              content: Row(
@@ -509,10 +641,10 @@ class _BookDetails extends State<BookDetails> {
            ),
          );
        } else {
-         // Update existing book
+        
          await bookProvider.update(widget.book!.id, request);
          
-         // Show success message
+        
          ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(
              content: Row(
@@ -531,8 +663,8 @@ class _BookDetails extends State<BookDetails> {
          );
        }
        
-       // Navigate back
-       Navigator.of(context).pop(true); // Return true to indicate success
+     
+       Navigator.of(context).pop(true);
        
      } catch (e) {
        
