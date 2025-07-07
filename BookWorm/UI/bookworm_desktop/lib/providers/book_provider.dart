@@ -177,7 +177,7 @@ class BookProvider extends BaseProvider<Book> {
   }
 
   Future<bool> existsWithTitleAndAuthor(String title, int authorId, {int? excludeId}) async {
-    // Build filter for API
+    
     final filter = {
       'title': title,
       'authorId': authorId,
@@ -186,7 +186,7 @@ class BookProvider extends BaseProvider<Book> {
     };
     final books = await get(filter: filter);
     if (books.items == null || books.items!.isEmpty) return false;
-    // If editing, exclude the current book by id
+    
     if (excludeId != null) {
       return books.items!.any((b) => b.id != excludeId);
     }

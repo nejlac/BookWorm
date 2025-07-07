@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BookWormWebAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class bookPic : Migration
+    public partial class Author : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -67,7 +67,7 @@ namespace BookWormWebAPI.Migrations
                     DateOfDeath = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CountryId = table.Column<int>(type: "int", nullable: false),
                     Website = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    PhotoUrl = table.Column<byte[]>(type: "varbinary(255)", maxLength: 255, nullable: true),
+                    PhotoUrl = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },

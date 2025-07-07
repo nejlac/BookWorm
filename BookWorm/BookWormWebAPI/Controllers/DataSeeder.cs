@@ -96,21 +96,21 @@ namespace BookWormWebAPI.Controllers
 
                 var authors = new List<Author>
         {
-            new Author { Name = "George Orwell", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1903, 6, 25), Website = "...", PhotoUrl = new byte[]{ } },
-            new Author { Name = "J.K. Rowling", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1965, 7, 31), Website = "...", PhotoUrl = new byte[] { }},
-            new Author { Name = "J.R.R. Tolkien", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1892, 1, 3), Website = "...", PhotoUrl = new byte[] { } },
-            new Author { Name = "Jane Austen", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1775, 12, 16), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Mark Twain", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1835, 11, 30), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "F. Scott Fitzgerald", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1896, 9, 24), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Ernest Hemingway", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1899, 7, 21), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Harper Lee", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1926, 4, 28), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Leo Tolstoy", Biography = "...", CountryId = russia.Id, DateOfBirth = new DateTime(1828, 9, 9), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Mary Shelley", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1797, 8, 30), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Agatha Christie", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1890, 9, 15), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Charles Dickens", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1812, 2, 7), Website = "...", PhotoUrl = new byte[] {}  },
-            new Author { Name = "Gabriel García Márquez", Biography = "...", CountryId = colombia.Id, DateOfBirth = new DateTime(1927, 3, 6), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Franz Kafka", Biography = "...", CountryId = czech.Id, DateOfBirth = new DateTime(1883, 7, 3), Website = "...", PhotoUrl = new byte[] {} },
-            new Author { Name = "Fyodor Dostoevsky", Biography = "...", CountryId = russia.Id, DateOfBirth = new DateTime(1821, 11, 11), Website = "...", PhotoUrl = new byte[] { 0xFF } }
+            new Author { Name = "George Orwell", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1903, 6, 25), Website = "...", PhotoUrl = null },
+            new Author { Name = "J.K. Rowling", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1965, 7, 31), Website = "...", PhotoUrl = null},
+            new Author { Name = "J.R.R. Tolkien", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1892, 1, 3), Website = "...", PhotoUrl =null },
+            new Author { Name = "Jane Austen", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1775, 12, 16), Website = "...", PhotoUrl = null },
+            new Author { Name = "Mark Twain", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1835, 11, 30), Website = "...", PhotoUrl = null },
+            new Author { Name = "F. Scott Fitzgerald", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1896, 9, 24), Website = "...", PhotoUrl = null },
+            new Author { Name = "Ernest Hemingway", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1899, 7, 21), Website = "...", PhotoUrl = null },
+            new Author { Name = "Harper Lee", Biography = "...", CountryId = usa.Id, DateOfBirth = new DateTime(1926, 4, 28), Website = "...", PhotoUrl = null },
+            new Author { Name = "Leo Tolstoy", Biography = "...", CountryId = russia.Id, DateOfBirth = new DateTime(1828, 9, 9), Website = "...", PhotoUrl = null },
+            new Author { Name = "Mary Shelley", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1797, 8, 30), Website = "...", PhotoUrl = null },
+            new Author { Name = "Agatha Christie", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1890, 9, 15), Website = "...", PhotoUrl = null },
+            new Author { Name = "Charles Dickens", Biography = "...", CountryId = uk.Id, DateOfBirth = new DateTime(1812, 2, 7), Website = "...", PhotoUrl = null  },
+            new Author { Name = "Gabriel García Márquez", Biography = "...", CountryId = colombia.Id, DateOfBirth = new DateTime(1927, 3, 6), Website = "...", PhotoUrl = null },
+            new Author { Name = "Franz Kafka", Biography = "...", CountryId = czech.Id, DateOfBirth = new DateTime(1883, 7, 3), Website = "...", PhotoUrl = null },
+            new Author { Name = "Fyodor Dostoevsky", Biography = "...", CountryId = russia.Id, DateOfBirth = new DateTime(1821, 11, 11), Website = "...", PhotoUrl = null }
         };
 
                 await _context.Authors.AddRangeAsync(authors);

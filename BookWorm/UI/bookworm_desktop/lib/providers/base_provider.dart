@@ -23,6 +23,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
       url = "$url?$queryString";
     }
 
+    print("AuthorProvider GET URL: $url");
+
     var uri = Uri.parse(url);
     var headers = createHeaders();
 

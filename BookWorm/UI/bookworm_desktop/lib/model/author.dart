@@ -11,6 +11,7 @@ class Author {
   final DateTime? dateOfDeath;
   final int countryId;
   final String countryName;
+  final String? photoUrl;
 
   Author({
     this.id = 0,
@@ -20,6 +21,7 @@ class Author {
     this.dateOfDeath,
     this.countryId = 0,
     this.countryName = '',
+    this.photoUrl,
   });
 
   factory Author.fromJson(Map<String, dynamic> json) => _$AuthorFromJson(json);

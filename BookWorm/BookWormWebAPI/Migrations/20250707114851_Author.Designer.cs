@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookWormWebAPI.Migrations
 {
     [DbContext(typeof(BookWormDbContext))]
-    [Migration("20250706170732_bookPic")]
-    partial class bookPic
+    [Migration("20250707114851_Author")]
+    partial class Author
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,9 +56,9 @@ namespace BookWormWebAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<byte[]>("PhotoUrl")
+                    b.Property<string>("PhotoUrl")
                         .HasMaxLength(255)
-                        .HasColumnType("varbinary(255)");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");

@@ -1,3 +1,4 @@
+import 'package:bookworm_desktop/screens/author_list.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:flutter/material.dart';
 
@@ -62,7 +63,9 @@ class _MasterScreenState extends State<MasterScreen> {
                         },
                       ),
                       _buildNavTile(icon: Icons.people_alt_rounded, label: 'Users', onTap: () {}),
-                      _buildNavTile(icon: Icons.people_alt_rounded, label: 'Authors', onTap: () {}),
+                      _buildNavTile(icon: Icons.people_alt_rounded, label: 'Authors', onTap: () {
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AuthorList()));
+                      }),
                       _buildNavTile(icon: Icons.reviews, label: 'Reviews', onTap: () {}),
                       _buildNavTile(icon: Icons.my_library_books_outlined, label: 'Challanges', onTap: () {}),
                       _buildNavTile(icon: Icons.auto_graph, label: 'Statistics', onTap: () {}),

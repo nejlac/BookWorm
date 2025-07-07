@@ -19,6 +19,7 @@ builder.Services.AddTransient<IBookReviewService, BookReviewService>();
 builder.Services.AddTransient<IReadingChallengeService, ReadingChallengeService>();
 builder.Services.AddTransient<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<IGenreService, GenreService>();
+builder.Services.AddScoped<ICountryService, CountryService>();
 
 builder.Services.AddHttpContextAccessor();
 

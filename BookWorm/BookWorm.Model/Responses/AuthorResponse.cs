@@ -12,7 +12,7 @@ namespace BookWorm.Model.Responses
         public DateTime? DateOfDeath { get; set; }
         public int CountryId { get; set; }
         public string CountryName { get; set; } = string.Empty;
-        public byte[]? PhotoUrl { get; set; }
+        public string? PhotoUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<AuthorBookResponse> Books { get; set; } = new List<AuthorBookResponse>();

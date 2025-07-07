@@ -29,7 +29,7 @@ namespace BookWorm.Services.DataBase
         public string? Website { get; set; }
         
         [MaxLength(255)]
-        public byte[]? PhotoUrl { get; set; }
+        public string? PhotoUrl { get; set; }
         
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         

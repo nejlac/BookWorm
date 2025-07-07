@@ -53,9 +53,9 @@ namespace BookWormWebAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<byte[]>("PhotoUrl")
+                    b.Property<string>("PhotoUrl")
                         .HasMaxLength(255)
-                        .HasColumnType("varbinary(255)");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
