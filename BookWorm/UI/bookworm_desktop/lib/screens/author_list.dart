@@ -4,6 +4,7 @@ import 'package:bookworm_desktop/model/country.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:bookworm_desktop/providers/country_provider.dart';
+import 'package:bookworm_desktop/screens/author_details.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -95,7 +96,7 @@ class _AuthorListState extends State<AuthorList> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
-           
+            _buildAddAuthorButton(),
             _buildSearch(),
             _buildResultView(),
             _buildPaginationControls(),
@@ -234,63 +235,136 @@ class _AuthorListState extends State<AuthorList> {
               itemBuilder: (context, index) {
                 final author = Authors!.items![index];
                 final hasImage = author.photoUrl != null && author.photoUrl!.isNotEmpty;
-                return Card(
-                  color: const Color(0xFFFFF8E1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: Color(0xFFD7CCC8), width: 2),
-                  ),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: hasImage
-                              ? Image.network(
-                                  author.photoUrl!,
-                                  height: 90,
-                                  width: 90,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _cutePlaceholder(),
-                                )
-                              : _cutePlaceholder(),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          author.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: Color(0xFF4E342E),
-                            fontFamily: 'Literata',
+                String? imageUrl;
+                if (hasImage) {
+                  if (author.photoUrl!.startsWith('http')) {
+                    imageUrl = author.photoUrl!;
+                  } else {
+                    imageUrl = 'https://localhost:7031/${author.photoUrl}';
+                  }
+                  print('[AuthorList] author.photoUrl: \\${author.photoUrl}');
+                  print('[AuthorList] imageUrl: \\${imageUrl}');
+                }
+                return GestureDetector(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AuthorDetails(author: author, isEditMode: false, isAddMode: false),
+                      ),
+                    );
+                    if (result == true) _fetchAllAuthors(page: currentPage);
+                  },
+                  child: Card(
+                    color: const Color(0xFFFFF8E1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Color(0xFFD7CCC8), width: 2),
+                    ),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: hasImage && imageUrl != null
+                                ? Image.network(
+                                    imageUrl,
+                                    height: 90,
+                                    width: 90,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _cutePlaceholder(),
+                                  )
+                                : _cutePlaceholder(),
                           ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Spacer(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.edit, color: Color(0xFF8D6748)),
-                              tooltip: 'Edit',
-                              onPressed: () {
-                                // TODO: Implement edit
-                              },
+                          SizedBox(height: 10),
+                          Text(
+                            author.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF4E342E),
+                              fontFamily: 'Literata',
                             ),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Color(0xFFC62828)),
-                              tooltip: 'Delete',
-                              onPressed: () {
-                                // TODO: Implement delete
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Color(0xFF8D6748)),
+                                tooltip: 'Edit',
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AuthorDetails(author: author, isEditMode: true, isAddMode: false),
+                                    ),
+                                  );
+                                  if (result == true) _fetchAllAuthors(page: currentPage);
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Color(0xFFC62828)),
+                                tooltip: 'Delete',
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: Row(
+                                        children: [
+                                          Icon(Icons.warning, color: Color(0xFFC62828)),
+                                          SizedBox(width: 8),
+                                          Text('Delete Author'),
+                                        ],
+                                      ),
+                                      content: Text('Are you sure you want to delete this author? This action cannot be undone.'),
+                                      actions: [
+                                        TextButton(
+                                          child: Text('Cancel'),
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Color(0xFFC62828),
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: Text('Delete'),
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    final success = await authorProvider.delete(author.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
+                                            SizedBox(width: 12),
+                                            Text(success ? 'Author deleted.' : 'Failed to delete author.'),
+                                          ],
+                                        ),
+                                        backgroundColor: success ? Color(0xFF4CAF50) : Color(0xFFF44336),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                    if (success) _fetchAllAuthors(page: currentPage);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -415,6 +489,51 @@ class _AuthorListState extends State<AuthorList> {
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                   color: Color(0xFF8D6748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddAuthorButton() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AuthorDetails(isEditMode: true, isAddMode: true),
+                    ),
+                  );
+                  if (result == true) _fetchAllAuthors(page: 1);
+                },
+                icon: Icon(Icons.add, color: Colors.white),
+                label: Text(
+                  'Add an author',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF8D6748),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
                 ),
               ),
             ],
