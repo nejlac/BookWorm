@@ -87,8 +87,8 @@ namespace BookWormWebAPI.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<byte[]>("CoverImageUrl")
-                        .HasColumnType("varbinary(max)");
+                    b.Property<string>("CoverImagePath")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

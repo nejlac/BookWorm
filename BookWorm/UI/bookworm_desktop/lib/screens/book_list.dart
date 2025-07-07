@@ -64,7 +64,7 @@ class _BookListState extends State<BookList> {
     });
   }
 
-  void _fetchGenres() async {
+  Future<void> _fetchGenres() async {
     try {
       var loadedGenres = await genreProvider.getAllGenres();
       debugPrint('Loaded genres: ' + loadedGenres.toString());

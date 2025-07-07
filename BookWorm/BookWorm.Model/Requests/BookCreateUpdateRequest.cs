@@ -23,7 +23,7 @@ namespace BookWorm.Model.Requests
         [Required(ErrorMessage = "Page count is required.")]
         public int PageCount { get; set; }
 
-        public byte[]? CoverImageUrl { get; set; }
+        public string? CoverImagePath { get; set; }
 
         public List<int> GenreIds { get; set; } = new List<int>();
 

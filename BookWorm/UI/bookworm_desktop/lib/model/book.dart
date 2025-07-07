@@ -12,6 +12,7 @@ class Book {
     final int pageCount;
   final String bookState;
   final List<String> genres;
+  final String? coverImagePath;
 
   Book({
     this.id = 0,
@@ -23,6 +24,7 @@ class Book {
     this.pageCount = 0,
     this.description = '',
     this.genres = const [],
+    this.coverImagePath,
   });
   factory Book.fromJson(Map<String, dynamic> json) => _$BookFromJson(json);
 }

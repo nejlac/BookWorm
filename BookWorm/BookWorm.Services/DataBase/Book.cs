@@ -25,7 +25,7 @@ namespace BookWorm.Services.DataBase
         public int PageCount { get; set; }
         
    
-        public byte[]? CoverImageUrl { get; set; }
+        public string? CoverImagePath { get; set; }
         
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         

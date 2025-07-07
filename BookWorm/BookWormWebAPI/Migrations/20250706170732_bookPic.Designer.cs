@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookWormWebAPI.Migrations
 {
     [DbContext(typeof(BookWormDbContext))]
-    [Migration("20250629154059_again")]
-    partial class again
+    [Migration("20250706170732_bookPic")]
+    partial class bookPic
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -90,8 +90,8 @@ namespace BookWormWebAPI.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<byte[]>("CoverImageUrl")
-                        .HasColumnType("varbinary(max)");
+                    b.Property<string>("CoverImagePath")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

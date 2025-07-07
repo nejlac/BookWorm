@@ -12,7 +12,7 @@ namespace BookWorm.Model.Responses
         public string Description { get; set; } = string.Empty;
         public int PublicationYear { get; set; }
         public int PageCount { get; set; }
-        public byte[]? CoverImageUrl { get; set; }
+        public string? CoverImagePath { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public string BookState { get; set; } = string.Empty;

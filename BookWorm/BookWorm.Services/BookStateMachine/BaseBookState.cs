@@ -95,7 +95,7 @@ namespace BookWorm.Services.BookStateMachine
                 Description = book.Description,
                 PublicationYear = book.PublicationYear,
                 PageCount = book.PageCount,
-                CoverImageUrl = book.CoverImageUrl,
+                CoverImagePath = book.CoverImagePath,
                 CreatedAt = book.CreatedAt,
                 UpdatedAt = book.UpdatedAt,
                 BookState = book.BookState,

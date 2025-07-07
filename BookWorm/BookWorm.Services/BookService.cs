@@ -115,7 +115,6 @@ namespace BookWorm.Services
             if (book == null)
                 return null;
 
-         
             var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
             if (currentUserId.HasValue)
             {
@@ -256,7 +255,7 @@ namespace BookWorm.Services
                 Description = book.Description,
                 PublicationYear = book.PublicationYear,
                 PageCount = book.PageCount,
-                CoverImageUrl = book.CoverImageUrl,
+                CoverImagePath = book.CoverImagePath,
                 CreatedAt = book.CreatedAt,
                 UpdatedAt = book.UpdatedAt,
                 BookState = book.BookState,

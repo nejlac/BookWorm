@@ -6,6 +6,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
+using BookWormWebAPI.Requests;
+using BookWorm.Services.DataBase;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -15,13 +20,16 @@ namespace BookWormWebAPI.Controllers
     public class BookController : BaseCRUDController<BookResponse, BookSearchObject, BookCreateUpdateRequest, BookCreateUpdateRequest>
     {
         private readonly IBookService _bookService;
+        private readonly IWebHostEnvironment _env;
+        private readonly BookWormDbContext _context;
 
-        public BookController(IBookService bookService) : base(bookService)
+        public BookController(IBookService bookService, IWebHostEnvironment env, BookWormDbContext context) : base(bookService)
         {
             _bookService = bookService;
+            _env = env;
+            _context = context;
         }
 
-        
         [HttpGet("")]
        
         public override async Task<PagedResult<BookResponse>> Get([FromQuery] BookSearchObject? search = null)
@@ -36,7 +44,7 @@ namespace BookWormWebAPI.Controllers
             return await _bookService.GetByIdAsync(id);
         }
 
-        // State transition endpoints
+        
         [HttpPost("{id}/accept")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<BookResponse>> AcceptBook(int id)
@@ -55,6 +63,61 @@ namespace BookWormWebAPI.Controllers
             if (book == null)
                 return NotFound();
             return book;
+        }
+
+
+        [HttpPost]
+        public override async Task<BookResponse> Create([FromBody] BookCreateUpdateRequest request)
+        {
+            return await _bookService.CreateAsync(request);
+        }
+
+        [HttpPut("{id}")]
+        public override async Task<BookResponse?> Update(int id, [FromBody] BookCreateUpdateRequest request)
+        {
+            return await _bookService.UpdateAsync(id, request);
+        }
+
+        [HttpPost("{id}/cover")]
+        [RequestSizeLimit(10_000_000)]
+        public async Task<ActionResult<BookResponse>> UploadCover(int id, [FromForm] CoverUploadRequest request)
+        {
+            try
+            {
+                var coverImage = request.CoverImage;
+                var book = await _bookService.GetByIdAsync(id);
+                if (book == null)
+                    return NotFound($"Book with ID {id} not found");
+                if (coverImage == null || coverImage.Length == 0)
+                    return BadRequest("No file uploaded or file is empty.");
+
+                // Save the image file
+                var uploads = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "covers");
+                if (!Directory.Exists(uploads))
+                    Directory.CreateDirectory(uploads);
+                var fileName = Guid.NewGuid() + Path.GetExtension(coverImage.FileName);
+                var filePath = Path.Combine(uploads, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await coverImage.CopyToAsync(stream);
+                }
+
+                // Only update the CoverImagePath field
+                var bookEntity = await _context.Books.FindAsync(id);
+                if (bookEntity != null)
+                {
+                    bookEntity.CoverImagePath = $"covers/{fileName}";
+                    await _context.SaveChangesAsync();
+                    // Return the updated book
+                    var updatedBook = await _bookService.GetByIdAsync(id);
+                    return Ok(updatedBook);
+                }
+                return NotFound($"Book entity with ID {id} not found in database");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error uploading cover: {ex.Message}");
+            }
         }
     }
 } 

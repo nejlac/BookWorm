@@ -18,6 +18,7 @@ Book _$BookFromJson(Map<String, dynamic> json) => Book(
   genres:
       (json['genres'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
+  coverImagePath: json['coverImagePath'] as String?,
 );
 
 Map<String, dynamic> _$BookToJson(Book instance) => <String, dynamic>{
@@ -30,4 +31,5 @@ Map<String, dynamic> _$BookToJson(Book instance) => <String, dynamic>{
   'pageCount': instance.pageCount,
   'bookState': instance.bookState,
   'genres': instance.genres,
+  'coverImagePath': instance.coverImagePath,
 };

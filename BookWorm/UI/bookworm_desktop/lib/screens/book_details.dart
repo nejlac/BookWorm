@@ -9,6 +9,8 @@ import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 
 class BookDetails extends StatefulWidget {
   Book? book;
@@ -20,39 +22,44 @@ class BookDetails extends StatefulWidget {
 }
 class _BookDetails extends State<BookDetails> {
   final formKey = GlobalKey<FormBuilderState>();
-    Map<String, dynamic> _initalValue = {};
-    late BookProvider bookProvider;
-    late GenreProvider genreProvider;
-    late AuthorProvider authorProvider;
+  Map<String, dynamic> _initalValue = {};
+  late BookProvider bookProvider;
+  late GenreProvider genreProvider;
+  late AuthorProvider authorProvider;
 
-    SearchResult<Genre>? genres;
-    SearchResult<Author>? authors;
-    bool isLoading=true;
-    bool isSaving = false;
+  SearchResult<Genre>? genres;
+  SearchResult<Author>? authors;
+  bool isLoading=true;
+  bool isSaving = false;
+  File? _selectedImageFile;
+  String? _existingCoverPath;
 
-    @override
-    void initState() {
-      super.initState();
-      bookProvider = Provider.of<BookProvider>(context, listen: false);
-      genreProvider = Provider.of<GenreProvider>(context, listen: false);
-      authorProvider = Provider.of<AuthorProvider>(context, listen: false);
-      _initalValue={
-        "id": widget.book?.id,
-        "title": widget.book?.title ?? '',
-        "authorId": widget.book?.authorId,
-        "authorName": widget.book?.authorName ?? '',
-        "description": widget.book?.description ?? '',
-        "genres": widget.isEditMode ? widget.book?.genres ?? [] : widget.book?.genres.join(', ') ?? '',
-        "publicationYear": widget.book?.publicationYear?.toString() ?? '',
-        "pageCount": widget.book?.pageCount?.toString() ?? '',
-      };
-      print("widget.book");
-      print(_initalValue);
-      initFormData();
+  @override
+  void initState() {
+    super.initState();
+    bookProvider = Provider.of<BookProvider>(context, listen: false);
+    genreProvider = Provider.of<GenreProvider>(context, listen: false);
+    authorProvider = Provider.of<AuthorProvider>(context, listen: false);
+    
+    // Set existing cover path if editing
+    if (widget.book?.coverImagePath != null) {
+      _existingCoverPath = widget.book!.coverImagePath;
     }
+    
+    _initalValue={
+      "id": widget.book?.id,
+      "title": widget.book?.title ?? '',
+      "authorId": widget.book?.authorId,
+      "authorName": widget.book?.authorName ?? '',
+      "description": widget.book?.description ?? '',
+      "genres": widget.isEditMode ? widget.book?.genres ?? [] : widget.book?.genres.join(', ') ?? '',
+      "publicationYear": widget.book?.publicationYear?.toString() ?? '',
+      "pageCount": widget.book?.pageCount?.toString() ?? '',
+    };
+    initFormData();
+  }
 
-  
-   initFormData() async {
+  initFormData() async {
     final loadedGenres = await genreProvider.getAllGenres();
     final loadedAuthors = await authorProvider.getAllAuthors();
     setState(() {
@@ -64,135 +71,212 @@ class _BookDetails extends State<BookDetails> {
       );
       isLoading = false;
     });
-   }
-    @override
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MasterScreen(
       title: widget.isEditMode ? "Edit Book" : "Book Details",
-      child: Column(
-        children: [
-          _buildForm(),
-          if (widget.isEditMode)
-            _buildSaveButton(),
-          if (!widget.isEditMode)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: widget.book?.bookState == "Accepted" ? null : () async {
-                      try {
-                        await bookProvider.acceptBook(widget.book!.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.white),
-                                SizedBox(width: 12),
-                                Text("Book accepted!"),
-                              ],
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildForm(),
+            if (widget.isEditMode)
+              _buildSaveButton(),
+            if (!widget.isEditMode)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: widget.book?.bookState == "Accepted" ? null : () async {
+                        try {
+                          await bookProvider.acceptBook(widget.book!.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Text("Book accepted!"),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFF4CAF50),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            backgroundColor: Color(0xFF4CAF50),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                          );
+                          Navigator.of(context).pop(true);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.error, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Text("Failed to accept book: "+e.toString()),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFFF44336),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                        );
-                        Navigator.of(context).pop(true);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.error, color: Colors.white),
-                                SizedBox(width: 12),
-                                Text("Failed to accept book: "+e.toString()),
-                              ],
-                            ),
-                            backgroundColor: Color(0xFFF44336),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: Icon(Icons.check, color: Colors.white),
-                    label: Text("Accept"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4CAF50),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                          );
+                        }
+                      },
+                      icon: Icon(Icons.check, color: Colors.white),
+                      label: Text("Accept"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF4CAF50),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
                       ),
-                      elevation: 3,
                     ),
-                  ),
-                  SizedBox(width: 24),
-                  ElevatedButton.icon(
-                    onPressed: widget.book?.bookState == "Declined" ? null : () async {
-                      try {
-                        await bookProvider.declineBook(widget.book!.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.white),
-                                SizedBox(width: 12),
-                                Text("Book declined!"),
-                              ],
+                    SizedBox(width: 24),
+                    ElevatedButton.icon(
+                      onPressed: widget.book?.bookState == "Declined" ? null : () async {
+                        try {
+                          await bookProvider.declineBook(widget.book!.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Text("Book declined!"),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFF4CAF50),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            backgroundColor: Color(0xFF4CAF50),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                          );
+                          Navigator.of(context).pop(true);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.error, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Text("Failed to decline book: "+e.toString()),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFFF44336),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                        );
-                        Navigator.of(context).pop(true);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.error, color: Colors.white),
-                                SizedBox(width: 12),
-                                Text("Failed to decline book: "+e.toString()),
-                              ],
-                            ),
-                            backgroundColor: Color(0xFFF44336),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: Icon(Icons.close, color: Colors.white),
-                    label: Text("Decline"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFC62828),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                          );
+                        }
+                      },
+                      icon: Icon(Icons.close, color: Colors.white),
+                      label: Text("Decline"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFC62828),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
                       ),
-                      elevation: 3,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
   
+  Widget _buildCoverImagePreview() {
+    final imageWidget = _selectedImageFile != null
+        ? Image.file(
+            _selectedImageFile!,
+            fit: BoxFit.cover,
+            width: 140,
+            height: 210,
+          )
+        : _existingCoverPath != null
+            ? Image.network(
+                "https://localhost:7031/$_existingCoverPath",
+                fit: BoxFit.cover,
+                width: 140,
+                height: 210,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[200],
+                    width: 140,
+                    height: 210,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, color: Colors.grey[600], size: 32),
+                        SizedBox(height: 8),
+                        Text("Image not found", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      ],
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[200],
+                    width: 140,
+                    height: 210,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  );
+                },
+              )
+            : Container(
+                color: Colors.grey[200],
+                width: 140,
+                height: 210,
+                child: Icon(Icons.image_not_supported, color: Colors.grey[600], size: 32),
+              );
+    return Center(
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Color(0xFF8D6E63).withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: imageWidget,
+        ),
+      ),
+    );
+  }
+
   _buildForm() {
      return FormBuilder(
         key: formKey,
@@ -347,6 +431,115 @@ class _BookDetails extends State<BookDetails> {
                    ),
                  ],
                ),
+               SizedBox(height: 16),
+               
+               
+               if (_selectedImageFile != null || _existingCoverPath != null)
+                 _buildCoverImagePreview(),
+               
+               
+               if (widget.isEditMode) ...[
+                 Container(
+                   decoration: BoxDecoration(
+                     color: Color(0xFFFFFBFE),
+                     borderRadius: BorderRadius.circular(12),
+                     border: Border.all(color: Color(0xFF8D6E63).withOpacity(0.4)),
+                     boxShadow: [
+                       BoxShadow(
+                         color: Colors.brown.withOpacity(0.08),
+                         spreadRadius: 1,
+                         blurRadius: 4,
+                         offset: Offset(0, 2),
+                       ),
+                     ],
+                   ),
+                   padding: EdgeInsets.all(16),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Row(
+                         children: [
+                           Icon(Icons.image, color: Color(0xFF8D6E63)),
+                           SizedBox(width: 8),
+                           Text(
+                             "📷 Cover Image",
+                             style: TextStyle(
+                               fontSize: 16,
+                               fontWeight: FontWeight.w600,
+                               color: Color(0xFF8D6E63),
+                             ),
+                           ),
+                         ],
+                       ),
+                       SizedBox(height: 12),
+                       
+                      
+                       Row(
+                         mainAxisSize: MainAxisSize.min,
+                         children: [
+                           ElevatedButton.icon(
+                             onPressed: _showImagePickerDialog,
+                             icon: Icon(Icons.add_photo_alternate, size: 16),
+                             label: Text("Select", style: TextStyle(fontSize: 12)),
+                             style: ElevatedButton.styleFrom(
+                               backgroundColor: Color(0xFF8D6E63),
+                               foregroundColor: Colors.white,
+                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                               shape: RoundedRectangleBorder(
+                                 borderRadius: BorderRadius.circular(6),
+                               ),
+                               minimumSize: Size(0, 32),
+                             ),
+                           ),
+                           if (_selectedImageFile != null) ...[
+                             SizedBox(width: 6),
+                             ElevatedButton.icon(
+                               onPressed: () {
+                                 setState(() {
+                                   _selectedImageFile = null;
+                                 });
+                               },
+                               icon: Icon(Icons.clear, size: 16),
+                               label: Text("Clear", style: TextStyle(fontSize: 12)),
+                               style: ElevatedButton.styleFrom(
+                                 backgroundColor: Color(0xFFD32F2F),
+                                 foregroundColor: Colors.white,
+                                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                 shape: RoundedRectangleBorder(
+                                   borderRadius: BorderRadius.circular(6),
+                                 ),
+                                 minimumSize: Size(0, 32),
+                               ),
+                             ),
+                           ],
+                           if (_existingCoverPath != null && _selectedImageFile == null) ...[
+                             SizedBox(width: 6),
+                             ElevatedButton.icon(
+                               onPressed: () {
+                                 setState(() {
+                                   _existingCoverPath = null;
+                                 });
+                               },
+                               icon: Icon(Icons.clear, size: 16),
+                               label: Text("Remove", style: TextStyle(fontSize: 12)),
+                               style: ElevatedButton.styleFrom(
+                                 backgroundColor: Color(0xFFFF9800),
+                                 foregroundColor: Colors.white,
+                                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                 shape: RoundedRectangleBorder(
+                                   borderRadius: BorderRadius.circular(6),
+                                 ),
+                                 minimumSize: Size(0, 32),
+                               ),
+                             ),
+                           ],
+                         ],
+                       ),
+                     ],
+                   ),
+                 ),
+                 SizedBox(height: 16),
+               ],
             ],
           ),
         )     );
@@ -538,7 +731,7 @@ class _BookDetails extends State<BookDetails> {
          ),
          style: TextStyle(
            fontSize: 16,
-           color: Color(0xFF5D4037), // Dark brown text
+           color: Color(0xFF5D4037), 
            fontWeight: readOnly ? FontWeight.w500 : FontWeight.normal,
          ),
        ),
@@ -617,12 +810,36 @@ class _BookDetails extends State<BookDetails> {
          "pageCount": int.tryParse(formData["pageCount"] ?? "") ?? 0,
          "genreIds": selectedGenreIds,
        };
+
+       // Duplicate check
+       final title = formData["title"]?.toString().trim() ?? "";
+       final authorId = formData["authorId"] ?? 0;
+       final excludeId = widget.book?.id;
+       final exists = await bookProvider.existsWithTitleAndAuthor(title, authorId, excludeId: excludeId);
+       if (exists) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Row(
+               children: [
+                 Icon(Icons.error, color: Colors.white),
+                 SizedBox(width: 12),
+                 Text("A book with this title and author already exists!"),
+               ],
+             ),
+             backgroundColor: Color(0xFFF44336),
+             behavior: SnackBarBehavior.floating,
+             shape: RoundedRectangleBorder(
+               borderRadius: BorderRadius.circular(8),
+             ),
+           ),
+         );
+         setState(() { isSaving = false; });
+         return;
+       }
        
-      
        if (widget.book == null) {
         
-         await bookProvider.insert(request);
-         
+         await bookProvider.insertWithCover(request, _selectedImageFile);
          
          ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(
@@ -641,10 +858,9 @@ class _BookDetails extends State<BookDetails> {
            ),
          );
        } else {
-        
-         await bookProvider.update(widget.book!.id, request);
+         // Updating existing book
+         await bookProvider.updateWithCover(widget.book!.id, request, _selectedImageFile);
          
-        
          ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(
              content: Row(
@@ -663,18 +879,17 @@ class _BookDetails extends State<BookDetails> {
          );
        }
        
-     
        Navigator.of(context).pop(true);
        
      } catch (e) {
-       
+      
        ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(
            content: Row(
              children: [
                Icon(Icons.error, color: Colors.white),
                SizedBox(width: 12),
-               Text("Failed to ${widget.book == null ? 'add' : 'update'} book: ${e.toString()}"),
+               Text("Failed to "+(widget.book == null ? 'add' : 'update')+" book: "+e.toString()),
              ],
            ),
            backgroundColor: Color(0xFFF44336),
@@ -691,4 +906,74 @@ class _BookDetails extends State<BookDetails> {
      }
    }
    
+   
+   Future<void> _pickImageFile() async {
+     FilePickerResult? result = await FilePicker.platform.pickFiles(
+       type: FileType.custom,
+       allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+       allowMultiple: false,
+       withData: false,
+     );
+     if (result != null && result.files.single.path != null) {
+       final pickedFile = File(result.files.single.path!);
+       try {
+         await decodeImageFromList(await pickedFile.readAsBytes());
+         setState(() {
+           _selectedImageFile = pickedFile;
+         });
+       } catch (e) {
+         showDialog(
+           context: context,
+           builder: (context) => AlertDialog(
+             title: Row(
+               children: [
+                 Icon(Icons.info_outline, color: Color(0xFF8D6E63)),
+                 SizedBox(width: 8),
+                 Text('Invalid Image'),
+               ],
+             ),
+             content: Text(
+               'The selected file could not be loaded as an image.\nPlease choose a valid image file (JPG, PNG, GIF, BMP, or WEBP).',
+               style: TextStyle(fontSize: 15),
+             ),
+             backgroundColor: Color(0xFFFFF8E1),
+             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+             actions: [
+               TextButton(
+                 child: Text('OK', style: TextStyle(color: Color(0xFF8D6E63))),
+                 onPressed: () => Navigator.of(context).pop(),
+               ),
+             ],
+           ),
+         );
+       }
+     }
+   }
+
+  void _showImagePickerDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Cover Image'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Browse'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFile();
+                },
+              ),
+            ],
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        );
+      },
+    );
+  }
 }
