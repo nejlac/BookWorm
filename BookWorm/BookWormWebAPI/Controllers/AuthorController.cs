@@ -28,6 +28,53 @@ namespace BookWormWebAPI.Controllers
 
         }
 
+        [HttpGet("")]
+
+        public override async Task<PagedResult<AuthorResponse>> Get([FromQuery] AuthorSearchObject? search = null)
+        {
+            return await _authorService.GetAsync(search ?? new AuthorSearchObject());
+        }
+
+        [HttpGet("{id}")]
+
+        public override async Task<AuthorResponse?> GetById(int id)
+        {
+            return await _authorService.GetByIdAsync(id);
+        }
+
+
+        [HttpPost("{id}/accept")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<AuthorResponse>> AcceptAuthor(int id)
+        {
+            var author = await _authorService.AcceptAuthorAsync(id);
+            if (author == null)
+                return NotFound();
+            return author;
+        }
+
+        [HttpPost("{id}/decline")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<AuthorResponse>> DeclineBook(int id)
+        {
+            var author = await _authorService.AcceptAuthorAsync(id);
+            if (author == null)
+                return NotFound();
+            return author;
+        }
+
+
+        [HttpPost]
+        public override async Task<AuthorResponse> Create([FromBody] AuthorCreateUpdateRequest request)
+        {
+            return await _authorService.CreateAsync(request);
+        }
+
+        [HttpPut("{id}")]
+        public override async Task<AuthorResponse?> Update(int id, [FromBody] AuthorCreateUpdateRequest request)
+        {
+            return await _authorService.UpdateAsync(id, request);
+        }
         [HttpPost("{id}/cover")]
             [RequestSizeLimit(10_000_000)]
             public async Task<ActionResult<BookResponse>> UploadCover(int id, [FromForm] CoverUploadRequest request)

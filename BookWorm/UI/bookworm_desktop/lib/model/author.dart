@@ -12,6 +12,7 @@ class Author {
   final int countryId;
   final String countryName;
   final String? photoUrl;
+  final String authorState;
 
   Author({
     this.id = 0,
@@ -22,6 +23,7 @@ class Author {
     this.countryId = 0,
     this.countryName = '',
     this.photoUrl,
+    this.authorState=''
   });
 
   factory Author.fromJson(Map<String, dynamic> json) {

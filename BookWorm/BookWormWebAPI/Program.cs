@@ -1,4 +1,5 @@
 using BookWorm.Services;
+using BookWorm.Services.AuthorStateMachine;
 using BookWorm.Services.BookStateMachine;
 using BookWorm.Services.DataBase;
 using BookWormWebAPI.Filters;
@@ -27,6 +28,11 @@ builder.Services.AddTransient<BaseBookState>();
 builder.Services.AddTransient<SubmittedBookState>();
 builder.Services.AddTransient<AcceptedBookState>();
 builder.Services.AddTransient<DeclinedBookState>();
+builder.Services.AddTransient<BaseAuthorState>();
+builder.Services.AddTransient<SubmittedAuthorState>();
+builder.Services.AddTransient<AcceptedAuthorState>();
+builder.Services.AddTransient<DeclinedAuthorState>();
+
 
 builder.Services.AddMapster();
 

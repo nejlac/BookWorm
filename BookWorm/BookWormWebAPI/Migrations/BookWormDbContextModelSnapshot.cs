@@ -30,6 +30,10 @@ namespace BookWormWebAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AuthorState")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Biography")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -40,6 +44,9 @@ namespace BookWormWebAPI.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasMaxLength(255)
@@ -67,6 +74,8 @@ namespace BookWormWebAPI.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CountryId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Authors");
                 });
@@ -513,7 +522,13 @@ namespace BookWormWebAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BookWorm.Services.DataBase.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId");
+
                     b.Navigation("Country");
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("BookWorm.Services.DataBase.Book", b =>

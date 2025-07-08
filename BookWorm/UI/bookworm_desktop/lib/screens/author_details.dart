@@ -254,6 +254,121 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                         ),
                       ],
                     ),
+                  if (!widget.isEditMode && !widget.isAddMode && widget.author != null && widget.author!.authorState != 'Accepted')
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: widget.author!.authorState == 'Submitted' || widget.author!.authorState == 'Declined'
+                              ? () async {
+                                  try {
+                                    await Provider.of<AuthorProvider>(context, listen: false).accept(widget.author!.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            Icon(Icons.check_circle, color: Colors.white),
+                                            SizedBox(width: 12),
+                                            Text('Author accepted!'),
+                                          ],
+                                        ),
+                                        backgroundColor: Color(0xFF4CAF50),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.of(context).pop(true);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            Icon(Icons.error, color: Colors.white),
+                                            SizedBox(width: 12),
+                                            Text('Failed to accept author: \\${e.toString()}'),
+                                          ],
+                                        ),
+                                        backgroundColor: Color(0xFFF44336),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+                          icon: Icon(Icons.check, color: Colors.white),
+                          label: Text('Accept'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF4CAF50),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                          ),
+                        ),
+                        SizedBox(width: 24),
+                        ElevatedButton.icon(
+                          onPressed: widget.author!.authorState == 'Submitted'
+                              ? () async {
+                                  try {
+                                    await Provider.of<AuthorProvider>(context, listen: false).decline(widget.author!.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            Icon(Icons.cancel, color: Colors.white),
+                                            SizedBox(width: 12),
+                                            Text('Author declined!'),
+                                          ],
+                                        ),
+                                        backgroundColor: Color(0xFFF44336),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.of(context).pop(true);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            Icon(Icons.error, color: Colors.white),
+                                            SizedBox(width: 12),
+                                            Text('Failed to decline author: \\${e.toString()}'),
+                                          ],
+                                        ),
+                                        backgroundColor: Color(0xFFF44336),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+                          icon: Icon(Icons.cancel, color: Colors.white),
+                          label: Text('Decline'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFC62828),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

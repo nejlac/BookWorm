@@ -11,4 +11,4 @@ class Country {
 
   factory Country.fromJson(Map<String, dynamic> json) => _$CountryFromJson(json);
   Map<String, dynamic> toJson() => _$CountryToJson(this);
-} 
+}

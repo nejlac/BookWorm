@@ -7,11 +7,11 @@ import 'dart:convert';
 class BookProvider extends BaseProvider<Book> {
   BookProvider():super("book");
 
-  @override
+ @override
   Book fromJson(dynamic json) {
     return Book.fromJson(json);
   }
-
+ 
   String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
 
   Future<void> acceptBook(int id) async {
@@ -196,6 +196,6 @@ class BookProvider extends BaseProvider<Book> {
 
 
 
-
+   
 
 

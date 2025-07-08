@@ -34,8 +34,12 @@ namespace BookWorm.Services.DataBase
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
-        
-        
+        public int? CreatedByUserId { get; set; }
+
+        [ForeignKey("CreatedByUserId")]
+        public User? CreatedByUser { get; set; }
+        public string AuthorState { get; set; } = "Initial";
+
         public virtual ICollection<Book> Books { get; set; } = new List<Book>();
     }
 } 

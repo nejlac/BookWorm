@@ -15,6 +15,9 @@ namespace BookWorm.Model.Responses
         public string? PhotoUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string AuthorState { get; set; } = string.Empty;
+        public int? CreatedByUserId { get; set; }
+        public string CreatedByUserName { get; set; } = string.Empty;
         public List<AuthorBookResponse> Books { get; set; } = new List<AuthorBookResponse>();
     }
 

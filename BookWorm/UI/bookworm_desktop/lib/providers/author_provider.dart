@@ -11,7 +11,7 @@ class AuthorProvider extends BaseProvider<Author> {
   Author fromJson(dynamic json) {
     return Author.fromJson(json);
   }
-  
+  String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
   Future<List<Author>> getAllAuthors() async {
     try {
       final result = await get();
@@ -22,6 +22,23 @@ class AuthorProvider extends BaseProvider<Author> {
     }
   }
 
+   Future<void> accept(int id) async {
+    var url = "${baseUrl}author/$id/accept";
+    var headers = createHeaders();
+    var response = await http.post(Uri.parse(url), headers: headers);
+    if (!isValidResponse(response)) {
+      throw Exception("Failed to accept author");
+    }
+  }
+
+  Future<void> decline(int id) async {
+    var url = "${baseUrl}author/$id/decline";
+    var headers = createHeaders();
+    var response = await http.post(Uri.parse(url), headers: headers);
+    if (!isValidResponse(response)) {
+      throw Exception("Failed to decline author");
+    }
+  }
   Future<void> uploadPhoto(int authorId, File photoFile) async {
     try {
       print("Uploading author photo. File path: "+photoFile.path);

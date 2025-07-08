@@ -10,6 +10,7 @@ namespace BookWorm.Model.SearchObjects
     {
         public string? Name { get; set; }
         public int? CountryId { get; set; }
-        
+        public string? AuthorState { get; set; }
+
     }
 }

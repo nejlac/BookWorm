@@ -22,23 +22,23 @@ class BookDetails extends StatefulWidget {
 }
 class _BookDetails extends State<BookDetails> {
   final formKey = GlobalKey<FormBuilderState>();
-  Map<String, dynamic> _initalValue = {};
-  late BookProvider bookProvider;
-  late GenreProvider genreProvider;
+    Map<String, dynamic> _initalValue = {};
+    late BookProvider bookProvider;
+    late GenreProvider genreProvider;
   late AuthorProvider authorProvider;
 
-  SearchResult<Genre>? genres;
+    SearchResult<Genre>? genres;
   SearchResult<Author>? authors;
-  bool isLoading=true;
+    bool isLoading=true;
   bool isSaving = false;
   File? _selectedImageFile;
   String? _existingCoverPath;
 
-  @override
-  void initState() {
-    super.initState();
-    bookProvider = Provider.of<BookProvider>(context, listen: false);
-    genreProvider = Provider.of<GenreProvider>(context, listen: false);
+    @override
+    void initState() {
+      super.initState();
+      bookProvider = Provider.of<BookProvider>(context, listen: false);
+      genreProvider = Provider.of<GenreProvider>(context, listen: false);
     authorProvider = Provider.of<AuthorProvider>(context, listen: false);
     
     // Set existing cover path if editing
@@ -46,8 +46,8 @@ class _BookDetails extends State<BookDetails> {
       _existingCoverPath = widget.book!.coverImagePath;
     }
     
-    _initalValue={
-      "id": widget.book?.id,
+      _initalValue={
+        "id": widget.book?.id,
       "title": widget.book?.title ?? '',
       "authorId": widget.book?.authorId,
       "authorName": widget.book?.authorName ?? '',
@@ -56,10 +56,10 @@ class _BookDetails extends State<BookDetails> {
       "publicationYear": widget.book?.publicationYear?.toString() ?? '',
       "pageCount": widget.book?.pageCount?.toString() ?? '',
     };
-    initFormData();
-  }
-
-  initFormData() async {
+      initFormData();
+    }
+  
+   initFormData() async {
     final loadedGenres = await genreProvider.getAllGenres();
     final loadedAuthors = await authorProvider.getAllAuthors();
     setState(() {
@@ -71,16 +71,16 @@ class _BookDetails extends State<BookDetails> {
       );
       isLoading = false;
     });
-  }
+   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return MasterScreen(
       title: widget.isEditMode ? "Edit Book" : "Book Details",
       child: SingleChildScrollView(
         child: Column(
           children: [
-            _buildForm(),
+        _buildForm(),
             if (widget.isEditMode)
               _buildSaveButton(),
             if (!widget.isEditMode)
@@ -276,7 +276,7 @@ class _BookDetails extends State<BookDetails> {
       ),
     );
   }
-
+  
   _buildForm() {
      return FormBuilder(
         key: formKey,
@@ -396,7 +396,7 @@ class _BookDetails extends State<BookDetails> {
                  children: [
                    Expanded(
                      child: FormBuilderTextField(
-                       name: "publicationYear",
+                name: "publicationYear",
                        decoration: InputDecoration(
                          labelText: "📅 Publication Year",
                          prefixIcon: Icon(Icons.calendar_today, color: Color(0xFF6D4C41)),
@@ -414,7 +414,7 @@ class _BookDetails extends State<BookDetails> {
                    SizedBox(width: 16),
                    Expanded(
                      child: FormBuilderTextField(
-                       name: "pageCount",
+                name: "pageCount",
                        decoration: InputDecoration(
                          labelText: "📄 Pages",
                          prefixIcon: Icon(Icons.pages, color: Color(0xFF795548)),

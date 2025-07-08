@@ -27,6 +27,13 @@ class _AuthorListState extends State<AuthorList> {
   int currentPage = 1;
   int pageSize = 14;
   int totalPages = 1;
+  String? selectedStatus;
+  final List<Map<String, dynamic>> statusOptions = [
+    {'value': null, 'label': 'All'},
+    {'value': 'Accepted', 'label': 'Accepted'},
+    {'value': 'Submitted', 'label': 'Submitted'},
+    {'value': 'Declined', 'label': 'Declined'},
+  ];
   
 
     @override
@@ -46,7 +53,7 @@ class _AuthorListState extends State<AuthorList> {
         "countryId": selectedCountry?['id'] ?? null,
         "page": (page ?? currentPage) -1,
         "pageSize": pageSize,
-        
+        "authorState": selectedStatus,
       };
       print("Author filter: $filter");
       Authors = await authorProvider.get(filter: filter);
@@ -91,16 +98,18 @@ class _AuthorListState extends State<AuthorList> {
       child: Container(
         color: Colors.white,
         alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 24),
-            _buildAddAuthorButton(),
-            _buildSearch(),
-            _buildResultView(),
-            _buildPaginationControls(),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 24),
+              _buildAddAuthorButton(),
+              _buildSearch(),
+              _buildResultView(),
+              _buildPaginationControls(),
+            ],
+          ),
         ),
       ),
     );
@@ -176,6 +185,43 @@ class _AuthorListState extends State<AuthorList> {
                 ),
               ),
               const SizedBox(width: 12),
+              Flexible(
+                flex: 2,
+                child: DropdownButtonFormField<String?>(
+                  value: selectedStatus,
+                  items: statusOptions.map((s) => DropdownMenuItem<String?>(
+                    value: s['value'],
+                    child: Text(s['label'],
+                      style: TextStyle(
+                        color: s['value'] == 'Accepted'
+                            ? Color(0xFF388E3C)
+                            : s['value'] == 'Submitted'
+                                ? Color(0xFFC62828)
+                                : s['value'] == 'Declined'
+                                    ? Colors.grey
+                                    : Color(0xFF4E342E),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedStatus = value;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  ),
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF4E342E)),
+                  dropdownColor: Color(0xFFFFF8E1),
+                  menuMaxHeight: 300,
+                ),
+              ),
+              const SizedBox(width: 12),
               SizedBox(
                 height: 36,
                 child: ElevatedButton(
@@ -228,9 +274,9 @@ class _AuthorListState extends State<AuthorList> {
               itemCount: Authors!.items!.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7, // Adjust for your layout
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.7,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.62, // slightly tighter
               ),
               itemBuilder: (context, index) {
                 final author = Authors!.items![index];
@@ -255,117 +301,147 @@ class _AuthorListState extends State<AuthorList> {
                     );
                     if (result == true) _fetchAllAuthors(page: currentPage);
                   },
-                  child: Card(
-                    color: const Color(0xFFFFF8E1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Color(0xFFD7CCC8), width: 2),
-                    ),
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: hasImage && imageUrl != null
-                                ? Image.network(
-                                    imageUrl,
-                                    height: 90,
-                                    width: 90,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => _cutePlaceholder(),
-                                  )
-                                : _cutePlaceholder(),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            author.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Color(0xFF4E342E),
-                              fontFamily: 'Literata',
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Spacer(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                  child: Stack(
+                    children: [
+                      Card(
+                        color: const Color(0xFFFFF8E1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: Color(0xFFD7CCC8), width: 2),
+                        ),
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
                             children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, color: Color(0xFF8D6748)),
-                                tooltip: 'Edit',
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AuthorDetails(author: author, isEditMode: true, isAddMode: false),
-                                    ),
-                                  );
-                                  if (result == true) _fetchAllAuthors(page: currentPage);
-                                },
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: hasImage && imageUrl != null
+                                    ? Image.network(
+                                        imageUrl,
+                                        height: 100,
+                                        width: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => _cutePlaceholder(),
+                                      )
+                                    : _cutePlaceholder(),
                               ),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Color(0xFFC62828)),
-                                tooltip: 'Delete',
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: Row(
-                                        children: [
-                                          Icon(Icons.warning, color: Color(0xFFC62828)),
-                                          SizedBox(width: 8),
-                                          Text('Delete Author'),
-                                        ],
-                                      ),
-                                      content: Text('Are you sure you want to delete this author? This action cannot be undone.'),
-                                      actions: [
-                                        TextButton(
-                                          child: Text('Cancel'),
-                                          onPressed: () => Navigator.of(context).pop(false),
+                              SizedBox(height: 4),
+                              Text(
+                                author.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Color(0xFF4E342E),
+                                  fontFamily: 'Literata',
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: author.authorState == 'Accepted'
+                                      ? Color(0xFF388E3C).withOpacity(0.15)
+                                      : author.authorState == 'Submitted'
+                                          ? Color(0xFFC62828).withOpacity(0.15)
+                                          : Colors.grey.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  author.authorState ?? '',
+                                  style: TextStyle(
+                                    color: author.authorState == 'Accepted'
+                                        ? Color(0xFF388E3C)
+                                        : author.authorState == 'Submitted'
+                                            ? Color(0xFFC62828)
+                                            : Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit, color: Color(0xFF8D6748), size: 18),
+                                    tooltip: 'Edit',
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AuthorDetails(author: author, isEditMode: true, isAddMode: false),
                                         ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Color(0xFFC62828),
-                                            foregroundColor: Colors.white,
+                                      );
+                                      if (result == true) _fetchAllAuthors(page: currentPage);
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete, color: Color(0xFFC62828), size: 18),
+                                    tooltip: 'Delete',
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Row(
+                                            children: [
+                                              Icon(Icons.warning, color: Color(0xFFC62828)),
+                                              SizedBox(width: 8),
+                                              Text('Delete Author'),
+                                            ],
                                           ),
-                                          child: Text('Delete'),
-                                          onPressed: () => Navigator.of(context).pop(true),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirm == true) {
-                                    final success = await authorProvider.delete(author.id);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Row(
-                                          children: [
-                                            Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
-                                            SizedBox(width: 12),
-                                            Text(success ? 'Author deleted.' : 'Failed to delete author.'),
+                                          content: Text('Are you sure you want to delete this author? This action cannot be undone.'),
+                                          actions: [
+                                            TextButton(
+                                              child: Text('Cancel'),
+                                              onPressed: () => Navigator.of(context).pop(false),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Color(0xFFC62828),
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              child: Text('Delete'),
+                                              onPressed: () => Navigator.of(context).pop(true),
+                                            ),
                                           ],
                                         ),
-                                        backgroundColor: success ? Color(0xFF4CAF50) : Color(0xFFF44336),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    );
-                                    if (success) _fetchAllAuthors(page: currentPage);
-                                  }
-                                },
+                                      );
+                                      if (confirm == true) {
+                                        final success = await authorProvider.delete(author.id);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Row(
+                                              children: [
+                                                Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
+                                                SizedBox(width: 12),
+                                                Text(success ? 'Author deleted.' : 'Failed to delete author.'),
+                                              ],
+                                            ),
+                                            backgroundColor: success ? Color(0xFF4CAF50) : Color(0xFFF44336),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        );
+                                        if (success) _fetchAllAuthors(page: currentPage);
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 );
               },

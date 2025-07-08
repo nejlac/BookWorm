@@ -17,6 +17,7 @@ Author _$AuthorFromJson(Map<String, dynamic> json) => Author(
   countryId: (json['countryId'] as num?)?.toInt() ?? 0,
   countryName: json['countryName'] as String? ?? '',
   photoUrl: json['photoUrl'] as String?,
+  authorState: json['authorState'] as String? ?? '',
 );
 
 Map<String, dynamic> _$AuthorToJson(Author instance) => <String, dynamic>{
@@ -28,4 +29,5 @@ Map<String, dynamic> _$AuthorToJson(Author instance) => <String, dynamic>{
   'countryId': instance.countryId,
   'countryName': instance.countryName,
   'photoUrl': instance.photoUrl,
+  'authorState': instance.authorState,
 };

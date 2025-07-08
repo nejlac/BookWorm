@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BookWorm.Model.Exceptions;
-
+using BookWorm.Services.AuthorStateMachine;
 
 namespace BookWorm.Services
 {
@@ -19,13 +19,17 @@ namespace BookWorm.Services
     {
         private readonly BookWormDbContext _context;
         private readonly ILogger<AuthorService> _logger;
+        private readonly IUserRoleService _userRoleService;
+        private readonly BaseAuthorState _baseAuthorState;
 
-        public AuthorService(BookWormDbContext context, IMapper mapper, ILogger<AuthorService> logger):base (context,mapper)
+        public AuthorService(BookWormDbContext context, IMapper mapper, ILogger<AuthorService> logger, IUserRoleService userRoleService, BaseAuthorState baseAuthorState)
+            : base(context, mapper)
         {
             _context = context;
             _logger = logger;
+            _userRoleService = userRoleService;
+            _baseAuthorState = baseAuthorState;
         }
-
        
         protected override IQueryable<DataBase.Author> ApplyFilter(IQueryable<DataBase.Author> query, AuthorSearchObject search)
         {
@@ -35,13 +39,11 @@ namespace BookWorm.Services
                 query = query.Where(a => a.CountryId == search.CountryId);
             if (!string.IsNullOrEmpty(search.FTS))
                 query = query.Where(a => a.Name.Contains(search.FTS) || a.Biography.Contains(search.FTS));
-            
-            
+            if (!string.IsNullOrEmpty(search.AuthorState))
+                query = query.Where(a => a.AuthorState == search.AuthorState);
             query = query.Include(a => a.Country).Include(a => a.Books);
             return query;
         }
-
-       
 
         protected override async Task BeforeInsert(Author entity, AuthorCreateUpdateRequest request)
         {
@@ -52,7 +54,6 @@ namespace BookWorm.Services
             {
                 throw new AuthorException($"An author with the name '{request.Name}' and date of birth '{request.DateOfBirth:yyyy-MM-dd}' already exists.");
             }
-            
            
             entity.CreatedAt = DateTime.Now;
             entity.UpdatedAt = DateTime.Now;
@@ -75,17 +76,117 @@ namespace BookWorm.Services
 
         public override async Task<AuthorResponse?> GetByIdAsync(int id)
         {
-            var entity = await _context.Authors
+            var author = await _context.Authors
                 .Include(a => a.Country)
                 .Include(a => a.Books)
                 .FirstOrDefaultAsync(a => a.Id == id);
             
-            if (entity == null)
+            if (author == null)
                 return null;
 
-            return MapToResponse(entity);
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (currentUserId.HasValue)
+            {
+                var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+                if (!isAdmin && author.AuthorState != "Accepted")
+                    return null;
+            }
+
+            return MapToResponse(author);
         }
 
-      
+        public override async Task<AuthorResponse> CreateAsync(AuthorCreateUpdateRequest request)
+        {
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+                throw new AuthorException("User not authenticated.");
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            request.CreatedByUserId = currentUserId.Value;
+            BaseAuthorState baseState = isAdmin
+                ? _baseAuthorState.GetAuthorState("Accepted")
+                : _baseAuthorState.GetAuthorState("Submitted");
+            return await baseState.CreateAsync(request);
+        }
+
+        public override async Task<AuthorResponse?> UpdateAsync(int id, AuthorCreateUpdateRequest request)
+        {
+            var author = await _context.Authors.FindAsync(id);
+            if (author == null)
+                return null;
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+                throw new AuthorException("User not authenticated.");
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
+                throw new AuthorException("Only admin can edit authors.");
+            var baseState = _baseAuthorState.GetAuthorState(author.AuthorState);
+            return await baseState.UpdateAsync(id, request);
+        }
+
+        public override async Task<PagedResult<AuthorResponse>> GetAsync(AuthorSearchObject search)
+        {
+            var query = _context.Set<Author>().AsQueryable();
+            query = ApplyFilter(query, search);
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (currentUserId.HasValue)
+            {
+                var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+                if (!isAdmin)
+                    query = query.Where(a => a.AuthorState == "Accepted");
+            }
+            else
+            {
+                query = query.Where(a => a.AuthorState == "Accepted");
+            }
+            int? totalCount = null;
+            if (search.IncludeTotalCount)
+                totalCount = await query.CountAsync();
+            if (!search.RetrieveAll)
+            {
+                if (search.Page.HasValue)
+                    query = query.Skip(search.Page.Value * search.PageSize.Value);
+                if (search.PageSize.HasValue)
+                    query = query.Take(search.PageSize.Value);
+            }
+            var list = await query.ToListAsync();
+            return new PagedResult<AuthorResponse>
+            {
+                Items = list.Select(MapToResponse).ToList(),
+                TotalCount = totalCount
+            };
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var author = await _context.Authors.FindAsync(id);
+            if (author == null)
+                return false;
+            var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
+            if (!currentUserId.HasValue)
+                throw new AuthorException("User not authenticated.");
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
+            if (!isAdmin)
+                throw new AuthorException("Only admin can delete authors.");
+            await BeforeDelete(author);
+            _context.Authors.Remove(author);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<AuthorResponse?> AcceptAuthorAsync(int id)
+        {
+            var author = await _context.Authors.FindAsync(id);
+            if (author == null) return null;
+            var baseState = _baseAuthorState.GetAuthorState(author.AuthorState);
+            return await baseState.AcceptAsync(id);
+        }
+
+        public async Task<AuthorResponse?> DeclineAuthorAsync(int id)
+        {
+            var author = await _context.Authors.FindAsync(id);
+            if (author == null) return null;
+            var baseState = _baseAuthorState.GetAuthorState(author.AuthorState);
+            return await baseState.DeclineAsync(id);
+        }
     }
 } 

@@ -23,6 +23,7 @@ namespace BookWorm.Model.Requests
 
         [MaxLength(255, ErrorMessage = "Website must not exceed 255 characters.")]
         public string? Website { get; set; }
+        public int? CreatedByUserId { get; set; }
 
         public string? PhotoUrl { get; set; }
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
