@@ -1,4 +1,4 @@
-import 'package:bookworm_desktop/layouts/master_screen.dart';
+
 import 'package:bookworm_desktop/model/author.dart';
 import 'package:bookworm_desktop/model/country.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
@@ -8,7 +8,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:bookworm_desktop/providers/base_provider.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class AuthorDetails extends StatefulWidget {
   final Author? author;
@@ -62,13 +62,18 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     if (isLoading) {
       return Center(child: CircularProgressIndicator());
     }
-    return MasterScreen(
-      title: widget.isAddMode
-          ? "Add Author"
-          : widget.isEditMode
-              ? "Edit Author"
-              : "Author Details",
-      child: Center(
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(widget.isAddMode ? 'Add Author' : widget.isEditMode ? 'Edit Author' : 'Author Details'),
+        backgroundColor: Color(0xFF8D6748),
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
+      body: Center(
         child: Container(
           constraints: BoxConstraints(maxWidth: 500),
           margin: EdgeInsets.symmetric(vertical: 32, horizontal: 12),
@@ -144,6 +149,10 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                     ),
                     maxLines: 4,
                     readOnly: !(widget.isEditMode || widget.isAddMode),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Biography is required';
+                      return null;
+                    },
                   ),
                   SizedBox(height: 14),
                   Row(
@@ -166,6 +175,7 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                             if (val == null) return 'Date of birth is required';
                             return null;
                           },
+                          firstDate: DateTime(1),
                         ),
                       ),
                       SizedBox(width: 12),
@@ -183,32 +193,44 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                             fillColor: Color(0xFFFFF8E1),
                           ),
                           enabled: widget.isEditMode || widget.isAddMode,
+                          firstDate: DateTime(1),
                         ),
                       ),
                     ],
                   ),
                   SizedBox(height: 14),
-                  FormBuilderDropdown<Country>(
-                    name: 'country',
-                    decoration: InputDecoration(
-                      labelText: 'Country',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: Icon(Icons.flag, color: Color(0xFF8D6748)),
-                      filled: true,
-                      fillColor: Color(0xFFFFF8E1),
-                    ),
-                    items: countries
-                        .map((c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name),
-                            ))
-                        .toList(),
-                    initialValue: selectedCountry,
+                  DropdownSearch<Country>(
+                    items: countries,
+                    itemAsString: (c) => c.name,
+                    selectedItem: selectedCountry,
                     enabled: widget.isEditMode || widget.isAddMode,
-                    validator: (val) {
-                      if (val == null) return 'Country is required';
+                    dropdownDecoratorProps: DropDownDecoratorProps(
+                      dropdownSearchDecoration: InputDecoration(
+                        labelText: 'Country',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: Icon(Icons.flag, color: Color(0xFF8D6748)),
+                        filled: true,
+                        fillColor: Color(0xFFFFF8E1),
+                      ),
+                    ),
+                    popupProps: PopupProps.menu(
+                      showSearchBox: true,
+                      searchFieldProps: TextFieldProps(
+                        decoration: InputDecoration(
+                          labelText: 'Search country',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCountry = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) return 'Country is required';
                       return null;
                     },
                   ),
@@ -529,7 +551,41 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     if (!formKey.currentState!.saveAndValidate()) return;
     setState(() { isSaving = true; });
     final formData = formKey.currentState!.value;
+    final name = formData['name']?.toString().trim() ?? '';
+    final dateOfBirth = formData['dateOfBirth'] as DateTime?;
+    final excludeId = widget.author?.id;
+    if (name.isNotEmpty && dateOfBirth != null) {
+      final exists = await authorProvider.existsWithNameAndDateOfBirth(name, dateOfBirth, excludeId: excludeId);
+      if (exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 12),
+                Flexible(child: Text('An author with this name and date of birth already exists.')),
+              ],
+            ),
+            backgroundColor: Color(0xFFF44336),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        setState(() { isSaving = false; });
+        return;
+      }
+    }
     try {
+      final country = selectedCountry;
+      if (country == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please select a country.')),
+        );
+        setState(() { isSaving = false; });
+        return;
+      }
       final request = {
         "name": formData['name'],
         "biography": formData['biography'],
@@ -539,8 +595,8 @@ class _AuthorDetailsState extends State<AuthorDetails> {
         "dateOfDeath": (formData['dateOfDeath'] is DateTime)
             ? (formData['dateOfDeath'] as DateTime).toIso8601String()
             : null,
-        "countryId": (formData['country'] as Country).id,
-        // TODO: handle photo upload if needed
+        "countryId": country.id,
+        "photoUrl": _existingPhotoUrl, // Preserve existing photo URL
       };
       if (widget.isAddMode) {
         final inserted = await authorProvider.insert(request);
@@ -639,13 +695,40 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       }
       Navigator.of(context).pop(true);
     } catch (e) {
+      String errorMsg = e.toString();
+      // Try to parse common backend error formats for duplicate author
+      if (errorMsg.contains('already exists') ||
+          errorMsg.contains('An author with the name') ||
+          errorMsg.contains('AuthorException')) {
+        errorMsg = 'An author with this name and date of birth already exists.';
+      } else if (errorMsg.contains('400') && errorMsg.contains('already exists')) {
+        errorMsg = 'An author with this name and date of birth already exists.';
+      } else if (errorMsg.contains('Exception:') && errorMsg.contains('already exists')) {
+        errorMsg = 'An author with this name and date of birth already exists.';
+      } else if (errorMsg.contains('Exception:')) {
+        // Try to extract the backend message
+        final parts = errorMsg.split('Exception:');
+        if (parts.length > 1) {
+          errorMsg = parts.last.trim();
+        }
+      } else if (errorMsg.contains('SocketException')) {
+        errorMsg = 'Could not connect to the server. Please check your internet connection.';
+      } else if (errorMsg.contains('HttpException') && errorMsg.contains('message')) {
+        // Try to extract message from a JSON error body
+        final match = RegExp(r'message[":\s]+([^\"]+)').firstMatch(errorMsg);
+        if (match != null && match.groupCount > 0) {
+          errorMsg = match.group(1)!;
+        }
+      } else if (errorMsg.contains('Something bad happened')) {
+        errorMsg = 'An unexpected error occurred. Please try again.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.error, color: Colors.white),
               SizedBox(width: 12),
-              Text('Failed to save author: ${e.toString()}'),
+              Flexible(child: Text(errorMsg)),
             ],
           ),
           backgroundColor: Color(0xFFF44336),

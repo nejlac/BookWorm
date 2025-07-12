@@ -46,9 +46,10 @@ namespace BookWorm.Services.DataBase
         public DateTime? LastLoginAt { get; set; }
         public DateTime? ModdifiedAt { get; set; }
 
-        [Phone]
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
+
+        public string? PhotoUrl { get; set; }
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public ICollection<UserFriend> SentFriendRequests { get; set; } = new List<UserFriend>();
         public ICollection<UserFriend> ReceivedFriendRequests { get; set; } = new List<UserFriend>();

@@ -23,21 +23,45 @@ abstract class BaseProvider<T> with ChangeNotifier {
       url = "$url?$queryString";
     }
 
-    print("AuthorProvider GET URL: $url");
-
+    print("DEBUG: BaseProvider GET URL: $url");
     var uri = Uri.parse(url);
     var headers = createHeaders();
 
     var response = await http.get(uri, headers: headers);
+    print("DEBUG: Response status: ${response.statusCode}");
+    print("DEBUG: Response body: ${response.body}");
 
     if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-
+      print("DEBUG: Parsed data: $data");
+      print("DEBUG: data type: ${data.runtimeType}");
+      
       var result = SearchResult<T>();
-      result.totalCount = data['totalCount'];
-      result.page = data['page'];
-      result.pageSize = data['pageSize'];
-      result.items = List<T>.from(data["items"].map((e) => fromJson(e)));
+      
+      // Check if response is a paginated object or direct array
+      if (data is Map<String, dynamic>) {
+        // Paginated response with totalCount, page, pageSize, items
+        print("DEBUG: Paginated response detected");
+        result.totalCount = data['totalCount'];
+        result.page = data['page'];
+        result.pageSize = data['pageSize'];
+        
+        if (data['items'] != null) {
+          result.items = List<T>.from(data["items"].map((e) => fromJson(e)));
+        } else {
+          result.items = [];
+        }
+      } else if (data is List) {
+        // Direct array response
+        print("DEBUG: Direct array response detected");
+        result.totalCount = data.length;
+        result.page = 0;
+        result.pageSize = data.length;
+        result.items = List<T>.from(data.map((e) => fromJson(e)));
+      } else {
+        print("DEBUG: Unexpected response format: ${data.runtimeType}");
+        result.items = [];
+      }
 
       return result;
     } else {
@@ -57,7 +81,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
       var data = jsonDecode(response.body);
       return fromJson(data);
     } else {
-      throw new Exception("Unknown error");
+      // This should not be reached since isValidResponse throws an exception
+      throw new Exception("Insert failed: ${response.statusCode} - ${response.body}");
     }
   }
 
@@ -73,7 +98,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
       var data = jsonDecode(response.body);
       return fromJson(data);
     } else {
-      throw new Exception("Unknown error");
+      // This should not be reached since isValidResponse throws an exception
+      throw new Exception("Update failed: ${response.statusCode} - ${response.body}");
     }
   }
 
@@ -87,8 +113,9 @@ abstract class BaseProvider<T> with ChangeNotifier {
     } else if (response.statusCode == 401) {
       throw new Exception("Unauthorized");
     } else {
-      print(response.body);
-      throw new Exception("Something bad happened please try again");
+      print("Response body: ${response.body}");
+      // Preserve the actual error response from the backend
+      throw new Exception("${response.statusCode} - ${response.body}");
     }
   }
 

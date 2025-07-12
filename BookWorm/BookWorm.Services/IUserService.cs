@@ -11,7 +11,7 @@ namespace BookWorm.Services
 {
     public interface IUserService
     {
-        Task<List<UserResponse>> GetAsync(UserSearchObject search);
+        Task<PagedResult<UserResponse>> GetAsync(UserSearchObject search);
         Task<UserResponse?> GetByIdAsync(int id);
         Task<UserResponse> CreateAsync(UserCreateUpdateRequest request);
         Task<UserResponse?> UpdateAsync(int id, UserCreateUpdateRequest request);

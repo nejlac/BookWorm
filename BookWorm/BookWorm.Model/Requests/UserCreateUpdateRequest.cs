@@ -37,11 +37,8 @@ namespace BookWorm.Model.Requests
         public int Age { get; set; }
 
         public bool IsActive { get; set; } = true;
+        public string? PhotoUrl { get; set; }
 
-        [Required(ErrorMessage = "Password is required.")]
-        [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
-        [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$",
-            ErrorMessage = "Password must contain uppercase, lowercase, number, and special character.")]
         public string? Password { get; set; }
 
 
@@ -53,6 +50,23 @@ namespace BookWorm.Model.Requests
             if (RoleIds == null || RoleIds.Count == 0)
             {
                 yield return new ValidationResult("At least one role must be selected.", new[] { nameof(RoleIds) });
+            }
+
+           
+            if (!string.IsNullOrEmpty(Password))
+            {
+                if (Password.Length < 8)
+                {
+                    yield return new ValidationResult("Password must be at least 8 characters long.", new[] { nameof(Password) });
+                }
+                else
+                {
+                    var passwordRegex = new System.Text.RegularExpressions.Regex(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$");
+                    if (!passwordRegex.IsMatch(Password))
+                    {
+                        yield return new ValidationResult("Password must contain uppercase, lowercase, number, and special character.", new[] { nameof(Password) });
+                    }
+                }
             }
         }
     }

@@ -15,5 +15,15 @@ namespace BookWormWebAPI.Controllers
         public CountryController(ICountryService countryService) : base(countryService)
         {
         }
+
+        [HttpGet]
+        public override async Task<PagedResult<CountryResponse>> Get([FromQuery] CountrySearchObject search = null)
+        {
+            if (search == null)
+                search = new CountrySearchObject();
+            if (!search.PageSize.HasValue || search.PageSize.Value == 0)
+                search.PageSize = 500; 
+            return await base.Get(search);
+        }
     }
 }

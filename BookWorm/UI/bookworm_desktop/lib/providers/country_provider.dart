@@ -14,10 +14,9 @@ class CountryProvider extends ChangeNotifier {
   List<Country> get countries => _countries;
 
   Future<void> fetchCountries() async {
-    final url = Uri.parse('$_baseUrl/Country');
+    final url = Uri.parse('$_baseUrl/Country?pageSize=500');
     final headers = <String, String>{};
     if (AuthProvider.username != null && AuthProvider.password != null) {
-      // Example: Basic Auth (adjust if you use Bearer tokens)
       String basicAuth = 'Basic ' + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));
       headers['Authorization'] = basicAuth;
     }

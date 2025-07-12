@@ -1,12 +1,12 @@
-import 'package:bookworm_desktop/layouts/master_screen.dart';
+
 import 'package:bookworm_desktop/model/author.dart';
-import 'package:bookworm_desktop/model/country.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:bookworm_desktop/providers/country_provider.dart';
 import 'package:bookworm_desktop/screens/author_details.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class AuthorList extends StatefulWidget {
   const AuthorList({super.key});
@@ -89,27 +89,45 @@ class _AuthorListState extends State<AuthorList> {
     }
   }
 
+  Future<void> _initCountries() async {
+    try {
+      print('Fetching countries...');
+      await countryProvider.fetchCountries();
+      countries =countryProvider.countries
+          .map((c) => {'id': c.id, 'name': c.name})
+          .toList();  
+      print('Loaded countries:  {countries.length}');
+      setState(() {});
+    } catch (e) {
+      print('Failed to load countries: $e');
+      countries = [];
+      setState(() {});
+    }
+  }
 
+  @override
+  void initState() {
+    super.initState();
+    countryProvider = Provider.of<CountryProvider>(context, listen: false);
+    _initCountries();
+  }
   
   @override
   Widget build(BuildContext context) {
-    return MasterScreen(
-      title: "Author List",
-      child: Container(
-        color: Colors.white,
-        alignment: Alignment.center,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 24),
-              _buildAddAuthorButton(),
-              _buildSearch(),
-              _buildResultView(),
-              _buildPaginationControls(),
-            ],
-          ),
+    return Container(
+      color: Colors.white,
+      alignment: Alignment.center,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 24),
+            _buildAddAuthorButton(),
+            _buildSearch(),
+            _buildResultView(),
+            _buildPaginationControls(),
+          ],
         ),
       ),
     );
@@ -155,33 +173,36 @@ class _AuthorListState extends State<AuthorList> {
               const SizedBox(width: 12),
               Flexible(
                 flex: 2,
-                child: DropdownButtonFormField<Map<String, dynamic>>(
-                  value: selectedCountry,
-                  items: countries.map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(
-                      c['name'] ?? '',
-                      style: const TextStyle(
-                        color: Color(0xFF4E342E),
-                        fontFamily: 'Literata',
-                        fontSize: 14,
+                child: DropdownSearch<Map<String, dynamic>>(
+                  items: countries,
+                  itemAsString: (c) => c['name'] ?? '',
+                  selectedItem: selectedCountry,
+                  dropdownDecoratorProps: DropDownDecoratorProps(
+                    dropdownSearchDecoration: InputDecoration(
+                      labelText: 'Country',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    ),
+                  ),
+                  popupProps: PopupProps.menu(
+                    showSearchBox: true,
+                    searchFieldProps: TextFieldProps(
+                      decoration: InputDecoration(
+                        labelText: 'Search country',
+                        prefixIcon: Icon(Icons.search),
                       ),
                     ),
-                  )).toList(),
+                  ),
                   onChanged: (value) {
                     setState(() {
                       selectedCountry = value;
                     });
                   },
-                  decoration: const InputDecoration(
-                    labelText: 'Country',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  ),
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF4E342E)),
-                  dropdownColor: Color(0xFFFFF8E1),
-                  menuMaxHeight: 300,
+                  validator: (value) {
+                    if (value == null) return 'Country is required';
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(width: 12),

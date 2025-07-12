@@ -20,8 +20,8 @@ namespace BookWorm.Model.Responses
         public string? PhoneNumber { get; set; }
         public int CountryId { get; set; }
        public int Age { get; set; }
-
-        // Collection of roles assigned to the user
+        public string? PhotoUrl { get; set; } 
+       
         public List<RoleResponse> Roles { get; set; } = new List<RoleResponse>();
     }
 }

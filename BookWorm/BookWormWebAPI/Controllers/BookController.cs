@@ -29,7 +29,7 @@ namespace BookWormWebAPI.Controllers
             _env = env;
             _context = context;
         }
-
+        
         [HttpGet("")]
        
         public override async Task<PagedResult<BookResponse>> Get([FromQuery] BookSearchObject? search = null)

@@ -52,6 +52,7 @@ class _BookListState extends State<BookList> {
       "pageSize": pageSize,
       "includeTotalCount": true,
     };
+    debugPrint("DEBUG: Book filter parameters: $filter");
     var books = await bookProvider.get(filter: filter);
     setState(() {
       this.books = books;
@@ -84,9 +85,7 @@ class _BookListState extends State<BookList> {
 
   @override
   Widget build(BuildContext context) {
-    return MasterScreen(
-      title: "Book List",
-      child: Container(
+    return Container(
         color: Colors.white,
         alignment: Alignment.center,
         child: Column(
@@ -94,12 +93,11 @@ class _BookListState extends State<BookList> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
-            _buildAddBookButton(),
+          _buildAddBookButton(),
             _buildSearch(),
             _buildResultView(),
             _buildPaginationControls(),
           ],
-        ),
       ),
     );
   }
@@ -314,7 +312,7 @@ class _BookListState extends State<BookList> {
     final totalCount = books?.totalCount ?? 0;
     return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 1200),
+        constraints: const BoxConstraints(maxWidth: 1200), 
         margin: const EdgeInsets.only(top: 0),
         padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 24),
         decoration: BoxDecoration(
@@ -353,35 +351,35 @@ class _BookListState extends State<BookList> {
                   ),
                 ),
               DataTable(
-                showCheckboxColumn: false,
-                headingRowHeight: 48,
-                dataRowHeight: 44,
-                dividerThickness: 0.5,
-                columnSpacing: 32,
-                horizontalMargin: 16,
-                columns: [
-                  DataColumn(label: Text("Title", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Author", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Genre", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Pages", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Year", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("State", style: _tableHeaderStyle())),
-                  DataColumn(label: Icon(Icons.info_outline, color: Color(0xFF8D6748))),
-                  DataColumn(label: Icon(Icons.edit, color: Color(0xFF8D6748))),
-                  DataColumn(label: Icon(Icons.delete, color: Colors.red)),
-                ],
-                dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
-                  if (states.contains(MaterialState.selected)) {
-                    return const Color(0xFFFFF8E1);
-                  }
-                  return Colors.white;
-                }),
-                headingRowColor: MaterialStateProperty.all(const Color(0xFFF6E3B4)),
-                rows: books?.items?.map((e) => DataRow(
-                  onSelectChanged: (value) {},
-                  cells: [
-                    DataCell(Text(e.title, style: _tableCellStyle())),
-                    DataCell(Text(e.authorName, style: _tableCellStyle())),
+              showCheckboxColumn: false,
+              headingRowHeight: 48,
+              dataRowHeight: 44,
+              dividerThickness: 0.5,
+              columnSpacing: 32,
+              horizontalMargin: 16,
+              columns: [
+                DataColumn(label: Text("Title", style: _tableHeaderStyle())),
+                DataColumn(label: Text("Author", style: _tableHeaderStyle())),
+                DataColumn(label: Text("Genre", style: _tableHeaderStyle())),
+                DataColumn(label: Text("Pages", style: _tableHeaderStyle())),
+                DataColumn(label: Text("Year", style: _tableHeaderStyle())),
+                DataColumn(label: Text("State", style: _tableHeaderStyle())),
+                DataColumn(label: Icon(Icons.info_outline, color: Color(0xFF8D6748))),
+                DataColumn(label: Icon(Icons.edit, color: Color(0xFF8D6748))),
+                DataColumn(label: Icon(Icons.delete, color: Colors.red)),
+              ],
+              dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return const Color(0xFFFFF8E1);
+                }
+                return Colors.white;
+              }),
+              headingRowColor: MaterialStateProperty.all(const Color(0xFFF6E3B4)),
+              rows: books?.items?.map((e) => DataRow(
+                onSelectChanged: (value) {},
+                cells: [
+                  DataCell(Text(e.title, style: _tableCellStyle())),
+                  DataCell(Text(e.authorName, style: _tableCellStyle())),
                     DataCell(
                       Container(
                         constraints: BoxConstraints(maxWidth: 120),
@@ -393,63 +391,63 @@ class _BookListState extends State<BookList> {
                         ),
                       ),
                     ),
-                    DataCell(Text(e.pageCount.toString(), style: _tableCellStyle())),
-                    DataCell(Text(e.publicationYear.toString(), style: _tableCellStyle())),
-                    DataCell(
-                      Text(
-                        e.bookState,
-                        style: _tableCellStyle().copyWith(
-                          color: e.bookState == 'Accepted'
-                              ? Color(0xFF2E7D32)
-                              : e.bookState == 'Submitted'
-                                  ? Color(0xFFC62828)
-                                  : Color(0xFF4E342E),
-                          fontWeight: FontWeight.bold,
-                        ),
+                  DataCell(Text(e.pageCount.toString(), style: _tableCellStyle())),
+                  DataCell(Text(e.publicationYear.toString(), style: _tableCellStyle())),
+                  DataCell(
+                    Text(
+                      e.bookState,
+                      style: _tableCellStyle().copyWith(
+                        color: e.bookState == 'Accepted'
+                            ? Color(0xFF2E7D32)
+                            : e.bookState == 'Submitted'
+                                ? Color(0xFFC62828)
+                                : Color(0xFF4E342E),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    DataCell(IconButton(
-                      icon: const Icon(Icons.info_outline, color: Color(0xFF8D6748)),
+                  ),
+                  DataCell(IconButton(
+                    icon: const Icon(Icons.info_outline, color: Color(0xFF8D6748)),
                       onPressed: () async {
                         final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetails(book: e, isEditMode: false,),
-                          ),
-                        );
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetails(book: e, isEditMode: false,),
+                        ),
+                      );
                         if (result == true) {
                           _fetchAllBooks();
                         }
-                      },
-                      splashRadius: 20,
-                      tooltip: 'Details',
-                    )),
-                    DataCell(IconButton(
-                      icon: const Icon(Icons.edit, color: Color(0xFF8D6748)),
+                    },
+                    splashRadius: 20,
+                    tooltip: 'Details',
+                  )),
+                  DataCell(IconButton(
+                    icon: const Icon(Icons.edit, color: Color(0xFF8D6748)),
                       onPressed: () async {
                         final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetails(book: e, isEditMode: true,),
-                          ),
-                        );
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BookDetails(book: e, isEditMode: true,),
+                        ),
+                      );
                         if (result == true) {
                           _fetchAllBooks();
                         }
-                      },
-                      splashRadius: 20,
-                      tooltip: 'Edit',
-                    )),
-                    DataCell(IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Book'),
-                            content: const Text('Are you sure you want to delete this book?'),
-                            actions: [
-                              TextButton(
+                    },
+                    splashRadius: 20,
+                    tooltip: 'Edit',
+                  )),
+                  DataCell(IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Book'),
+                          content: const Text('Are you sure you want to delete this book?'),
+                          actions: [
+                            TextButton(
                                 onPressed: () async {
                                   try {
                                     await bookProvider.delete(e.id);
@@ -474,23 +472,23 @@ class _BookListState extends State<BookList> {
                                       ),
                                     );
                                   }
-                                },
-                                child: const Text('Delete'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      splashRadius: 20,
-                      tooltip: 'Delete',
-                    )),
-                  ],
-                )).toList() ?? [],
-              ),
+                              },
+                              child: const Text('Delete'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    splashRadius: 20,
+                    tooltip: 'Delete',
+                  )),
+                ],
+              )).toList() ?? [],
+            ),
             ],
           ),
         ),

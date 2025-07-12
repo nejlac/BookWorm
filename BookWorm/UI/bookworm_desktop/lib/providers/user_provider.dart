@@ -1,48 +1,24 @@
-import 'package:bookworm_desktop/model/author.dart';
+import 'package:bookworm_desktop/model/user.dart';
 import 'package:bookworm_desktop/providers/base_provider.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class AuthorProvider extends BaseProvider<Author> {
-  AuthorProvider():super("author");
+class UserProvider extends BaseProvider<User> {
+  UserProvider():super("users");
 
   @override
-  Author fromJson(dynamic json) {
-    return Author.fromJson(json);
+  User fromJson(dynamic json) {
+    return User.fromJson(json);
   }
   String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
-  Future<List<Author>> getAllAuthors() async {
-    try {
-      final result = await get(filter: {'RetrieveAll': true});
-      return result.items ?? [];
-    } catch (e) {
-      print('Error fetching authors: $e');
-      return [];
-    }
-  }
+  
 
-   Future<void> accept(int id) async {
-    var url = "${baseUrl}author/$id/accept";
-    var headers = createHeaders();
-    var response = await http.post(Uri.parse(url), headers: headers);
-    if (!isValidResponse(response)) {
-      throw Exception("Failed to accept author");
-    }
-  }
-
-  Future<void> decline(int id) async {
-    var url = "${baseUrl}author/$id/decline";
-    var headers = createHeaders();
-    var response = await http.post(Uri.parse(url), headers: headers);
-    if (!isValidResponse(response)) {
-      throw Exception("Failed to decline author");
-    }
-  }
-  Future<void> uploadPhoto(int authorId, File photoFile) async {
+  
+  Future<void> uploadPhoto(int userId, File photoFile) async {
     try {
-      print("Uploading author photo. File path: "+photoFile.path);
-      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$authorId/cover";
+      print("Uploading user photo. File path: "+photoFile.path);
+      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$userId/cover";
       print("Upload URL: $url");
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
@@ -68,7 +44,7 @@ class AuthorProvider extends BaseProvider<Author> {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         print("Upload failed with status: response.statusCode");
         print("Response body: response.body");
-        throw Exception("Failed to upload author photo: response.statusCode - response.body");
+        throw Exception("Failed to upload user photo: response.statusCode - response.body");
       }
       print("Upload successful!");
     } catch (e) {
@@ -77,45 +53,45 @@ class AuthorProvider extends BaseProvider<Author> {
     }
   }
 
-  Future<Author> getById(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
+  Future<User> getById(int id) async {
+    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       var data = jsonDecode(response.body);
-      print("Author getById response: $data");
+      print("User getById response: $data");
       return fromJson(data);
     } else {
-      throw Exception("Failed to get author: \\${response.statusCode} - \\${response.body}");
+      throw Exception("Failed to get user: \\${response.statusCode} - \\${response.body}");
     }
   }
 
   Future<bool> delete(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
+    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.delete(uri, headers: headers);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
     } else {
-      print("Failed to delete author: \\${response.statusCode} - \\${response.body}");
+      print("Failed to delete user: \\${response.statusCode} - \\${response.body}");
       return false;
     }
   }
 
-  Future<bool> existsWithNameAndDateOfBirth(String name, DateTime dateOfBirth, {int? excludeId}) async {
+  /*Future<bool> existstWithUsernameOrEmail(String username, String email, {int? excludeId}) async {
     final filter = {
-      'name': name,
-      'dateOfBirth': dateOfBirth.toIso8601String(),
+      'username': username,
+      'email': email,
       'pageSize': 1,
       'page': 0,
     };
-    final authors = await get(filter: filter);
-    if (authors.items == null || authors.items!.isEmpty) return false;
+    final users = await get(filter: filter);
+    if (users.items == null || users.items!.isEmpty) return false;
     if (excludeId != null) {
-      return authors.items!.any((a) => a.id != excludeId);
+      return users.items!.any((a) => a.id != excludeId);
     }
     return true;
-  }
+  }*/
 } 

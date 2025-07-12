@@ -4,9 +4,12 @@ import 'package:bookworm_desktop/providers/book_provider.dart';
 import 'package:bookworm_desktop/providers/country_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
+import 'package:bookworm_desktop/providers/role_provider.dart';
+import 'package:bookworm_desktop/providers/user_provider.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bookworm_desktop/layouts/master_screen.dart';
 
 void main() {
  runApp(MultiProvider(providers: [
@@ -18,6 +21,10 @@ void main() {
         create: (context) => AuthorProvider()),
     ChangeNotifierProvider<CountryProvider>(
         create: (context) => CountryProvider()),
+    ChangeNotifierProvider<UserProvider>(
+      create: (context) => UserProvider()),
+    ChangeNotifierProvider<RoleProvider>(
+        create: (context) => RoleProvider()),
   ], child: const LoginPageApp()));
 }
 
@@ -221,7 +228,13 @@ await showDialog(
 
 Navigator.push(
   context,
-  MaterialPageRoute(builder: (context) => BookList()),
+  MaterialPageRoute(
+    builder: (context) => MasterScreen(
+      child: BookList(),
+      title: "Book List",
+      selectedIndex: 0,
+    ),
+  ),
 );
                     } on Exception catch (e) {
                       showDialog(

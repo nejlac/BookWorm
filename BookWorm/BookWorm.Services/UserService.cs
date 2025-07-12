@@ -29,7 +29,7 @@ namespace BookWorm.Services
             _logger = logger;
         }
 
-        public async Task<List<UserResponse>> GetAsync(UserSearchObject search)
+        public async Task<PagedResult<UserResponse>> GetAsync(UserSearchObject search)
         {
             var query = _context.Users.AsQueryable();
 
@@ -40,8 +40,21 @@ namespace BookWorm.Services
 
             if (!string.IsNullOrEmpty(search.FirstName))
             {
-                query = query.Where(u => u.Email.Contains(search.FirstName));
+                query = query.Where(u => u.FirstName.Contains(search.FirstName));
             }
+
+            if (!string.IsNullOrEmpty(search.LastName))
+            {
+                query = query.Where(u => u.LastName.Contains(search.LastName));
+            }
+
+            if (!string.IsNullOrEmpty(search.Email))
+            {
+                query = query.Where(u => u.Email.Contains(search.Email));
+            }
+
+            if (search.CountryId.HasValue)
+                query = query.Where(u => u.CountryId == search.CountryId);
 
             if (!string.IsNullOrEmpty(search.FTS))
             {
@@ -52,8 +65,40 @@ namespace BookWorm.Services
                     u.Email.Contains(search.FTS));
             }
 
+           
+            int? totalCount = null;
+            if (search.IncludeTotalCount)
+            {
+                totalCount = await query.CountAsync();
+            }
+
+         
+            if (!search.RetrieveAll)
+            {
+                if (search.Page.HasValue)
+                {
+                    query = query.Skip(search.Page.Value * search.PageSize.Value);
+                }
+                if (search.PageSize.HasValue)
+                {
+                    query = query.Take(search.PageSize.Value);
+                }
+            }
+
             var users = await query.ToListAsync();
-            return users.Select(MapToResponse).ToList();
+
+            var userResponses = new List<UserResponse>();
+            foreach (var user in users)
+            {
+                var userResponse = await GetUserResponseWithRolesAsync(user.Id);
+                userResponses.Add(userResponse);
+            }
+
+            return new PagedResult<UserResponse>
+            {
+                Items = userResponses,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<UserResponse?> GetByIdAsync(int id)
@@ -85,13 +130,13 @@ namespace BookWorm.Services
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             {
             _logger.LogInformation("User is trying to register with existing email.");
-            throw new UserException("The username or email is already in use.");
+            throw new UserException($"A user with the email '{request.Email}' already exists.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
             _logger.LogInformation("User is trying to register with existing username.");
-            throw new UserException("The username or email is already in use.");
+            throw new UserException($"A user with the username '{request.Username}' already exists.");
             }
 
             var user = new User
@@ -104,7 +149,8 @@ namespace BookWorm.Services
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.UtcNow,
                 Age=request.Age,
-                CountryId = request.CountryId
+                CountryId = request.CountryId,
+                PhotoUrl = request.PhotoUrl
             };
 
            
@@ -150,13 +196,13 @@ namespace BookWorm.Services
             if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.Id != id))
             {
                 _logger.LogInformation("User is trying to update with existing email.");
-                throw new UserException("The username or email is already in use.");
+                throw new UserException($"A user with the email '{request.Email}' already exists.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username && u.Id != id))
             {
                 _logger.LogInformation("User is trying to update with existing username.");
-                throw new UserException("The username or email is already in use.");
+                throw new UserException($"A user with the username '{request.Username}' already exists.");
             }
 
             user.FirstName = request.FirstName;
@@ -168,6 +214,7 @@ namespace BookWorm.Services
             user.CountryId = request.CountryId;
             user.Age = request.Age;
             user.ModdifiedAt = DateTime.Now;
+            user.PhotoUrl = request.PhotoUrl;
 
 
         if (!string.IsNullOrEmpty(request.Password))
@@ -229,7 +276,9 @@ namespace BookWorm.Services
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt,
                 CountryId=user.CountryId,
-                Age = user.Age
+                Age = user.Age,
+                PhotoUrl = user.PhotoUrl,
+
 
             };
         }

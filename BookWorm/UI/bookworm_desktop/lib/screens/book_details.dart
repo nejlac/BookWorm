@@ -1,4 +1,3 @@
-import 'package:bookworm_desktop/layouts/master_screen.dart';
 import 'package:bookworm_desktop/model/book.dart';
 import 'package:bookworm_desktop/model/genre.dart';
 import 'package:bookworm_desktop/model/author.dart';
@@ -6,11 +5,14 @@ import 'package:bookworm_desktop/model/search_result.dart';
 import 'package:bookworm_desktop/providers/book_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
+import 'package:bookworm_desktop/screens/author_details.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:dropdown_search/dropdown_search.dart';
+import 'package:collection/collection.dart';
 
 class BookDetails extends StatefulWidget {
   Book? book;
@@ -75,9 +77,18 @@ class _BookDetails extends State<BookDetails> {
 
     @override
   Widget build(BuildContext context) {
-    return MasterScreen(
-      title: widget.isEditMode ? "Edit Book" : "Book Details",
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(widget.isEditMode ? 'Edit Book' : 'Book Details'),
+        backgroundColor: Color(0xFF8D6748),
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
+      body: SingleChildScrollView(
         child: Column(
           children: [
         _buildForm(),
@@ -351,7 +362,16 @@ class _BookDetails extends State<BookDetails> {
               SizedBox(height: 16),
               
              
-              widget.isEditMode ? _buildAuthorDropdown() : FormBuilderTextField(
+              widget.isEditMode ? Column(
+                children: [
+                  // Hidden field to always store authorId as int
+                  FormBuilderField<int>(
+                    name: 'authorId',
+                    builder: (field) => SizedBox.shrink(),
+                  ),
+                  _buildAuthorDropdown(),
+                ],
+              ) : FormBuilderTextField(
                 name: "authorName",
                 decoration: InputDecoration(
                   labelText: "✍️ Author",
@@ -579,58 +599,92 @@ class _BookDetails extends State<BookDetails> {
        );
      }
      
-     return Container(
-       decoration: BoxDecoration(
-         color: Color(0xFFFFFBFE),
-         borderRadius: BorderRadius.circular(12),
-         border: Border.all(color: Color(0xFFA1887F).withOpacity(0.4)),
-         boxShadow: [
-           BoxShadow(
-             color: Colors.brown.withOpacity(0.08),
-             spreadRadius: 1,
-             blurRadius: 4,
-             offset: Offset(0, 2),
+     return Row(    
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Expanded(
+           child: DropdownSearch<Author>(
+             items: authors?.items ?? [],
+             itemAsString: (author) => author?.name ?? '',
+             selectedItem: authors?.items?.firstWhereOrNull((a) => a.id == formKey.currentState?.fields['authorId']?.value),
+             dropdownDecoratorProps: DropDownDecoratorProps(
+               dropdownSearchDecoration: InputDecoration(
+                 labelText: "✍️ Author",
+                 prefixIcon: Icon(Icons.person, color: Color(0xFFA1887F)),
+                 border: OutlineInputBorder(
+                   borderRadius: BorderRadius.circular(12),
+                   borderSide: BorderSide.none,
+                 ),
+                 filled: true,
+                 fillColor: Colors.transparent,
+                 labelStyle: TextStyle(
+                   color: Color(0xFFA1887F),
+                   fontWeight: FontWeight.w600,
+                 ),
+                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+               ),
+             ),
+             popupProps: PopupProps.menu(
+               showSearchBox: true,
+               searchFieldProps: TextFieldProps(
+                 decoration: InputDecoration(
+                   labelText: 'Search author',
+                   prefixIcon: Icon(Icons.search),
+                 ),
+               ),
+             ),
+             onChanged: (author) {
+               if (author != null) {
+                 formKey.currentState?.fields['authorId']?.didChange(author.id);
+                 formKey.currentState?.fields['authorName']?.didChange(author.name);
+               }
+             },
+             validator: (author) {
+               if (author == null) {
+                 return "Please select an author";
+               }
+               return null;
+             },
            ),
-         ],
-       ),
-       child: FormBuilderDropdown<int>(
-         name: "authorId",
-         decoration: InputDecoration(
-           labelText: "✍️ Author",
-           prefixIcon: Icon(Icons.person, color: Color(0xFFA1887F)),
-           border: OutlineInputBorder(
-             borderRadius: BorderRadius.circular(12),
-             borderSide: BorderSide.none,
-           ),
-           filled: true,
-           fillColor: Colors.transparent,
-           labelStyle: TextStyle(
-             color: Color(0xFFA1887F),
-             fontWeight: FontWeight.w600,
-           ),
-           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
          ),
-         items: authors?.items?.map((author) =>
-           DropdownMenuItem<int>(
-             value: author.id,
-             child: Text(author.name),
-           )
-         ).toList() ?? [],
-         onChanged: (value) {
-           if (value != null) {
-             final selectedAuthor = authors?.items?.firstWhere((author) => author.id == value);
-             if (selectedAuthor != null) {
-               formKey.currentState?.fields['authorName']?.didChange(selectedAuthor.name);
+         SizedBox(width: 8),
+         ElevatedButton.icon(
+           icon: Icon(Icons.add, size: 18),
+           label: Text("Add Author", style: TextStyle(fontSize: 13)),
+           style: ElevatedButton.styleFrom(
+             backgroundColor: Color(0xFF8D6748),
+             foregroundColor: Colors.white,
+             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+             shape: RoundedRectangleBorder(
+               borderRadius: BorderRadius.circular(8),
+             ),
+             elevation: 2,
+           ),
+           onPressed: () async {
+             final result = await Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => AuthorDetails(isEditMode: true, isAddMode: true),
+               ),
+             );
+             if (result == true) {
+               // Refresh authors and select the new one
+               final loadedAuthors = await authorProvider.getAllAuthors();
+               setState(() {
+                 authors = SearchResult<Author>(
+                   items: loadedAuthors.whereType<Author>().toList(),
+                 );
+               });
+               // Find the most recently added author (by max id)
+               final newAuthor = authors?.items?.reduce((a, b) => a.id > b.id ? a : b);
+               if (newAuthor != null) {
+                 formKey.currentState?.fields['authorId']?.didChange(newAuthor.id);
+                 formKey.currentState?.fields['authorName']?.didChange(newAuthor.name);
+               }
              }
-           }
-         },
-         validator: (value) {
-           if (value == null || value == 0) {
-             return "Please select an author";
-           }
-           return null;
-         },
-       ),
+           },
+         ),
+       ],
      );
    }
    
@@ -809,6 +863,7 @@ class _BookDetails extends State<BookDetails> {
          "publicationYear": int.tryParse(formData["publicationYear"] ?? "") ?? 0,
          "pageCount": int.tryParse(formData["pageCount"] ?? "") ?? 0,
          "genreIds": selectedGenreIds,
+         "coverImagePath": _existingCoverPath, // Preserve existing cover path
        };
 
        // Duplicate check
