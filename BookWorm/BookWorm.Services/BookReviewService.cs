@@ -1,16 +1,17 @@
+using BookWorm.Model.Exceptions;
 using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
-using BookWorm.Services.DataBase;
 using BookWorm.Services;
+using BookWorm.Services.DataBase;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BookWorm.Model.Exceptions;
 
 namespace BookWorm.Services
 {
@@ -27,10 +28,14 @@ namespace BookWorm.Services
 
         protected override IQueryable<BookReview> ApplyFilter(IQueryable<BookReview> query, BookReviewSearchObject search)
         {
-            if (search.UserId.HasValue)
-                query = query.Where(br => br.UserId == search.UserId);
-            if (search.BookId.HasValue)
-                query = query.Where(br => br.BookId == search.BookId);
+            if (!string.IsNullOrEmpty(search.Username))
+            {
+                query = query.Where(br => br.User.Username.Contains(search.Username));
+            }
+            if (!string.IsNullOrEmpty(search.BookTitle))
+            {
+                query = query.Where(br => br.Book.Title.Contains(search.BookTitle));
+            }
             if (search.Rating.HasValue)
                 query = query.Where(br => br.Rating == search.Rating);
             if (search.IsChecked.HasValue)

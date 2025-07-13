@@ -18,7 +18,6 @@ namespace BookWorm.Services.DataBase
         [ForeignKey("BookId")]
         public Book Book { get; set; } = null!;
         
-        [Required]
         [MaxLength(2000)]
         public string? Review { get; set; } = string.Empty;
 

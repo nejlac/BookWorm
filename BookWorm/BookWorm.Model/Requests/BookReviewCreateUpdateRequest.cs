@@ -10,9 +10,9 @@ namespace BookWorm.Model.Requests
         [Required(ErrorMessage = "BookId is required.")]
         public int BookId { get; set; }
 
-        [Required(ErrorMessage = "Review text is required.")]
+        
         [MaxLength(2000, ErrorMessage = "Review must not exceed 2000 characters.")]
-        public string Review { get; set; } = string.Empty;
+        public string? Review { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Rating is required.")]
         [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5.")]

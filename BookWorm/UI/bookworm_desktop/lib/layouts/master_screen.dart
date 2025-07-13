@@ -1,4 +1,5 @@
 import 'package:bookworm_desktop/screens/author_list.dart';
+import 'package:bookworm_desktop/screens/bookReview_list.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:bookworm_desktop/screens/user_list.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ class _MasterScreenState extends State<MasterScreen> {
     _NavItem(icon: Icons.menu_book_rounded, label: 'Books', screen: BookList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Users', screen: UserList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Authors', screen: AuthorList()),
-    _NavItem(icon: Icons.reviews, label: 'Reviews', screen: null),
+    _NavItem(icon: Icons.reviews, label: 'Reviews', screen: BookReviewList()),
     _NavItem(icon: Icons.my_library_books_outlined, label: 'Challanges', screen: null),
     _NavItem(icon: Icons.auto_graph, label: 'Statistics', screen: null),
   ];

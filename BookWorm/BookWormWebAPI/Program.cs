@@ -2,6 +2,7 @@ using BookWorm.Services;
 using BookWorm.Services.AuthorStateMachine;
 using BookWorm.Services.BookStateMachine;
 using BookWorm.Services.DataBase;
+using BookWorm.Model.Requests;
 using BookWormWebAPI.Filters;
 using Mapster;
 using MapsterMapper;
@@ -34,6 +35,9 @@ builder.Services.AddTransient<SubmittedAuthorState>();
 builder.Services.AddTransient<AcceptedAuthorState>();
 builder.Services.AddTransient<DeclinedAuthorState>();
 
+// Mapster mapping for BookReviewCreateUpdateRequest -> BookReview
+TypeAdapterConfig<BookReviewCreateUpdateRequest, BookReview>.NewConfig()
+    .Map(dest => dest.isChecked, src => src.IsChecked);
 
 builder.Services.AddMapster();
 

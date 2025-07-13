@@ -38,9 +38,9 @@ abstract class BaseProvider<T> with ChangeNotifier {
       
       var result = SearchResult<T>();
       
-      // Check if response is a paginated object or direct array
+     
       if (data is Map<String, dynamic>) {
-        // Paginated response with totalCount, page, pageSize, items
+       
         print("DEBUG: Paginated response detected");
         result.totalCount = data['totalCount'];
         result.page = data['page'];
