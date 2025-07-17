@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BookWormWebAPI.Requests;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -59,6 +60,20 @@ namespace BookWormWebAPI.Controllers
             if (!deleted)
                 return NotFound();
             return NoContent();
+        }
+
+        [HttpPost("{id}/add-book")]
+        public async Task<ActionResult<ReadingListResponse>> AddBookToList(int id, [FromBody] AddBookToListRequest request)
+        {
+            try
+            {
+                var result = await _readingListService.AddBookToListAsync(id, request.BookId, request.ReadAt);
+                return Ok(result);
+            }
+            catch (BookWorm.Model.Exceptions.ReadingListException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
     }
 } 

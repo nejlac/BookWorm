@@ -23,4 +23,18 @@ namespace BookWorm.Model.Responses
         public string Title { get; set; } = string.Empty;
         public DateTime CompletedAt { get; set; }
     }
+
+    public class ReadingChallengeSummaryResponse
+    {
+        public int CompletedChallenges { get; set; }
+        public List<TopReaderDto> TopReaders { get; set; } = new List<TopReaderDto>();
+    }
+
+    public class TopReaderDto
+    {
+        public int UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string? PhotoUrl { get; set; }
+        public int NumberOfBooksRead { get; set; }
+    }
 } 

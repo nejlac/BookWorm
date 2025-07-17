@@ -14,10 +14,12 @@ namespace BookWorm.Services
     public class ReadingListService : IReadingListService
     {
         private readonly BookWormDbContext _context;
+        private readonly IReadingChallengeService _readingChallengeService;
 
-        public ReadingListService(BookWormDbContext context)
+        public ReadingListService(BookWormDbContext context, IReadingChallengeService readingChallengeService)
         {
             _context = context;
+            _readingChallengeService = readingChallengeService;
         }
 
         public async Task<List<ReadingListResponse>> GetAsync(ReadingListSearchObject search)
@@ -56,7 +58,12 @@ namespace BookWorm.Services
                 {
                     if (await _context.Books.AnyAsync(b => b.Id == bookId))
                     {
-                        var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now };
+                        DateTime? readAt = null;
+                        if (request.BookReadDates != null && request.BookReadDates.TryGetValue(bookId, out var date) && date.HasValue)
+                            readAt = date.Value;
+                        else
+                            readAt = DateTime.Now;
+                        var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now, ReadAt = readAt };
                         _context.ReadingListBooks.Add(rlb);
                     }
                 }
@@ -80,7 +87,12 @@ namespace BookWorm.Services
                 {
                     if (await _context.Books.AnyAsync(b => b.Id == bookId))
                     {
-                        var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now };
+                        DateTime? readAt = null;
+                        if (request.BookReadDates != null && request.BookReadDates.TryGetValue(bookId, out var date) && date.HasValue)
+                            readAt = date.Value;
+                        else
+                            readAt = DateTime.Now;
+                        var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now, ReadAt = readAt };
                         _context.ReadingListBooks.Add(rlb);
                     }
                 }
@@ -97,6 +109,36 @@ namespace BookWorm.Services
             _context.ReadingLists.Remove(list);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<ReadingListResponse> AddBookToListAsync(int readingListId, int bookId, DateTime? readAt = null)
+        {
+            var list = await _context.ReadingLists.Include(rl => rl.ReadingListBooks).FirstOrDefaultAsync(rl => rl.Id == readingListId);
+            if (list == null)
+                throw new ReadingListException("Reading list not found");
+            if (!await _context.Books.AnyAsync(b => b.Id == bookId))
+                throw new ReadingListException("Book not found");
+            if (list.ReadingListBooks.Any(rlb => rlb.BookId == bookId))
+                throw new ReadingListException("Book already in the list");
+            var actualReadAt = readAt ?? DateTime.Now;
+            var rlb = new ReadingListBook
+            {
+                ReadingListId = readingListId,
+                BookId = bookId,
+                AddedAt = DateTime.Now,
+                ReadAt = actualReadAt
+            };
+            _context.ReadingListBooks.Add(rlb);
+            await _context.SaveChangesAsync();
+
+           
+            if (actualReadAt != null)
+            {
+                var year = actualReadAt.Year;
+                await _readingChallengeService.AddBookToChallengeAsync(list.UserId, year, bookId, actualReadAt);
+            }
+
+            return await GetReadingListResponseWithBooksAsync(readingListId);
         }
 
         private ReadingListResponse MapToResponse(ReadingList list)

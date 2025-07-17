@@ -13,6 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:collection/collection.dart';
+import 'package:bookworm_desktop/providers/base_provider.dart';
 
 class BookDetails extends StatefulWidget {
   Book? book;
@@ -223,43 +224,50 @@ class _BookDetails extends State<BookDetails> {
             height: 210,
           )
         : _existingCoverPath != null
-            ? Image.network(
-                "https://localhost:7031/$_existingCoverPath",
-                fit: BoxFit.cover,
-                width: 140,
-                height: 210,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[200],
-                    width: 140,
-                    height: 210,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.image_not_supported, color: Colors.grey[600], size: 32),
-                        SizedBox(height: 8),
-                        Text("Image not found", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                      ],
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[200],
-                    width: 140,
-                    height: 210,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                        strokeWidth: 2,
+            ? (() {
+                String base = BaseProvider.baseUrl ?? '';
+                if (base.endsWith('/api/')) {
+                  base = base.substring(0, base.length - 5);
+                }
+                String coverUrl = '$base/$_existingCoverPath';
+                return Image.network(
+                  coverUrl,
+                  fit: BoxFit.cover,
+                  width: 140,
+                  height: 210,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      width: 140,
+                      height: 210,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, color: Colors.grey[600], size: 32),
+                          SizedBox(height: 8),
+                          Text("Image not found", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                        ],
                       ),
-                    ),
-                  );
-                },
-              )
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      width: 140,
+                      height: 210,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              })()
             : Container(
                 color: Colors.grey[200],
                 width: 140,

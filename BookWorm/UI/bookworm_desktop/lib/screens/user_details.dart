@@ -14,6 +14,7 @@ import 'package:bookworm_desktop/providers/role_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:ui' as ui;
 import 'dart:async';
+import 'package:bookworm_desktop/providers/base_provider.dart';
 
 class UserDetails extends StatefulWidget {
   final User? user;
@@ -841,7 +842,11 @@ class _UserDetailsState extends State<UserDetails> {
       if (_existingPhotoUrl!.startsWith('http')) {
         imageUrl = _existingPhotoUrl;
       } else {
-        imageUrl = 'https://localhost:7031/${_existingPhotoUrl}';
+        String base = BaseProvider.baseUrl ?? '';
+        if (base.endsWith('/api/')) {
+          base = base.substring(0, base.length - 5);
+        }
+        imageUrl = '$base/${_existingPhotoUrl}';
       }
       print('[UserDetails] _existingPhotoUrl: ${_existingPhotoUrl}');
       print('[UserDetails] imageUrl: ${imageUrl}');

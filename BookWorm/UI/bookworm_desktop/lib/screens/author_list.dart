@@ -3,6 +3,7 @@ import 'package:bookworm_desktop/model/author.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:bookworm_desktop/providers/country_provider.dart';
+import 'package:bookworm_desktop/providers/base_provider.dart';
 import 'package:bookworm_desktop/screens/author_details.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -307,7 +308,11 @@ class _AuthorListState extends State<AuthorList> {
                   if (author.photoUrl!.startsWith('http')) {
                     imageUrl = author.photoUrl!;
                   } else {
-                    imageUrl = 'https://localhost:7031/${author.photoUrl}';
+                    String base = BaseProvider.baseUrl ?? '';
+                    if (base.endsWith('/api/')) {
+                      base = base.substring(0, base.length - 5);
+                    }
+                    imageUrl = '$base/${author.photoUrl}';
                   }
                   print('[AuthorList] author.photoUrl: \\${author.photoUrl}');
                   print('[AuthorList] imageUrl: \\${imageUrl}');

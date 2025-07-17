@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:bookworm_desktop/providers/base_provider.dart';
 
 class AuthorDetails extends StatefulWidget {
   final Author? author;
@@ -407,7 +408,11 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       if (_existingPhotoUrl!.startsWith('http')) {
         imageUrl = _existingPhotoUrl;
       } else {
-        imageUrl = 'https://localhost:7031/${_existingPhotoUrl}';
+        String base = BaseProvider.baseUrl ?? '';
+        if (base.endsWith('/api/')) {
+          base = base.substring(0, base.length - 5);
+        }
+        imageUrl = '$base/${_existingPhotoUrl}';
       }
       print('[AuthorDetails] _existingPhotoUrl: \\${_existingPhotoUrl}');
       print('[AuthorDetails] imageUrl: \\${imageUrl}');

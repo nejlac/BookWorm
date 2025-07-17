@@ -19,5 +19,6 @@ namespace BookWorm.Services.DataBase
         public Book Book { get; set; } = null!;
         
         public DateTime AddedAt { get; set; } = DateTime.Now;
+        public DateTime? ReadAt { get; set; } = null;
     }
 } 

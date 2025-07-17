@@ -27,8 +27,8 @@ namespace BookWorm.Services
 
         protected override IQueryable<ReadingChallenge> ApplyFilter(IQueryable<ReadingChallenge> query, ReadingChallengeSearchObject search)
         {
-            if (search.UserId.HasValue)
-                query = query.Where(rc => rc.UserId == search.UserId);
+            if (!string.IsNullOrEmpty(search.Username))
+                query = query.Where(rc => rc.User.Username.Contains( search.Username));
             if (search.Year.HasValue)
                 query = query.Where(rc => rc.Year == search.Year);
             if (search.IsCompleted.HasValue)
@@ -199,6 +199,59 @@ namespace BookWorm.Services
                 
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task AddBookToChallengeAsync(int userId, int year, int bookId, DateTime completedAt)
+        {
+            var challenge = await _context.ReadingChallenges
+                .Include(rc => rc.ReadingChallengeBooks)
+                .FirstOrDefaultAsync(rc => rc.UserId == userId && rc.Year == year);
+            if (challenge == null)
+                return; 
+            if (challenge.ReadingChallengeBooks.Any(rcb => rcb.BookId == bookId))
+                return; 
+            var rcb = new ReadingChallengeBook
+            {
+                ReadingChallengeId = challenge.Id,
+                BookId = bookId,
+                CompletedAt = completedAt
+            };
+            _context.ReadingChallengeBooks.Add(rcb);
+            await _context.SaveChangesAsync();
+            await UpdateChallengeProgress(challenge.Id);
+        }
+
+        public async Task<ReadingChallengeSummaryResponse> GetSummaryAsync(int? year = null, int topN = 3)
+        {
+            var challengesQuery = _context.ReadingChallenges
+                .Include(rc => rc.User)
+                .Include(rc => rc.ReadingChallengeBooks)
+                .AsQueryable();
+
+            if (year.HasValue)
+                challengesQuery = challengesQuery.Where(c => c.Year == year.Value);
+
+            var challengeList = await challengesQuery.ToListAsync();
+            var completedCount = challengeList.Count(c => c.IsCompleted);
+
+            var topReaders = challengeList
+                .GroupBy(c => c.UserId)
+                .Select(g => new TopReaderDto
+                {
+                    UserId = g.Key,
+                    Username = g.First().User.Username,
+                    PhotoUrl = g.First().User.PhotoUrl,
+                    NumberOfBooksRead = g.Sum(c => c.NumberOfBooksRead)
+                })
+                .OrderByDescending(x => x.NumberOfBooksRead)
+                .Take(topN)
+                .ToList();
+
+            return new ReadingChallengeSummaryResponse
+            {
+                CompletedChallenges = completedCount,
+                TopReaders = topReaders
+            };
         }
     }
 } 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System;
 
 namespace BookWorm.Model.Requests
 {
@@ -20,5 +21,8 @@ namespace BookWorm.Model.Requests
 
 
         public List<int> BookIds { get; set; } = new List<int>();
+
+        // Optional: map BookId to ReadAt date
+        public Dictionary<int, DateTime?> BookReadDates { get; set; } = new();
     }
 } 

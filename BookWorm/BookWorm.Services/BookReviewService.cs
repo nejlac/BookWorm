@@ -79,6 +79,7 @@ namespace BookWorm.Services
 
            
             entity.CreatedAt = DateTime.Now;
+            entity.isChecked = false;
         }
 
         protected override async Task BeforeUpdate(BookReview entity, BookReviewCreateUpdateRequest request)

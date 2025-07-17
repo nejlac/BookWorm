@@ -167,6 +167,23 @@ namespace BookWorm.Services
             var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
             if (!isAdmin)
                 throw new AuthorException("Only admin can delete authors.");
+
+            // 1. Delete all books for this author (and all related book data)
+            var books = _context.Books.Where(b => b.AuthorId == id).ToList();
+            foreach (var book in books)
+            {
+                // Remove related book data manually, as in BookService.DeleteAsync
+                var reviews = _context.BookReviews.Where(r => r.BookId == book.Id);
+                _context.BookReviews.RemoveRange(reviews);
+                var bookGenres = _context.BookGenres.Where(bg => bg.BookId == book.Id);
+                _context.BookGenres.RemoveRange(bookGenres);
+                var readingListBooks = _context.ReadingListBooks.Where(rlb => rlb.BookId == book.Id);
+                _context.ReadingListBooks.RemoveRange(readingListBooks);
+                var challengeBooks = _context.ReadingChallengeBooks.Where(rcb => rcb.BookId == book.Id);
+                _context.ReadingChallengeBooks.RemoveRange(challengeBooks);
+                _context.Books.Remove(book);
+            }
+
             await BeforeDelete(author);
             _context.Authors.Remove(author);
             await _context.SaveChangesAsync();

@@ -406,10 +406,10 @@ namespace BookWormWebAPI.Controllers
                 {
                     readingLists.AddRange(new[]
                     {
-                new ReadingList { UserId = user.Id, Name = "Want to read", IsPublic = true, CreatedAt = DateTime.Now },
-                new ReadingList { UserId = user.Id, Name = "Currently reading", IsPublic = true, CreatedAt = DateTime.Now },
-                new ReadingList { UserId = user.Id, Name = "Read", IsPublic = true, CreatedAt = DateTime.Now }
-            });
+                        new ReadingList { UserId = user.Id, Name = "Want to read", Description = "Books I want to read", IsPublic = true, CreatedAt = DateTime.Now },
+                        new ReadingList { UserId = user.Id, Name = "Currently reading", Description = "Books I am currently reading", IsPublic = true, CreatedAt = DateTime.Now },
+                        new ReadingList { UserId = user.Id, Name = "Read", Description = "Books I have read", IsPublic = true, CreatedAt = DateTime.Now }
+                    });
                 }
 
                 await _context.ReadingLists.AddRangeAsync(readingLists);

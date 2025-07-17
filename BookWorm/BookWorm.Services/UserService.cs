@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BookWorm.Services
-{ }
+{
     public class UserService : IUserService
 
     {
@@ -23,10 +23,12 @@ namespace BookWorm.Services
         private const int KeySize = 32;
         private const int Iterations = 10000;
         private readonly ILogger<UserService> _logger;
-    public UserService(BookWormDbContext context, ILogger<UserService> logger)
+        private readonly IReadingListService _readingListService;
+        public UserService(BookWormDbContext context, ILogger<UserService> logger, IReadingListService readingListService)
         {
             _context = context;
             _logger = logger;
+            _readingListService = readingListService;
         }
 
         public async Task<PagedResult<UserResponse>> GetAsync(UserSearchObject search)
@@ -65,14 +67,14 @@ namespace BookWorm.Services
                     u.Email.Contains(search.FTS));
             }
 
-           
+
             int? totalCount = null;
             if (search.IncludeTotalCount)
             {
                 totalCount = await query.CountAsync();
             }
 
-         
+
             if (!search.RetrieveAll)
             {
                 if (search.Page.HasValue)
@@ -126,17 +128,17 @@ namespace BookWorm.Services
 
         public async Task<UserResponse> CreateAsync(UserCreateUpdateRequest request)
         {
-            
+
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             {
-            _logger.LogInformation("User is trying to register with existing email.");
-            throw new UserException($"A user with the email '{request.Email}' already exists.");
+                _logger.LogInformation("User is trying to register with existing email.");
+                throw new UserException($"A user with the email '{request.Email}' already exists.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
-            _logger.LogInformation("User is trying to register with existing username.");
-            throw new UserException($"A user with the username '{request.Username}' already exists.");
+                _logger.LogInformation("User is trying to register with existing username.");
+                throw new UserException($"A user with the username '{request.Username}' already exists.");
             }
 
             var user = new User
@@ -148,12 +150,12 @@ namespace BookWorm.Services
                 PhoneNumber = request.PhoneNumber,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.UtcNow,
-                Age=request.Age,
+                Age = request.Age,
                 CountryId = request.CountryId,
                 PhotoUrl = request.PhotoUrl
             };
 
-           
+
             if (!string.IsNullOrEmpty(request.Password))
             {
                 byte[] salt;
@@ -161,15 +163,34 @@ namespace BookWorm.Services
                 user.PasswordSalt = Convert.ToBase64String(salt);
             }
 
-            
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            // Create default reading lists for the new user
+            var defaultLists = new[]
+            {
+                new { Name = "Want to read", Description = "Books I want to read" },
+                new { Name = "Currently reading", Description = "Books I am currently reading" },
+                new { Name = "Read", Description = "Books I have read" }
+            };
+            foreach (var list in defaultLists)
+            {
+                var readingListRequest = new BookWorm.Model.Requests.ReadingListCreateUpdateRequest
+                {
+                    UserId = user.Id,
+                    Name = list.Name,
+                    Description = list.Description,
+                    IsPublic = true
+                };
+                await _readingListService.CreateAsync(readingListRequest);
+            }
 
             if (request.RoleIds != null && request.RoleIds.Count > 0)
             {
                 foreach (var roleId in request.RoleIds)
                 {
-                   
+
                     if (await _context.Roles.AnyAsync(r => r.Id == roleId))
                     {
                         var userRole = new UserRole
@@ -217,23 +238,23 @@ namespace BookWorm.Services
             user.PhotoUrl = request.PhotoUrl;
 
 
-        if (!string.IsNullOrEmpty(request.Password))
+            if (!string.IsNullOrEmpty(request.Password))
             {
                 byte[] salt;
                 user.PasswordHash = HashPassword(request.Password, out salt);
                 user.PasswordSalt = Convert.ToBase64String(salt);
             }
 
-       
+
             var existingUserRoles = await _context.UserRoles.Where(ur => ur.UserId == id).ToListAsync();
             _context.UserRoles.RemoveRange(existingUserRoles);
 
-           
+
             if (request.RoleIds != null && request.RoleIds.Count > 0)
             {
                 foreach (var roleId in request.RoleIds)
                 {
-                   
+
                     if (await _context.Roles.AnyAsync(r => r.Id == roleId))
                     {
                         var userRole = new UserRole
@@ -257,6 +278,42 @@ namespace BookWorm.Services
             if (user == null)
                 return false;
 
+            // 1. Delete all BookReviews by this user
+            var reviews = _context.BookReviews.Where(r => r.UserId == id);
+            _context.BookReviews.RemoveRange(reviews);
+
+            // 2. Delete all ReadingLists (and ReadingListBooks) by this user
+            var lists = _context.ReadingLists.Where(rl => rl.UserId == id).ToList();
+            var listIds = lists.Select(rl => rl.Id).ToList();
+            var listBooks = _context.ReadingListBooks.Where(rlb => listIds.Contains(rlb.ReadingListId));
+            _context.ReadingListBooks.RemoveRange(listBooks);
+            _context.ReadingLists.RemoveRange(lists);
+
+            // 3. Delete all ReadingChallenges (and ReadingChallengeBooks) by this user
+            var challenges = _context.ReadingChallenges.Where(rc => rc.UserId == id).ToList();
+            var challengeIds = challenges.Select(rc => rc.Id).ToList();
+            var challengeBooks = _context.ReadingChallengeBooks.Where(rcb => challengeIds.Contains(rcb.ReadingChallengeId));
+            _context.ReadingChallengeBooks.RemoveRange(challengeBooks);
+            _context.ReadingChallenges.RemoveRange(challenges);
+
+            // 4. Set CreatedByUserId to null for all Books and Authors created by this user
+            var books = _context.Books.Where(b => b.CreatedByUserId == id);
+            foreach (var book in books)
+                book.CreatedByUserId = null;
+            var authors = _context.Authors.Where(a => a.CreatedByUserId == id);
+            foreach (var author in authors)
+                author.CreatedByUserId = null;
+
+            // 5. Remove all UserFriends where user is sender or receiver
+            var sentFriends = _context.UserFriends.Where(uf => uf.UserId == id);
+            var receivedFriends = _context.UserFriends.Where(uf => uf.FriendId == id);
+            _context.UserFriends.RemoveRange(sentFriends);
+            _context.UserFriends.RemoveRange(receivedFriends);
+
+            // 6. Remove all UserRoles for this user
+            var userRoles = _context.UserRoles.Where(ur => ur.UserId == id);
+            _context.UserRoles.RemoveRange(userRoles);
+
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return true;
@@ -275,7 +332,7 @@ namespace BookWorm.Services
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt,
-                CountryId=user.CountryId,
+                CountryId = user.CountryId,
                 Age = user.Age,
                 PhotoUrl = user.PhotoUrl,
 
@@ -283,7 +340,7 @@ namespace BookWorm.Services
             };
         }
 
-       
+
         private async Task<UserResponse> GetUserResponseWithRolesAsync(int userId)
         {
             var user = await _context.Users
@@ -309,7 +366,7 @@ namespace BookWorm.Services
             return response;
         }
 
-       public async Task<UserResponse?> AuthenticateAsync(UserLoginRequest request)
+        public async Task<UserResponse?> AuthenticateAsync(UserLoginRequest request)
         {
             var user = await _context.Users
                 .Include(u => u.UserRoles)
@@ -322,7 +379,7 @@ namespace BookWorm.Services
             if (!VerifyPassword(request.Password!, user.PasswordHash, user.PasswordSalt))
                 return null;
 
-            
+
             user.LastLoginAt = DateTime.Now;
             await _context.SaveChangesAsync();
 
@@ -349,3 +406,4 @@ namespace BookWorm.Services
         }
     }
 
+}

@@ -193,6 +193,22 @@ namespace BookWorm.Services
                 throw new BookException("Only admin can delete books.", true);
             }
 
+            // 1. Delete all BookReviews for this book
+            var reviews = _context.BookReviews.Where(r => r.BookId == id);
+            _context.BookReviews.RemoveRange(reviews);
+
+            // 2. Delete all BookGenres for this book
+            var bookGenres = _context.BookGenres.Where(bg => bg.BookId == id);
+            _context.BookGenres.RemoveRange(bookGenres);
+
+            // 3. Delete all ReadingListBooks for this book
+            var readingListBooks = _context.ReadingListBooks.Where(rlb => rlb.BookId == id);
+            _context.ReadingListBooks.RemoveRange(readingListBooks);
+
+            // 4. Delete all ReadingChallengeBooks for this book
+            var challengeBooks = _context.ReadingChallengeBooks.Where(rcb => rcb.BookId == id);
+            _context.ReadingChallengeBooks.RemoveRange(challengeBooks);
+
             await BeforeDelete(book);
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();

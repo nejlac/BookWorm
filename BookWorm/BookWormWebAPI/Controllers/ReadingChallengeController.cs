@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BookWormWebAPI.Requests;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -50,6 +53,24 @@ namespace BookWormWebAPI.Controllers
         public override async Task<bool> Delete(int id)
         {
             return await base.Delete(id);
+        }
+
+        [HttpPost("add-book")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> AddBookToChallenge([FromBody] AddBookToChallengeRequest request)
+        {
+            var service = (IReadingChallengeService)base._crudService;
+            await service.AddBookToChallengeAsync(request.UserId, request.Year, request.BookId, request.CompletedAt);
+            return Ok();
+        }
+
+        [HttpGet("summary")]
+        [Authorize(Roles = "Admin,User")]
+        public async Task<IActionResult> GetSummary([FromQuery] int? year = null, [FromQuery] int topN = 3)
+        {
+            var service = (IReadingChallengeService)base._crudService;
+            var summary = await service.GetSummaryAsync(year, topN);
+            return Ok(summary);
         }
     }
 } 
