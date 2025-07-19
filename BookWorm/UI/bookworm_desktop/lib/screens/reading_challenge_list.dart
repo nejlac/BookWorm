@@ -8,9 +8,16 @@ import '../providers/base_provider.dart';
 import '../providers/book_provider.dart';
 import '../model/book.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert' as convert; // for base64Encode
 import '../providers/auth_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:process_run/process_run.dart' as process;
+
 
 class ReadingChallengeList extends StatefulWidget {
   @override
@@ -127,6 +134,7 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
   }
 
   Widget _buildTable() {
+   
     if (_loading) {
       return Center(child: CircularProgressIndicator());
     }
@@ -407,19 +415,139 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
     },
   );
 }
+void _generateReport() async {
+  final pdf = pw.Document();
+  final now = DateTime.now();
+  final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+  pdf.addPage(
+    pw.MultiPage(
+      build: (context) => [
+        pw.Header(
+          level: 0,
+          child: pw.Text(
+            'Reading Challenge Report',
+            style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+        pw.Text('Generated: $dateStr'),
+        pw.SizedBox(height: 16),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFFFFDE7),
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(
+              color: PdfColor.fromInt(0xFFFFD54F),
+              width: 1,
+            ),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Completed challenges (${DateTime.now().year}):',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
+              ),
+              pw.Text(
+                _completedChallenges?.toString() ?? '-',
+                style: pw.TextStyle(
+                  fontSize: 22,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromInt(0xFF8D6748),
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                'Top readers of the year:',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
+              ),
+              if (_topReaders.isEmpty)
+                pw.Text('No top readers.'),
+              if (_topReaders.isNotEmpty)
+                pw.Column(
+                  children: _topReaders.map((reader) {
+                    return pw.Row(
+                      children: [
+                        pw.Text(
+                          reader['username'] ?? '',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(width: 8),
+                        pw.Text(
+                          'Books read: ${reader['numberOfBooksRead'] ?? 0}',
+                          style: pw.TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 24),
+        pw.Text(
+          'Current Table Data',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table.fromTextArray(
+          headers: ['User', 'Goal', 'Books Read', 'Year', 'Progress', 'Status'],
+          data: _challenges.map((challenge) {
+            final progress = challenge.goal > 0
+                ? ((challenge.numberOfBooksRead / challenge.goal) * 100).round()
+                : 0;
+            return [
+              challenge.userName,
+              challenge.goal.toString(),
+              challenge.numberOfBooksRead.toString(),
+              challenge.year.toString(),
+              '$progress%',
+              challenge.isCompleted ? 'Completed' : 'In progress',
+            ];
+          }).toList(),
+          cellStyle: pw.TextStyle(fontSize: 11),
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+          cellAlignment: pw.Alignment.centerLeft,
+          headerDecoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFFFF8E1)),
+          border: null,
+        ),
+      ],
+    ),
+  );
+
+  try {
+    final outputDir = await getApplicationDocumentsDirectory();
+    final filePath = '${outputDir.path}/reading_challenge_report.pdf';
+    final file = File(filePath);
+    await file.writeAsBytes(await pdf.save());
+
+    if (Platform.isWindows) {
+      await process.run('explorer', [outputDir.path]);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('PDF saved to: $filePath')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to save PDF: $e')),
+    );
+  }
+}
+
 
 
   @override
   Widget build(BuildContext context) {
-    // Show loading until summary is loaded
+    
     if (_summaryLoading) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    // Use _completedChallenges and _topReaders for summary widgets:
+   
     String completedChallenges = _completedChallenges?.toString() ?? '...';
     List<Widget> topReaderWidgets = [];
     for (final reader in _topReaders) {
@@ -450,14 +578,36 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton(
-                        onPressed: () {/* Generate report logic */},
+                        onPressed: _generateReport,
                         child: Text('+ Generate report'),
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
                       ),
                     ],
                   ),
                 ),
-                // Centered filter above the table
+                // Total count above the table
+                if (_totalCount > 0)
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFF6E3B4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFF8D6748), width: 1),
+                      ),
+                      child: Text(
+                        'Total: $_totalCount challenge${_totalCount == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          fontFamily: 'Literata',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF4E342E),
+                        ),
+                      ),
+                    ),
+                  ),
+                
                 Center(
                   child: Container(
                     constraints: BoxConstraints(maxWidth: 700),
@@ -484,7 +634,7 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
                                     child: _buildTable(),
                                   ),
                                 ),
-                                // Centered pagination below the table
+                               
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Container(
