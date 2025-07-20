@@ -404,6 +404,39 @@ namespace BookWorm.Services
             var hashBytes = new Rfc2898DeriveBytes(password, salt, Iterations).GetBytes(KeySize);
             return hash.SequenceEqual(hashBytes);
         }
+
+        // --- STATISTICS METHODS ---
+        public async Task<int> GetUsersCount()
+        {
+            return await _context.Users.CountAsync();
+        }
+
+        public async Task<List<AgeDistributionResponse>> GetUserAgeDistribution()
+        {
+            
+            var ageGroups = new List<(int? min, int? max, string label)>
+            {
+                (13, 16, "13-16"),
+                (17, 19, "17-19"),
+                (20, 24, "20-24"),
+                (25, 30, "25-30"),
+                (31, 35, "31-35"),
+                (36, 40, "36-40"),
+                (41, 45, "41-45"),
+                (46, 50, "46-50"),
+                (51, 55, "51-55"),
+                (56, 60, "56-60"),
+                (61, null, ">60")
+            };
+
+            var users = await _context.Users.ToListAsync();
+            var result = ageGroups.Select(g => new AgeDistributionResponse
+            {
+                AgeRange = g.label,
+                Count = users.Count(u => (!g.min.HasValue || u.Age >= g.min) && (!g.max.HasValue || u.Age <= g.max))
+            }).ToList();
+            return result;
+        }
     }
 
 }

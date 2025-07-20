@@ -113,6 +113,23 @@ namespace BookWormWebAPI.Controllers
                 return BadRequest($"Error uploading cover: {ex.Message}");
             }
         }
+
+        // --- STATISTICS ENDPOINTS ---
+        [HttpGet("count")]
+        [AllowAnonymous]
+        public async Task<ActionResult<int>> GetUsersCount()
+        {
+            var count = await _userService.GetUsersCount();
+            return Ok(count);
+        }
+
+        [HttpGet("age-distribution")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<AgeDistributionResponse>>> GetUserAgeDistribution()
+        {
+            var result = await _userService.GetUserAgeDistribution();
+            return Ok(result);
+        }
     }
 
     /*[HttpPost("login")]

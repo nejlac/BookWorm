@@ -2,9 +2,13 @@ import 'package:bookworm_desktop/screens/author_list.dart';
 import 'package:bookworm_desktop/screens/bookReview_list.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:bookworm_desktop/screens/reading_challenge_list.dart';
+import 'package:bookworm_desktop/screens/statistics.dart';
 import 'package:bookworm_desktop/screens/user_list.dart';
 import 'package:flutter/material.dart';
 import 'package:bookworm_desktop/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import '../providers/statistics_provider.dart';
+import '../main.dart';
 
 class MasterScreen extends StatefulWidget {
   const MasterScreen({super.key, required this.child, required this.title, this.selectedIndex = 0});
@@ -24,7 +28,7 @@ class _MasterScreenState extends State<MasterScreen> {
     _NavItem(icon: Icons.people_alt_rounded, label: 'Authors', screen: AuthorList()),
     _NavItem(icon: Icons.reviews, label: 'Reviews', screen: BookReviewList()),
     _NavItem(icon: Icons.my_library_books_outlined, label: 'Challanges', screen: ReadingChallengeList()),
-    _NavItem(icon: Icons.auto_graph, label: 'Statistics', screen: null),
+    _NavItem(icon: Icons.auto_graph, label: 'Statistics', screen: StatisticsScreen()),
   ];
 
   @override
@@ -37,147 +41,175 @@ class _MasterScreenState extends State<MasterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          Container(
-            width: 240,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFEFEBE9), Color(0xFFD7CCC8)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.brown.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: Offset(2, 0),
+    return ChangeNotifierProvider(
+      create: (_) => StatisticsProvider(),
+      child: Scaffold(
+        body: Row(
+          children: [
+            Container(
+              width: 240,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFEFEBE9), Color(0xFFD7CCC8)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-              ],
-              border: const Border(
-                right: BorderSide(
-                  color: Color(0xFFBCAAA4),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const SizedBox(height: 24),
-                // User info/profile section
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: 20),
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.brown.withOpacity(0.06),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.brown.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: Offset(2, 0),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Color(0xFF8D6748),
-                        child: Text(
-                          (AuthProvider.username?.isNotEmpty ?? false)
-                              ? AuthProvider.username![0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
+                ],
+                border: const Border(
+                  right: BorderSide(
+                    color: Color(0xFFBCAAA4),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.brown.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Color(0xFF8D6748),
+                          child: Text(
+                            (AuthProvider.username?.isNotEmpty ?? false)
+                                ? AuthProvider.username![0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                            ),
                           ),
                         ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AuthProvider.username ?? 'Guest',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Literata',
+                                  fontSize: 16,
+                                  color: Color(0xFF5D4037),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Welcome!',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF8D6748),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                 
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/logo.png',
+                        height: 70,
+                        fit: BoxFit.contain,
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AuthProvider.username ?? 'Guest',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Literata',
-                                fontSize: 16,
-                                color: Color(0xFF5D4037),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Welcome!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8D6748),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 10),
+                      Text(
+                        'BookWorm',
+                        style: TextStyle(
+                          fontFamily: 'Literata',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                          color: Color(0xFF5D4037),
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                // Logo and app name
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 70,
-                      fit: BoxFit.contain,
+                  const SizedBox(height: 24),
+                  // Navigation
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _navItems.length,
+                      itemBuilder: (context, index) {
+                        final navItem = _navItems[index];
+                        return _buildNavTile(
+                          icon: navItem.icon,
+                          label: navItem.label,
+                          selected: _selectedIndex == index,
+                          onTap: () {
+                            setState(() {
+                              _selectedIndex = index;
+                              if (navItem.screen != null) {
+                                _currentChild = navItem.screen!;
+                                _currentTitle = navItem.label;
+                              }
+                            });
+                          },
+                        );
+                      },
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'BookWorm',
-                      style: TextStyle(
-                        fontFamily: 'Literata',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                        color: Color(0xFF5D4037),
-                        letterSpacing: 1.2,
+                  ),
+                  const SizedBox(height: 24),
+                
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24.0),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          AuthProvider.logout();
+                          clearLoginFields();
+                          if (mounted) {
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          }
+                        },
+                        icon: const Icon(Icons.logout, color: Color(0xFF8D6748)),
+                        label: const Text('Logout', style: TextStyle(color: Color(0xFF8D6748), fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Color(0xFF8D6748), width: 1.2),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Navigation
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _navItems.length,
-                    itemBuilder: (context, index) {
-                      final navItem = _navItems[index];
-                      return _buildNavTile(
-                        icon: navItem.icon,
-                        label: navItem.label,
-                        selected: _selectedIndex == index,
-                        onTap: () {
-                          setState(() {
-                            _selectedIndex = index;
-                            if (navItem.screen != null) {
-                              _currentChild = navItem.screen!;
-                              _currentTitle = navItem.label;
-                            }
-                          });
-                        },
-                      );
-                    },
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(child: _currentChild),
-        ],
+            Expanded(child: _currentChild),
+          ],
+        ),
       ),
     );
   }

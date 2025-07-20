@@ -119,5 +119,30 @@ namespace BookWormWebAPI.Controllers
                 return BadRequest($"Error uploading cover: {ex.Message}");
             }
         }
+
+        // --- STATISTICS ENDPOINTS ---
+        [HttpGet("most-read")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<MostReadBookResponse>>> GetMostReadBooks([FromQuery] int topN = 4)
+        {
+            var result = await _bookService.GetMostReadBooks(topN);
+            return Ok(result);
+        }
+
+        [HttpGet("count")]
+        [AllowAnonymous]
+        public async Task<ActionResult<int>> GetBooksCount()
+        {
+            var count = await _bookService.GetBooksCount();
+            return Ok(count);
+        }
+
+        [HttpGet("most-read-genres")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<GenreStatisticResponse>>> GetMostReadGenres([FromQuery] int topN = 3)
+        {
+            var result = await _bookService.GetMostReadGenres(topN);
+            return Ok(result);
+        }
     }
 } 

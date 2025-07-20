@@ -6,6 +6,7 @@ import 'package:bookworm_desktop/providers/country_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
 import 'package:bookworm_desktop/providers/role_provider.dart';
+import 'package:bookworm_desktop/providers/statistics_provider.dart';
 import 'package:bookworm_desktop/providers/user_provider.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,17 @@ void main() {
         create: (context) => RoleProvider()),
     ChangeNotifierProvider<BookReviewProvider>(
         create: (context) => BookReviewProvider()),
+    ChangeNotifierProvider<StatisticsProvider>(
+        create: (context) => StatisticsProvider()),
   ], child: const LoginPageApp()));
+}
+
+final TextEditingController usernameController = TextEditingController();
+final TextEditingController passwordController = TextEditingController();
+
+void clearLoginFields() {
+  usernameController.clear();
+  passwordController.clear();
 }
 
 class LoginPageApp extends StatelessWidget {
@@ -67,8 +78,6 @@ class LoginPageApp extends StatelessWidget {
 class LoginPage extends StatelessWidget {
    LoginPage({super.key});
 
-  final TextEditingController usernameController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Scaffold(

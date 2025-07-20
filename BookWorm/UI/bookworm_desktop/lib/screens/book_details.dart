@@ -84,7 +84,11 @@ class _BookDetails extends State<BookDetails> {
           icon: Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(widget.isEditMode ? 'Edit Book' : 'Book Details'),
+        title: Text(
+          widget.isEditMode
+              ? (widget.book == null ? 'Add Book' : 'Edit Book')
+              : 'Book Details'
+        ),
         backgroundColor: Color(0xFF8D6748),
         foregroundColor: Colors.white,
         elevation: 2,

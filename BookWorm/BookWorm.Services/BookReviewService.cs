@@ -19,11 +19,13 @@ namespace BookWorm.Services
     {
         private readonly BookWormDbContext _context;
         private readonly ILogger<BookReviewService> _logger;
+        private readonly IReadingListService _readingListService;
 
-        public BookReviewService(BookWormDbContext context, IMapper mapper, ILogger<BookReviewService> logger) : base(context, mapper)
+        public BookReviewService(BookWormDbContext context, IMapper mapper, ILogger<BookReviewService> logger, IReadingListService readingListService) : base(context, mapper)
         {
             _context = context;
             _logger = logger;
+            _readingListService = readingListService;
         }
 
         protected override IQueryable<BookReview> ApplyFilter(IQueryable<BookReview> query, BookReviewSearchObject search)
@@ -80,6 +82,35 @@ namespace BookWorm.Services
            
             entity.CreatedAt = DateTime.Now;
             entity.isChecked = false;
+
+            _logger.LogInformation($"[BookReviewService] _readingListService is null: {_readingListService == null}");
+            try {
+                var readList = (await _readingListService.GetAsync(new ReadingListSearchObject { UserId = request.UserId, Name = "Read" })).FirstOrDefault();
+                if (readList == null)
+                {
+                    _logger.LogInformation($"[BookReviewService] Creating 'Read' list for user {request.UserId} and adding book {request.BookId}");
+                    var createReq = new ReadingListCreateUpdateRequest
+                    {
+                        UserId = request.UserId,
+                        Name = "Read",
+                        Description = "Books I have read",
+                        IsPublic = true,
+                        BookIds = new List<int> { request.BookId }
+                    };
+                    await _readingListService.CreateAsync(createReq);
+                }
+                else if (!readList.Books.Any(b => b.BookId == request.BookId))
+                {
+                    _logger.LogInformation($"[BookReviewService] Adding book {request.BookId} to existing 'Read' list {readList.Id} for user {request.UserId}");
+                    await _readingListService.AddBookToListAsync(readList.Id, request.BookId, DateTime.Now);
+                }
+                else
+                {
+                    _logger.LogInformation($"[BookReviewService] Book {request.BookId} already in 'Read' list for user {request.UserId}");
+                }
+            } catch (Exception ex) {
+                _logger.LogError(ex, $"[BookReviewService] Error adding book to Read list: {ex.Message}");
+            }
         }
 
         protected override async Task BeforeUpdate(BookReview entity, BookReviewCreateUpdateRequest request)

@@ -11,5 +11,8 @@ namespace BookWorm.Services
        
         Task<BookResponse?> AcceptBookAsync(int id);
         Task<BookResponse?> DeclineBookAsync(int id);
+        Task<List<MostReadBookResponse?>> GetMostReadBooks(int id);
+        Task<int> GetBooksCount();
+        Task<List<GenreStatisticResponse>>GetMostReadGenres(int id);
     }
 } 

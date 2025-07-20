@@ -28,7 +28,7 @@ namespace BookWorm.Services
             if (search.UserId.HasValue)
                 query = query.Where(rl => rl.UserId == search.UserId);
             if (!string.IsNullOrEmpty(search.Name))
-                query = query.Where(rl => rl.Name.Contains(search.Name));
+                query = query.Where(rl => rl.Name.ToLower() == search.Name.ToLower());
             if (search.IsPublic.HasValue)
                 query = query.Where(rl => rl.IsPublic == search.IsPublic);
             var lists = await query.ToListAsync();

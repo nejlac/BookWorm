@@ -44,7 +44,7 @@ namespace BookWorm.Services
                 query = query.Where(b => b.PageCount == search.RPageCount);
             if (!string.IsNullOrEmpty(search.FTS))
                 query = query.Where(b => b.Title.Contains(search.FTS) || b.Description.Contains(search.FTS) || b.Author.Name.Contains(search.FTS));
-            if(!string.IsNullOrEmpty(search.Status))
+            if (!string.IsNullOrEmpty(search.Status))
                 query = query.Where(b => b.BookState == search.Status);
 
             query = query.Include(b => b.Author)
@@ -63,11 +63,11 @@ namespace BookWorm.Services
             }
 
             var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
-            
-           
+
+
             request.CreatedByUserId = currentUserId.Value;
-            
-           
+
+
             BaseBookState baseState;
             if (isAdmin)
             {
@@ -77,7 +77,7 @@ namespace BookWorm.Services
             {
                 baseState = _baseBookState.GetBookState("Submitted");
             }
-            
+
             return await baseState.CreateAsync(request);
         }
 
@@ -121,7 +121,7 @@ namespace BookWorm.Services
                 var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
                 if (!isAdmin && book.BookState != "Accepted")
                 {
-                    return null; 
+                    return null;
                 }
             }
 
@@ -133,7 +133,7 @@ namespace BookWorm.Services
             var query = _context.Set<Book>().AsQueryable();
             query = ApplyFilter(query, search);
 
-           
+
             var currentUserId = await _userRoleService.GetCurrentUserIdAsync();
             if (currentUserId.HasValue)
             {
@@ -145,7 +145,7 @@ namespace BookWorm.Services
             }
             else
             {
-               
+
                 query = query.Where(b => b.BookState == "Accepted");
             }
 
@@ -215,7 +215,7 @@ namespace BookWorm.Services
             return true;
         }
 
-      
+
         public async Task<BookResponse?> AcceptBookAsync(int id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -280,5 +280,98 @@ namespace BookWorm.Services
                 Genres = book.BookGenres?.Select(bg => bg.Genre.Name).ToList() ?? new List<string>()
             };
         }
+
+        // --- STATISTICS METHODS ---
+        public async Task<List<MostReadBookResponse>> GetMostReadBooks(int topN = 4)
+        {
+            // Rank by number of unique users who have the book in their Read lists
+            var readListBooks = await _context.ReadingListBooks
+                .Include(rlb => rlb.ReadingList)
+                .Where(rlb => rlb.ReadingList.Name == "Read")
+                .ToListAsync();
+
+            var bookUserCounts = readListBooks
+                .GroupBy(rlb => rlb.BookId)
+                .Select(g => new { BookId = g.Key, UserCount = g.Select(x => x.ReadingList.UserId).Distinct().Count() })
+                .ToDictionary(x => x.BookId, x => x.UserCount);
+
+            var books = await _context.Books
+                .Include(b => b.Author)
+                .Include(b => b.BookReviews)
+                .ToListAsync();
+
+            var rankedBooks = books
+                .Select(b => new
+                {
+                    Book = b,
+                    UserCount = bookUserCounts.ContainsKey(b.Id) ? bookUserCounts[b.Id] : 0,
+                    RatingsCount = b.BookReviews.Count
+                })
+                .OrderByDescending(x => x.UserCount)
+                .ThenByDescending(x => x.RatingsCount)
+                .Take(topN)
+                .Select(x => new MostReadBookResponse
+                {
+                    BookId = x.Book.Id,
+                    Title = x.Book.Title,
+                    AuthorName = x.Book.Author.Name,
+                    CoverImageUrl = x.Book.CoverImagePath,
+                    AverageRating = x.Book.BookReviews.Any() ? x.Book.BookReviews.Average(r => r.Rating) : 0,
+                    RatingsCount = x.RatingsCount
+                })
+                .ToList();
+            return rankedBooks;
+        }
+
+        public async Task<int> GetBooksCount()
+        {
+            return await _context.Books.CountAsync();
+        }
+
+        public async Task<List<GenreStatisticResponse>> GetMostReadGenres(int topN = 3)
+        {
+            // Rank genres by the number of unique users who have any book in that genre in their Read lists
+            var readListBooks = await _context.ReadingListBooks
+                .Include(rlb => rlb.ReadingList)
+                .Where(rlb => rlb.ReadingList.Name == "Read")
+                .ToListAsync();
+
+            var bookGenrePairs = await _context.BookGenres
+                .Include(bg => bg.Genre)
+                .ToListAsync();
+
+            var genreUserCounts = bookGenrePairs
+                .GroupBy(bg => bg.Genre.Name)
+                .Select(g => new
+                {
+                    GenreName = g.Key,
+                    UserCount = readListBooks
+                        .Where(rlb => g.Select(bg => bg.BookId).Contains(rlb.BookId))
+                        .Select(rlb => rlb.ReadingList.UserId)
+                        .Distinct()
+                        .Count()
+                })
+                .OrderByDescending(g => g.UserCount)
+                .Take(topN)
+                .ToList();
+
+            var totalUsers = genreUserCounts.Sum(g => g.UserCount);
+            if (totalUsers == 0)
+            {
+                var allGenres = await _context.Genres.ToListAsync();
+                return allGenres.Select(g => new GenreStatisticResponse
+                {
+                    GenreName = g.Name,
+                    Percentage = 0
+                }).ToList();
+            }
+
+            return genreUserCounts.Select(g => new GenreStatisticResponse
+            {
+                GenreName = g.GenreName,
+                Percentage = (double)g.UserCount * 100 / totalUsers
+            }).ToList();
+        }
     }
-} 
+
+    } 
