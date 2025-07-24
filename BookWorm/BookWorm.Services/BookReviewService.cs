@@ -88,7 +88,7 @@ namespace BookWorm.Services
                 var readList = (await _readingListService.GetAsync(new ReadingListSearchObject { UserId = request.UserId, Name = "Read" })).FirstOrDefault();
                 if (readList == null)
                 {
-                    _logger.LogInformation($"[BookReviewService] Creating 'Read' list for user {request.UserId} and adding book {request.BookId}");
+                   
                     var createReq = new ReadingListCreateUpdateRequest
                     {
                         UserId = request.UserId,
