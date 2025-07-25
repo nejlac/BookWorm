@@ -14,23 +14,7 @@ class BookProvider extends BaseProvider<Book> {
  
   String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
 
-  Future<void> acceptBook(int id) async {
-    var url = "${baseUrl}book/$id/accept";
-    var headers = createHeaders();
-    var response = await http.post(Uri.parse(url), headers: headers);
-    if (!isValidResponse(response)) {
-      throw Exception("Failed to accept book");
-    }
-  }
-
-  Future<void> declineBook(int id) async {
-    var url = "${baseUrl}book/$id/decline";
-    var headers = createHeaders();
-    var response = await http.post(Uri.parse(url), headers: headers);
-    if (!isValidResponse(response)) {
-      throw Exception("Failed to decline book");
-    }
-  }
+  
 
  
   Future<Book> insertWithCover(Map<String, dynamic> request, File? coverImage) async {

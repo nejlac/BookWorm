@@ -381,6 +381,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                           child: const Text('Register'),
                         ),
+                        const SizedBox(height: 30),
                       ],
                     ),
                   ),

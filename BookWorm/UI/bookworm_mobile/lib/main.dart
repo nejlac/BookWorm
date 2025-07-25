@@ -57,6 +57,11 @@ class LoginPageApp extends StatelessWidget {
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
+  static void clearFields(BuildContext context) {
+    final state = context.findAncestorStateOfType<_LoginPageState>();
+    state?.clearFields();
+  }
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -64,6 +69,11 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
+  void clearFields() {
+    usernameController.clear();
+    passwordController.clear();
+  }
 
   @override
   void dispose() {
@@ -172,14 +182,12 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-        
           SizedBox.expand(
             child: Image.asset(
               'assets/background.jpeg',
               fit: BoxFit.cover,
             ),
           ),
-     
           SizedBox.expand(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -188,117 +196,117 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-        
           Center(
-            child: Container(
-              width: 350,
-              padding: const EdgeInsets.all(32.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/logo.png',
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Login',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF8D6748),
-                        ),
-                  ),
-                  const SizedBox(height: 32),
-                  TextField(
-                    controller: usernameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      border: OutlineInputBorder(),
+            child: SingleChildScrollView(
+              child: Container(
+                width: 350,
+                padding: const EdgeInsets.all(32.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/logo.png',
+                      height: 120,
+                      fit: BoxFit.contain,
                     ),
-                  ),
-                  const SizedBox(height: 26),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8D6748),
-                        foregroundColor: Colors.white,
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        textStyle: const TextStyle(
-                         fontFamily: 'Literata',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: _login,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.login, size: 20),
-                          SizedBox(width: 12),
-                          Text('Login'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Don't have an account? ",
-                        style: TextStyle(fontFamily: 'Literata', fontSize: 15),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegistrationScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Register',
-                          style: TextStyle(
-                            color: Color(0xFF8D6748),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Login',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Literata',
-                            fontSize: 15,
-                            decoration: TextDecoration.underline,
+                            color: const Color(0xFF8D6748),
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    TextField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8D6748),
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          textStyle: const TextStyle(
+                           fontFamily: 'Literata',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        onPressed: _login,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.login, size: 20),
+                            SizedBox(width: 12),
+                            Text('Login'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Don't have an account? ",
+                          style: TextStyle(fontFamily: 'Literata', fontSize: 15),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            print('Register tapped');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => RegistrationScreen()),
+                            );
+                          },
+                          child: const Text(
+                            'Register',
+                            style: TextStyle(
+                              color: Color(0xFF8D6748),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Literata',
+                              fontSize: 15,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
