@@ -44,7 +44,8 @@ namespace BookWormWebAPI.Controllers
             return await _bookService.GetByIdAsync(id);
         }
 
-        
+       
+
         [HttpPost("{id}/accept")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<BookResponse>> AcceptBook(int id)
@@ -141,8 +142,17 @@ namespace BookWormWebAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<List<GenreStatisticResponse>>> GetMostReadGenres([FromQuery] int topN = 3)
         {
-            var result = await _bookService.GetMostReadGenres(topN);
-            return Ok(result);
+            return await _bookService.GetMostReadGenres(topN);
+        }
+
+        [HttpGet("{id}/rating")]
+        [AllowAnonymous]
+        public async Task<ActionResult<BookRatingResponse>> GetBookRating(int id)
+        {
+            var rating = await _bookService.GetBookRatingAsync(id);
+            if (rating == null)
+                return NotFound($"Book with ID {id} not found");
+            return rating;
         }
     }
 } 

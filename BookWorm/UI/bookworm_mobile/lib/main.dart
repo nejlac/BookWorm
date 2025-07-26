@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:bookworm_mobile/layouts/master_screen.dart';
 import 'package:bookworm_mobile/providers/book_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
+import 'package:bookworm_mobile/providers/genre_provider.dart';
 import 'package:bookworm_mobile/screens/homepage.dart';
 import 'package:bookworm_mobile/screens/registration.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => CountryProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => GenreProvider()),
       ],
       child: LoginPageApp(),
     ),

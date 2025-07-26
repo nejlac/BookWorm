@@ -15,15 +15,13 @@ class CountryProvider extends ChangeNotifier {
 
   Future<void> fetchCountries() async {
     final url = Uri.parse('${_baseUrl}Country?pageSize=500');
-    print('===COUNTRY=== Fetching countries from: ' + url.toString());
     final headers = <String, String>{};
     if (AuthProvider.username != null && AuthProvider.password != null) {
       String basicAuth = 'Basic ' + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));
       headers['Authorization'] = basicAuth;
     }
     final response = await http.get(url, headers: headers);
-    print('===COUNTRY=== Response status: ${response.statusCode}');
-    print('===COUNTRY=== Response body: ${response.body}');
+  
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is Map && data.containsKey('items')) {

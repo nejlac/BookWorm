@@ -1,6 +1,7 @@
 import 'package:bookworm_mobile/main.dart';
 import 'package:bookworm_mobile/screens/homepage.dart';
 import 'package:bookworm_mobile/screens/profile.dart';
+import 'package:bookworm_mobile/screens/search.dart';
 import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:flutter/rendering.dart';
@@ -25,7 +26,7 @@ class _MasterScreenState extends State<MasterScreen> {
 
   static final List<Widget> _pages = <Widget>[
     HomePage(),
-    Center(child: Text('Search', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+    SearchScreen(),
     Center(child: Text('Lists', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
     ProfileScreen(),
   ];

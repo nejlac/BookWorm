@@ -9,7 +9,7 @@ namespace BookWormWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, User")]
     public class GenreController : BaseCRUDController<GenreResponse, GenreSearchObject, GenreCreateUpdateRequest, GenreCreateUpdateRequest>
     {
         public GenreController(IGenreService genreService) : base(genreService)

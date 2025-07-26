@@ -36,16 +36,48 @@ namespace BookWorm.Services
                 query = query.Where(b => b.Title.Contains(search.Title));
             if (!string.IsNullOrEmpty(search.Author))
                 query = query.Where(b => b.Author.Name.Contains(search.Author));
+            if (search.AuthorId.HasValue)
+                query = query.Where(b => b.AuthorId == search.AuthorId.Value);
             if (search.GenreId.HasValue)
                 query = query.Where(b => b.BookGenres.Any(bg => bg.GenreId == search.GenreId));
             if (search.PublicationYear.HasValue)
                 query = query.Where(b => b.PublicationYear == search.PublicationYear);
-            if (search.RPageCount.HasValue)
-                query = query.Where(b => b.PageCount == search.RPageCount);
+            if (search.PageCount.HasValue)
+                query = query.Where(b => b.PageCount == search.PageCount);
+            if (search.MinPageCount.HasValue)
+                query = query.Where(b => b.PageCount >= search.MinPageCount.Value);
+            if (search.MaxPageCount.HasValue)
+                query = query.Where(b => b.PageCount <= search.MaxPageCount.Value);
             if (!string.IsNullOrEmpty(search.FTS))
                 query = query.Where(b => b.Title.Contains(search.FTS) || b.Description.Contains(search.FTS) || b.Author.Name.Contains(search.FTS));
             if (!string.IsNullOrEmpty(search.Status))
                 query = query.Where(b => b.BookState == search.Status);
+
+           
+            if (!string.IsNullOrEmpty(search.SortBy))
+            {
+                switch (search.SortBy.ToLower())
+                {
+                    case "title_asc":
+                        query = query.OrderBy(b => b.Title);
+                        break;
+                    case "title_desc":
+                        query = query.OrderByDescending(b => b.Title);
+                        break;
+                    case "year_asc":
+                        query = query.OrderBy(b => b.PublicationYear);
+                        break;
+                    case "year_desc":
+                        query = query.OrderByDescending(b => b.PublicationYear);
+                        break;
+                    case "rating_asc":
+                        query = query.OrderBy(b => b.BookReviews.Average(br => br.Rating));
+                        break;
+                    case "rating_desc":
+                        query = query.OrderByDescending(b => b.BookReviews.Average(br => br.Rating));
+                        break;
+                }
+            }
 
             query = query.Include(b => b.Author)
                         .Include(b => b.BookGenres)
@@ -215,7 +247,7 @@ namespace BookWorm.Services
             return true;
         }
 
-
+        
         public async Task<BookResponse?> AcceptBookAsync(int id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -371,6 +403,45 @@ namespace BookWorm.Services
                 GenreName = g.GenreName,
                 Percentage = (double)g.UserCount * 100 / totalUsers
             }).ToList();
+        }
+
+        public async Task<BookRatingResponse?> GetBookRatingAsync(int bookId)
+        {
+            var book = await _context.Books
+                .Where(b => b.Id == bookId && b.BookState == "Accepted")
+                .FirstOrDefaultAsync();
+
+            if (book == null)
+                return null;
+
+            var ratingStats = await _context.BookReviews
+                .Where(br => br.BookId == bookId)
+                .GroupBy(br => br.BookId)
+                .Select(g => new
+                {
+                    AverageRating = g.Average(br => br.Rating),
+                    RatingCount = g.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            if (ratingStats == null)
+            {
+                return new BookRatingResponse
+                {
+                    BookId = bookId,
+                    BookTitle = book.Title,
+                    AverageRating = 0,
+                    RatingCount = 0
+                };
+            }
+
+            return new BookRatingResponse
+            {
+                BookId = bookId,
+                BookTitle = book.Title,
+                AverageRating = Math.Round(ratingStats.AverageRating, 1),
+                RatingCount = ratingStats.RatingCount
+            };
         }
     }
 
