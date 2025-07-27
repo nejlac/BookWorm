@@ -4,6 +4,7 @@ import '../model/book.dart';
 import '../providers/author_provider.dart';
 import '../providers/book_provider.dart';
 import '../providers/base_provider.dart';
+import 'book_details.dart';
 
 class AuthorDetailsScreen extends StatefulWidget {
   final Author author;
@@ -439,7 +440,16 @@ class _AuthorDetailsScreenState extends State<AuthorDetailsScreen> {
   Widget _buildBookCard(Book book) {
     final coverUrl = _getBookCoverImageUrl(book);
     
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookDetailsScreen(book: book),
+          ),
+        );
+      },
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E1),
@@ -600,6 +610,6 @@ class _AuthorDetailsScreenState extends State<AuthorDetailsScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 } 

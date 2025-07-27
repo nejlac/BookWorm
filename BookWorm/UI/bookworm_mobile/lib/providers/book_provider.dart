@@ -175,6 +175,29 @@ class BookProvider extends BaseProvider<Book> {
     }
     return true;
   }
+
+  Future<Map<String, dynamic>?> getBookRating(int bookId) async {
+    try {
+      var url = "${baseUrl}book/$bookId/rating";
+      var uri = Uri.parse(url);
+      var headers = createHeaders();
+      var response = await http.get(uri, headers: headers);
+      
+      if (isValidResponse(response)) {
+        var data = jsonDecode(response.body);
+        return {
+          'averageRating': data['averageRating']?.toDouble() ?? 0.0,
+          'ratingCount': data['ratingCount'] ?? 0,
+        };
+      } else {
+        print("Failed to get book rating: ${response.statusCode} - ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error getting book rating: $e");
+      return null;
+    }
+  }
 }
 
 

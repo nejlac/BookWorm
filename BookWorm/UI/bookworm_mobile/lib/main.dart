@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:bookworm_mobile/providers/country_provider.dart';
+import 'package:bookworm_mobile/providers/author_provider.dart';
+import 'package:bookworm_mobile/providers/bookReview_provider.dart';
 
 void main() {
   runApp(
@@ -17,6 +19,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => CountryProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => GenreProvider()),
+        ChangeNotifierProvider(create: (_) => AuthorProvider()),
+        ChangeNotifierProvider(create: (_) => BookReviewProvider()),
       ],
       child: LoginPageApp(),
     ),

@@ -38,6 +38,14 @@ namespace BookWorm.Services
             {
                 query = query.Where(br => br.Book.Title.Contains(search.BookTitle));
             }
+            if (search.BookId.HasValue)
+            {
+                query = query.Where(br => br.BookId == search.BookId.Value);
+            }
+            if (search.UserId.HasValue)
+            {
+                query = query.Where(br => br.UserId == search.UserId.Value);
+            }
             if (search.Rating.HasValue)
                 query = query.Where(br => br.Rating == search.Rating);
             if (search.IsChecked.HasValue)

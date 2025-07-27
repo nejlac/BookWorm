@@ -13,6 +13,7 @@ import '../providers/country_provider.dart';
 import '../providers/base_provider.dart';
 import 'user_profile.dart';
 import 'author_details.dart';
+import 'book_details.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -999,23 +1000,36 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E1),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookDetailsScreen(book: book),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        );
+        // Refresh the books list to update ratings after returning from book details
+        if (_selectedTab == 'Books') {
+          _loadBooks(page: _currentPage);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
           children: [
             // Book Cover
             Container(
@@ -1182,7 +1196,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           ],
         ),
       ),
-    );
+    ));
   }
 
   Future<Map<String, dynamic>?> _getBookRating(int bookId) async {
