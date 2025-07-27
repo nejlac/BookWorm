@@ -304,13 +304,20 @@ namespace BookWorm.Services
             foreach (var author in authors)
                 author.CreatedByUserId = null;
 
-            // 5. Remove all UserFriends where user is sender or receiver
+            // 5. Set UserId to null for all Quotes by this user (keep quotes but remove user association)
+            var quotes = _context.Quotes.Where(q => q.UserId == id);
+            foreach (var quote in quotes)
+                quote.UserId = null;
+
+
+
+            // 6. Remove all UserFriends where user is sender or receiver
             var sentFriends = _context.UserFriends.Where(uf => uf.UserId == id);
             var receivedFriends = _context.UserFriends.Where(uf => uf.FriendId == id);
             _context.UserFriends.RemoveRange(sentFriends);
             _context.UserFriends.RemoveRange(receivedFriends);
 
-            // 6. Remove all UserRoles for this user
+            // 7. Remove all UserRoles for this user
             var userRoles = _context.UserRoles.Where(ur => ur.UserId == id);
             _context.UserRoles.RemoveRange(userRoles);
 

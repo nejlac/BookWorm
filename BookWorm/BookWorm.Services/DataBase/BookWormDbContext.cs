@@ -19,6 +19,7 @@ namespace BookWorm.Services.DataBase
         public DbSet<ReadingList> ReadingLists { get; set; }
         public DbSet<ReadingListBook> ReadingListBooks { get; set; }
         public DbSet<BookReview> BookReviews { get; set; }
+        public DbSet<Quote> Quotes { get; set; }
         
         public DbSet<ReadingChallenge> ReadingChallenges { get; set; }
         public DbSet<ReadingChallengeBook> ReadingChallengeBooks { get; set; }
@@ -46,6 +47,19 @@ namespace BookWorm.Services.DataBase
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.UserId, e.BookId }).IsUnique();
+            });
+
+            modelBuilder.Entity<Quote>(entity =>
+            {
+                entity.HasOne(q => q.User)
+                    .WithMany()
+                    .HasForeignKey(q => q.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(q => q.Book)
+                    .WithMany()
+                    .HasForeignKey(q => q.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<ReadingListBook>(entity =>

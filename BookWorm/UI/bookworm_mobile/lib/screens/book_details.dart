@@ -6,10 +6,12 @@ import '../providers/book_provider.dart';
 import '../providers/author_provider.dart';
 import '../providers/bookReview_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/quote_provider.dart';
 import '../model/book.dart';
 import '../model/author.dart';
 import '../model/bookReview.dart';
 import '../model/user.dart';
+import '../model/quote.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -32,12 +34,17 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   List<BookReview> _reviews = [];
   Map<int, User> _users = {};
   bool _isLoadingReviews = false;
+  List<Quote> _quotes = [];
+  Map<int, User> _quoteUsers = {};
+  bool _isLoadingQuotes = false;
   
   
   int _selectedRating = 0;
   final TextEditingController _reviewTextController = TextEditingController();
   bool _isSubmittingReview = false;
   BookReview? _userReview; // Track if user already has a review
+  final TextEditingController _quoteTextController = TextEditingController();
+  bool _isSubmittingQuote = false;
 
   @override
   void initState() {
@@ -46,12 +53,14 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     _loadBookRating();
     _loadAuthor();
     _loadReviews();
+    _loadQuotes();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _reviewTextController.dispose();
+    _quoteTextController.dispose();
     super.dispose();
   }
 
@@ -112,7 +121,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       final reviewProvider = Provider.of<BookReviewProvider>(context, listen: false);
       final filter = {
         'bookId': widget.book.id,
-        'pageSize': 50,
+        'pageSize': 1000, // Load all reviews
         'page': 0,
       };
       print('===REVIEWS=== Filter: $filter');
@@ -184,6 +193,66 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       });
     } catch (e) {
       print('Error loading users for reviews: $e');
+    }
+  }
+
+  Future<void> _loadQuotes() async {
+    try {
+      print('===QUOTES=== Loading quotes for book ID: ${widget.book.id}');
+      setState(() {
+        _isLoadingQuotes = true;
+      });
+      
+      final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
+      final filter = {
+        'bookId': widget.book.id,
+        'pageSize': 1000, // Load all quotes
+        'page': 0,
+      };
+      print('===QUOTES=== Filter: $filter');
+      
+      final result = await quoteProvider.get(filter: filter);
+      print('===QUOTES=== Result: ${result.items?.length ?? 0} quotes found');
+      
+      final quotes = result.items ?? [];
+      
+      setState(() {
+        _quotes = quotes;
+        _isLoadingQuotes = false;
+      });
+      
+      print('===QUOTES=== Quotes loaded: ${quotes.length}');
+      
+      await _loadUsersForQuotes(quotes);
+    } catch (e) {
+      print('===QUOTES=== Error loading quotes: $e');
+      setState(() {
+        _isLoadingQuotes = false;
+      });
+    }
+  }
+
+  Future<void> _loadUsersForQuotes(List<Quote> quotes) async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final users = <int, User>{};
+      
+      for (final quote in quotes) {
+        if (quote.userId != null) {
+          try {
+            final user = await userProvider.getById(quote.userId!);
+            users[quote.userId!] = user;
+          } catch (e) {
+            print('Error loading user ${quote.userId}: $e');
+          }
+        }
+      }
+      
+      setState(() {
+        _quoteUsers = users;
+      });
+    } catch (e) {
+      print('Error loading users for quotes: $e');
     }
   }
 
@@ -676,6 +745,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
             )
           else
             ..._reviews.map((review) => _buildReviewCard(review)).toList(),
+           const SizedBox(height: 40),
         ],
       ),
     );
@@ -820,14 +890,75 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   }
 
   Widget _buildQuotesTab() {
-    return const Center(
-      child: Text(
-        'Quotes coming soon...',
-        style: TextStyle(
-          fontSize: 16,
-          color: Color(0xFF8D6748),
+    return Column(
+      children: [
+        // Add Quote Button
+        Container(
+          margin: const EdgeInsets.all(16),
+          child: ElevatedButton(
+            onPressed: _isSubmittingQuote ? null : _showAddQuoteDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE0C9A6),
+              foregroundColor: const Color(0xFF5D4037),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isSubmittingQuote
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF5D4037),
+                    ),
+                  )
+                : const Text(
+                    'Add a quote',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
         ),
-      ),
+
+      
+        if (_isLoadingQuotes)
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF8D6748),
+              ),
+            ),
+          )
+        else if (_quotes.isEmpty)
+          const Expanded(
+            child: Center(
+              child: Text(
+                'No quotes yet for this book.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF8D6748),
+                ),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _quotes.length,
+              itemBuilder: (context, index) {
+                final quote = _quotes[index];
+                return _buildQuoteCard(quote);
+                
+              },
+            ),
+          ),
+          const SizedBox(height: 30),
+      ],
     );
   }
 
@@ -1727,6 +1858,760 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       setState(() {
         _isSubmittingReview = false;
       });
+    }
+  }
+
+  Widget _buildQuoteCard(Quote quote) {
+    final user = quote.userId != null ? _quoteUsers[quote.userId] : null;
+    final currentUsername = AuthProvider.username;
+    final isCurrentUserQuote = currentUsername != null && user?.username == currentUsername;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6E3B4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0C9A6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quote text
+          Text(
+            quote.quoteText,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF5D4037),
+              height: 1.4,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          
+          // Edit/Delete buttons for current user's quote
+          if (isCurrentUserQuote) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  onPressed: () => _showEditQuoteDialog(quote),
+                  icon: const Icon(
+                    Icons.edit,
+                    size: 20,
+                    color: Color(0xFF8D6748),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _showDeleteQuoteDialog(quote),
+                  icon: const Icon(
+                    Icons.delete,
+                    size: 20,
+                    color: Color(0xFF8D6748),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAddQuoteDialog() {
+    _quoteTextController.clear();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          backgroundColor: const Color(0xFFFFF8E1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 600),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.format_quote,
+                        color: Color(0xFF8D6748),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Add a Quote',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5D4037),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Color(0xFF8D6748),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Book info
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0C9A6)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Book cover
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: widget.book.coverImagePath != null && widget.book.coverImagePath!.isNotEmpty
+                              ? Image.network(
+                                  _getBookCoverImageUrl(widget.book.coverImagePath),
+                                  width: 60,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 60,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE0C9A6),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.book,
+                                        size: 30,
+                                        color: Color(0xFF8D6748),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  width: 60,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0C9A6),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.book,
+                                    size: 30,
+                                    color: Color(0xFF8D6748),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.book.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5D4037),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.book.authorName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF8D6748),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Quote text
+                  const Text(
+                    'Share your favorite quote',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5D4037),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  TextField(
+                    controller: _quoteTextController,
+                    maxLines: 6,
+                    maxLength: 10000,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your favorite quote from this book...',
+                      hintStyle: const TextStyle(color: Color(0xFF8D6748)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0C9A6)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Color(0xFF8D6748),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSubmittingQuote ? null : () => _submitQuote(dialogContext),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8D6748),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isSubmittingQuote
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Add Quote',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditQuoteDialog(Quote quote) {
+    _quoteTextController.text = quote.quoteText;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          backgroundColor: const Color(0xFFFFF8E1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 600),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.edit,
+                        color: Color(0xFF8D6748),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Edit Quote',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5D4037),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Color(0xFF8D6748),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Book info
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0C9A6)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Book cover
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: widget.book.coverImagePath != null && widget.book.coverImagePath!.isNotEmpty
+                              ? Image.network(
+                                  _getBookCoverImageUrl(widget.book.coverImagePath),
+                                  width: 60,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 60,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE0C9A6),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.book,
+                                        size: 30,
+                                        color: Color(0xFF8D6748),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  width: 60,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0C9A6),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.book,
+                                    size: 30,
+                                    color: Color(0xFF8D6748),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.book.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5D4037),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.book.authorName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF8D6748),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Quote text
+                  const Text(
+                    'Edit your quote',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5D4037),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  TextField(
+                    controller: _quoteTextController,
+                    maxLines: 6,
+                    maxLength: 10000,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your favorite quote from this book...',
+                      hintStyle: const TextStyle(color: Color(0xFF8D6748)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0C9A6)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Color(0xFF8D6748),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSubmittingQuote ? null : () => _updateQuote(dialogContext, quote),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8D6748),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isSubmittingQuote
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Update Quote',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteQuoteDialog(Quote quote) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFFF8E1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Delete Quote',
+          style: TextStyle(
+            color: Color(0xFF5D4037),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this quote? This action cannot be undone.',
+          style: TextStyle(
+            color: Color(0xFF5D4037),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF8D6748)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _deleteQuote(quote);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitQuote(BuildContext dialogContext) async {
+    final quoteText = _quoteTextController.text.trim();
+    
+    if (quoteText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Quote text cannot be empty.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    
+    if (quoteText.length > 10000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Quote text cannot exceed 10,000 characters.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isSubmittingQuote = true;
+    });
+    
+    try {
+      final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      final username = AuthProvider.username;
+      if (username == null) throw Exception('No user logged in');
+      
+      final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+      final user = userResult.items?.first;
+      if (user == null) throw Exception('User not found');
+      
+      final request = {
+        'userId': user.id,
+        'bookId': widget.book.id,
+        'quoteText': quoteText,
+      };
+      
+      print('===QUOTES=== Submitting quote: $request');
+      
+      await quoteProvider.insert(request);
+      
+      Navigator.of(dialogContext).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Quote added successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFF8D6748),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      
+      await _loadQuotes();
+      
+    } catch (e) {
+      print('===QUOTES=== Error submitting quote: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error adding quote: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSubmittingQuote = false;
+      });
+    }
+  }
+
+  Future<void> _updateQuote(BuildContext dialogContext, Quote quote) async {
+    final quoteText = _quoteTextController.text.trim();
+    
+    if (quoteText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Quote text cannot be empty.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    
+    if (quoteText.length > 10000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Quote text cannot exceed 10,000 characters.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isSubmittingQuote = true;
+    });
+    
+    try {
+      final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
+      
+      final request = {
+        'userId': quote.userId,
+        'bookId': quote.bookId,
+        'quoteText': quoteText,
+      };
+      
+      print('===QUOTES=== Updating quote: $request');
+      
+      await quoteProvider.update(quote.id, request);
+      
+      Navigator.of(dialogContext).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Quote updated successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFF8D6748),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      
+      await _loadQuotes();
+      
+    } catch (e) {
+      print('===QUOTES=== Error updating quote: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error updating quote: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSubmittingQuote = false;
+      });
+    }
+  }
+
+  Future<void> _deleteQuote(Quote quote) async {
+    try {
+      final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
+      
+      print('===QUOTES=== Deleting quote: ${quote.id}');
+      
+      await quoteProvider.delete(quote.id);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Quote deleted successfully!',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFF8D6748),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      
+      await _loadQuotes();
+      
+    } catch (e) {
+      print('===QUOTES=== Error deleting quote: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error deleting quote: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
     }
   }
 }

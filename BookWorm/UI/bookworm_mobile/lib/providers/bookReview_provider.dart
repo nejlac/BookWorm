@@ -9,14 +9,4 @@ class BookReviewProvider extends BaseProvider<BookReview> {
   BookReview fromJson(dynamic json) {
     return BookReview.fromJson(json);
   }
-
-  Future<void> checkReview(int id) async {
-    var url = "${BaseProvider.baseUrl}bookReview/$id/check";
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http.put(uri, headers: headers);
-    if (!isValidResponse(response)) {
-      throw Exception("Failed to check review");
-    }
-  }
 }

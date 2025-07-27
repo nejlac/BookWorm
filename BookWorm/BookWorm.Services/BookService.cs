@@ -241,6 +241,9 @@ namespace BookWorm.Services
             var challengeBooks = _context.ReadingChallengeBooks.Where(rcb => rcb.BookId == id);
             _context.ReadingChallengeBooks.RemoveRange(challengeBooks);
 
+            var quoteBooks = _context.Quotes.Where(q => q.BookId == id);
+            _context.Quotes.RemoveRange(quoteBooks);
+
             await BeforeDelete(book);
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
