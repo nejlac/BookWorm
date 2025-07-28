@@ -22,16 +22,27 @@ class BookProvider extends BaseProvider<Book> {
      
       print("Request: $request");
       var book = await insert(request);
+      print("✅ Book created with ID: ${book.id}");
      
       if (coverImage != null && await coverImage.exists()) {
         print("File path: ${coverImage.path}");
-       
+        print("File exists: ${await coverImage.exists()}");
+        print("File size: ${await coverImage.length()}");
         
         try {
-          
+          print("🔄 Starting image upload...");
           await uploadCover(book.id!, coverImage);
+          print("✅ Image upload completed");
+          
+          print("🔄 Fetching updated book...");
           book = await getById(book.id!);
           print("✅ Book retrieved with cover path: ${book.coverImagePath}");
+          
+          if (book.coverImagePath == null || book.coverImagePath!.isEmpty) {
+            print("⚠️ WARNING: Book cover path is still null/empty after upload!");
+          } else {
+            print("✅ SUCCESS: Book cover path saved: ${book.coverImagePath}");
+          }
         } catch (uploadError) {
           print("❌ Cover image upload failed: $uploadError");
           print("⚠️ Book was created but without cover image");
@@ -39,6 +50,9 @@ class BookProvider extends BaseProvider<Book> {
         }
       } else {
         print("ℹ️ No cover image provided or file doesn't exist");
+        if (coverImage != null) {
+          print("File exists check: ${await coverImage.exists()}");
+        }
       }
       
       return book;
@@ -92,6 +106,8 @@ class BookProvider extends BaseProvider<Book> {
     try {
      
       print("File path: ${coverImage.path}");
+      print("File exists: ${await coverImage.exists()}");
+      print("File size: ${await coverImage.length()}");
     
       
       var url = "${baseUrl}book/$bookId/cover";
@@ -105,6 +121,7 @@ class BookProvider extends BaseProvider<Book> {
       var headers = createHeaders();
       headers.remove('Content-Type'); 
       request.headers.addAll(headers);
+      print("Headers: $headers");
      
       var stream = http.ByteStream(coverImage.openRead());
       var length = await coverImage.length();
@@ -134,6 +151,7 @@ class BookProvider extends BaseProvider<Book> {
       }
       
       print("Upload successful!");
+      print("Response content: ${response.body}");
     } catch (e) {
       print("Error in uploadCover: $e");
       rethrow;

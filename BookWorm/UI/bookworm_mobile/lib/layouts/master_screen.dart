@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:flutter/rendering.dart';
 import 'package:bookworm_mobile/screens/change_password.dart';
+import 'package:bookworm_mobile/screens/add_book.dart';
 
 class MasterScreen extends StatefulWidget {
   final int initialIndex;
@@ -23,10 +24,11 @@ class _MasterScreenState extends State<MasterScreen> {
     _selectedIndex = widget.initialIndex;
   }
   final GlobalKey _profileSettingsKey = GlobalKey();
+  final GlobalKey _searchScreenKey = GlobalKey();
 
   static final List<Widget> _pages = <Widget>[
     HomePage(),
-    SearchScreen(),
+    SearchScreen(key: GlobalKey()),
     Center(child: Text('Lists', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
     ProfileScreen(),
   ];
@@ -41,6 +43,13 @@ class _MasterScreenState extends State<MasterScreen> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  void _refreshSearchScreen() {
+    setState(() {
+      // Recreate the SearchScreen to force a refresh
+      _pages[1] = SearchScreen(key: GlobalKey());
     });
   }
 
@@ -132,7 +141,21 @@ class _MasterScreenState extends State<MasterScreen> {
           ],
         ),
         actions: [
-          if (_selectedIndex == 3)
+          if (_selectedIndex == 1)
+            IconButton(
+              icon: const Icon(Icons.add, color: Color(0xFF8D6748), size: 28),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddBookScreen()),
+                );
+                if (result == true) {
+                  // Refresh the search page if a book was added
+                  _refreshSearchScreen();
+                }
+              },
+            )
+          else if (_selectedIndex == 3)
             IconButton(
               key: _profileSettingsKey,
               icon: const Icon(Icons.settings, color: Color(0xFF8D6748), size: 28),

@@ -151,7 +151,7 @@ namespace BookWorm.Services
             if (currentUserId.HasValue)
             {
                 var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
-                if (!isAdmin && book.BookState != "Accepted")
+                if (!isAdmin && book.BookState != "Accepted" && book.CreatedByUserId != currentUserId.Value)
                 {
                     return null;
                 }
@@ -172,7 +172,7 @@ namespace BookWorm.Services
                 var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId.Value);
                 if (!isAdmin)
                 {
-                    query = query.Where(b => b.BookState == "Accepted");
+                    query = query.Where(b => b.BookState == "Accepted" || b.CreatedByUserId == currentUserId.Value);
                 }
             }
             else

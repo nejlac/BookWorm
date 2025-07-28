@@ -55,9 +55,9 @@ namespace BookWormWebAPI.Controllers
 
         [HttpPost("{id}/decline")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<AuthorResponse>> DeclineBook(int id)
+        public async Task<ActionResult<AuthorResponse>> DeclineAuthor(int id)
         {
-            var author = await _authorService.AcceptAuthorAsync(id);
+            var author = await _authorService.DeclineAuthorAsync(id);
             if (author == null)
                 return NotFound();
             return author;

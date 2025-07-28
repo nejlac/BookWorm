@@ -23,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthorProvider()),
         ChangeNotifierProvider(create: (_) => BookReviewProvider()),
         ChangeNotifierProvider(create: (_) => QuoteProvider()),
+        ChangeNotifierProvider(create: (_) => BookProvider()),
       ],
       child: LoginPageApp(),
     ),

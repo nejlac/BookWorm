@@ -73,6 +73,27 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when screen becomes visible again
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshData();
+      }
+    });
+  }
+
+  void _refreshData() {
+    if (_selectedTab == 'Books') {
+      _loadBooks();
+    } else if (_selectedTab == 'Authors') {
+      _loadAuthors();
+    } else if (_selectedTab == 'Users') {
+      _loadUsers();
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();

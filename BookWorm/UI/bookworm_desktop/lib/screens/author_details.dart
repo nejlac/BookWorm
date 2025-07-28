@@ -133,6 +133,7 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                     readOnly: !(widget.isEditMode || widget.isAddMode),
                     validator: (val) {
                       if (val == null || val.isEmpty) return 'Name is required';
+                      if (val.length > 255) return 'Name must not exceed 255 characters';
                       return null;
                     },
                   ),
@@ -152,6 +153,7 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                     readOnly: !(widget.isEditMode || widget.isAddMode),
                     validator: (val) {
                       if (val == null || val.isEmpty) return 'Biography is required';
+                      if (val.length > 1000) return 'Biography must not exceed 1000 characters';
                       return null;
                     },
                   ),
@@ -174,6 +176,9 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                           enabled: widget.isEditMode || widget.isAddMode,
                           validator: (val) {
                             if (val == null) return 'Date of birth is required';
+                            final now = DateTime.now();
+                            final today = DateTime(now.year, now.month, now.day);
+                            if (val.isAfter(today)) return 'Date of birth cannot be in the future';
                             return null;
                           },
                           firstDate: DateTime(1),
@@ -189,11 +194,33 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                           
+                            prefixIcon: Icon(Icons.event, color: Color(0xFF8D6748)),
+                            suffixIcon: widget.isEditMode || widget.isAddMode
+                                ? IconButton(
+                                    icon: Icon(Icons.clear, color: Colors.red),
+                                    onPressed: () {
+                                      formKey.currentState?.fields['dateOfDeath']?.didChange(null);
+                                    },
+                                  )
+                                : null,
                             filled: true,
                             fillColor: Color(0xFFFFF8E1),
                           ),
                           enabled: widget.isEditMode || widget.isAddMode,
+                          validator: (val) {
+                            if (val != null) {
+                              final now = DateTime.now();
+                              final today = DateTime(now.year, now.month, now.day);
+                              if (val.isAfter(today)) return 'Date of death cannot be in the future';
+                              
+                              // Check if date of death is before date of birth
+                              final dateOfBirth = formKey.currentState?.value['dateOfBirth'] as DateTime?;
+                              if (dateOfBirth != null && val.isBefore(dateOfBirth)) {
+                                return 'Date of death cannot be before date of birth';
+                              }
+                            }
+                            return null;
+                          },
                           firstDate: DateTime(1),
                         ),
                       ),
@@ -558,7 +585,32 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     final formData = formKey.currentState!.value;
     final name = formData['name']?.toString().trim() ?? '';
     final dateOfBirth = formData['dateOfBirth'] as DateTime?;
+    final dateOfDeath = formData['dateOfDeath'] as DateTime?;
     final excludeId = widget.author?.id;
+    
+    // Frontend validation matching backend rules
+    final validationErrors = _validateAuthorData(name, dateOfBirth, dateOfDeath);
+    if (validationErrors.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 12),
+              Flexible(child: Text(validationErrors.first)),
+            ],
+          ),
+          backgroundColor: Color(0xFFF44336),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+      setState(() { isSaving = false; });
+      return;
+    }
+    
     if (name.isNotEmpty && dateOfBirth != null) {
       final exists = await authorProvider.existsWithNameAndDateOfBirth(name, dateOfBirth, excludeId: excludeId);
       if (exists) {
@@ -746,5 +798,52 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     } finally {
       setState(() { isSaving = false; });
     }
+  }
+
+  List<String> _validateAuthorData(String name, DateTime? dateOfBirth, DateTime? dateOfDeath) {
+    final errors = <String>[];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Name validation
+    if (name.isEmpty) {
+      errors.add('Name is required.');
+    } else if (name.length > 255) {
+      errors.add('Name must not exceed 255 characters.');
+    }
+
+    // Biography validation
+    final biography = formKey.currentState?.value['biography']?.toString().trim() ?? '';
+    if (biography.isEmpty) {
+      errors.add('Biography is required.');
+    } else if (biography.length > 1000) {
+      errors.add('Biography must not exceed 1000 characters.');
+    }
+
+    // Date of birth validation
+    if (dateOfBirth == null) {
+      errors.add('Date of birth is required.');
+    } else if (dateOfBirth.isAfter(today)) {
+      errors.add('Date of birth cannot be in the future.');
+    }
+
+    // Date of death validation
+    if (dateOfDeath != null) {
+      if (dateOfDeath.isAfter(today)) {
+        errors.add('Date of death cannot be in the future.');
+      }
+      
+      if (dateOfBirth != null && dateOfDeath.isBefore(dateOfBirth)) {
+        errors.add('Date of death cannot be before date of birth.');
+      }
+    }
+
+    // Country validation
+    final country = selectedCountry;
+    if (country == null) {
+      errors.add('Country is required.');
+    }
+
+    return errors;
   }
 } 
