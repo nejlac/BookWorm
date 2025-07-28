@@ -13,6 +13,7 @@ namespace BookWorm.Services
         Task<ReadingListResponse> CreateAsync(ReadingListCreateUpdateRequest request);
         Task<ReadingListResponse?> UpdateAsync(int id, ReadingListCreateUpdateRequest request);
         Task<ReadingListResponse> AddBookToListAsync(int readingListId, int bookId, DateTime? readAt = null);
+        Task<ReadingListResponse> RemoveBookFromListAsync(int readingListId, int bookId);
         Task<bool> DeleteAsync(int id);
     }
 } 

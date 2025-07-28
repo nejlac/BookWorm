@@ -2,6 +2,7 @@ import 'package:bookworm_mobile/main.dart';
 import 'package:bookworm_mobile/screens/homepage.dart';
 import 'package:bookworm_mobile/screens/profile.dart';
 import 'package:bookworm_mobile/screens/search.dart';
+import 'package:bookworm_mobile/screens/my_lists.dart';
 import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:flutter/rendering.dart';
@@ -25,11 +26,12 @@ class _MasterScreenState extends State<MasterScreen> {
   }
   final GlobalKey _profileSettingsKey = GlobalKey();
   final GlobalKey _searchScreenKey = GlobalKey();
+  final GlobalKey _myListsScreenKey = GlobalKey();
 
-  static final List<Widget> _pages = <Widget>[
+  List<Widget> _pages = <Widget>[
     HomePage(),
     SearchScreen(key: GlobalKey()),
-    Center(child: Text('Lists', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+    MyListsScreen(key: GlobalKey()),
     ProfileScreen(),
   ];
 
@@ -50,6 +52,15 @@ class _MasterScreenState extends State<MasterScreen> {
     setState(() {
       // Recreate the SearchScreen to force a refresh
       _pages[1] = SearchScreen(key: GlobalKey());
+    });
+  }
+
+  void _createNewReadingList() {
+    // Set the flag to show create dialog
+    MyListsScreen.shouldShowCreateDialog = true;
+    // Recreate the MyListsScreen to trigger the dialog
+    setState(() {
+      _pages[2] = MyListsScreen(key: GlobalKey());
     });
   }
 
@@ -154,6 +165,11 @@ class _MasterScreenState extends State<MasterScreen> {
                   _refreshSearchScreen();
                 }
               },
+            )
+          else if (_selectedIndex == 2)
+            IconButton(
+              icon: const Icon(Icons.add, color: Color(0xFF8D6748), size: 28),
+              onPressed: _createNewReadingList,
             )
           else if (_selectedIndex == 3)
             IconButton(

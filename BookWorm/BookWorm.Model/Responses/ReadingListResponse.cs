@@ -12,6 +12,7 @@ namespace BookWorm.Model.Responses
         public string Description { get; set; } = string.Empty;
         public bool IsPublic { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? CoverImagePath { get; set; }
         public List<ReadingListBookResponse> Books { get; set; } = new List<ReadingListBookResponse>();
     }
 
@@ -20,5 +21,6 @@ namespace BookWorm.Model.Responses
         public int BookId { get; set; }
         public string Title { get; set; } = string.Empty;
         public DateTime AddedAt { get; set; }
+        public string? CoverImagePath { get; set; }
     }
 } 

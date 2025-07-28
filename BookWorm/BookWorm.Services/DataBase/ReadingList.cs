@@ -21,8 +21,8 @@ namespace BookWorm.Services.DataBase
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+        public string? CoverImagePath { get; set; } = null;
 
-      
         public virtual ICollection<ReadingListBook> ReadingListBooks { get; set; } = new List<ReadingListBook>();
     }
 } 

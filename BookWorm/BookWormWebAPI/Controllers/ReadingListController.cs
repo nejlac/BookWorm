@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BookWormWebAPI.Requests;
+using BookWorm.Services.DataBase;
+using Microsoft.AspNetCore.Hosting;
+using System;
+using System.IO;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -16,10 +20,14 @@ namespace BookWormWebAPI.Controllers
     public class ReadingListController : ControllerBase
     {
         private readonly IReadingListService _readingListService;
+        private readonly IWebHostEnvironment _env;
+        private readonly BookWormDbContext _context;
 
-        public ReadingListController(IReadingListService readingListService)
+        public ReadingListController(IReadingListService readingListService, IWebHostEnvironment env, BookWormDbContext context)
         {
             _readingListService = readingListService;
+            _env = env;
+            _context = context;
         }
 
         [HttpGet]
@@ -73,6 +81,62 @@ namespace BookWormWebAPI.Controllers
             catch (BookWorm.Model.Exceptions.ReadingListException ex)
             {
                 return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}/books/{bookId}")]
+        public async Task<ActionResult<ReadingListResponse>> RemoveBookFromList(int id, int bookId)
+        {
+            try
+            {
+                var result = await _readingListService.RemoveBookFromListAsync(id, bookId);
+                return Ok(result);
+            }
+            catch (BookWorm.Model.Exceptions.ReadingListException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/cover")]
+        [RequestSizeLimit(10_000_000)]
+        public async Task<ActionResult<ReadingListResponse>> UploadCover(int id, [FromForm] CoverUploadRequest request)
+        {
+            try
+            {
+                var coverImage = request.CoverImage;
+                var list = await _readingListService.GetByIdAsync(id);
+                if (list == null)
+                    return NotFound($"Reading list with ID {id} not found");
+                if (coverImage == null || coverImage.Length == 0)
+                    return BadRequest("No file uploaded or file is empty.");
+
+                // Save the image file
+                var uploads = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "covers");
+                if (!Directory.Exists(uploads))
+                    Directory.CreateDirectory(uploads);
+                var fileName = Guid.NewGuid() + Path.GetExtension(coverImage.FileName);
+                var filePath = Path.Combine(uploads, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await coverImage.CopyToAsync(stream);
+                }
+
+                // Only update the CoverImagePath field
+                var listEntity = await _context.ReadingLists.FindAsync(id);
+                if (listEntity != null)
+                {
+                    listEntity.CoverImagePath = $"covers/{fileName}";
+                    await _context.SaveChangesAsync();
+                    // Return the updated list
+                    var updatedList = await _readingListService.GetByIdAsync(id);
+                    return Ok(updatedList);
+                }
+                return NotFound($"Reading list entity with ID {id} not found in database");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error uploading cover: {ex.Message}");
             }
         }
     }

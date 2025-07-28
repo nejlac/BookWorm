@@ -47,6 +47,7 @@ namespace BookWorm.Services
             {
                 UserId = request.UserId,
                 Name = request.Name,
+                Description = request.Description,
                 IsPublic = request.IsPublic,
                 CreatedAt = DateTime.Now
             };
@@ -78,6 +79,7 @@ namespace BookWorm.Services
             if (list == null)
                 return null;
             list.Name = request.Name;
+            list.Description = request.Description;
             list.IsPublic = request.IsPublic;
             var existingBooks = await _context.ReadingListBooks.Where(rlb => rlb.ReadingListId == id).ToListAsync();
             _context.ReadingListBooks.RemoveRange(existingBooks);
@@ -141,23 +143,55 @@ namespace BookWorm.Services
             return await GetReadingListResponseWithBooksAsync(readingListId);
         }
 
+        public async Task<ReadingListResponse> RemoveBookFromListAsync(int readingListId, int bookId)
+        {
+            var list = await _context.ReadingLists.Include(rl => rl.ReadingListBooks).FirstOrDefaultAsync(rl => rl.Id == readingListId);
+            if (list == null)
+                throw new ReadingListException("Reading list not found");
+            
+            var bookInList = list.ReadingListBooks.FirstOrDefault(rlb => rlb.BookId == bookId);
+            if (bookInList == null)
+                throw new ReadingListException("Book not found in the list");
+            
+            _context.ReadingListBooks.Remove(bookInList);
+            await _context.SaveChangesAsync();
+
+            return await GetReadingListResponseWithBooksAsync(readingListId);
+        }
+
         private ReadingListResponse MapToResponse(ReadingList list)
         {
-            return new ReadingListResponse
+            var response = new ReadingListResponse
             {
                 Id = list.Id,
                 UserId = list.UserId,
                 UserName = list.User?.Username ?? string.Empty,
                 Name = list.Name,
+                Description = list.Description,
                 IsPublic = list.IsPublic,
                 CreatedAt = list.CreatedAt,
+                CoverImagePath = list.CoverImagePath,
                 Books = list.ReadingListBooks.Select(rlb => new ReadingListBookResponse
                 {
                     BookId = rlb.BookId,
                     Title = rlb.Book?.Title ?? string.Empty,
-                    AddedAt = rlb.AddedAt
+                    AddedAt = rlb.AddedAt,
+                    CoverImagePath = rlb.Book?.CoverImagePath
                 }).ToList()
             };
+
+         
+            Console.WriteLine($"=== DEBUG: Mapping ReadingList '{list.Name}' ===");
+            Console.WriteLine($"  - CoverImagePath: {list.CoverImagePath}");
+            Console.WriteLine($"  - Books count: {list.ReadingListBooks.Count}");
+            foreach (var book in list.ReadingListBooks)
+            {
+                Console.WriteLine($"    Book: {book.Book?.Title} (ID: {book.BookId})");
+                Console.WriteLine($"      - Book CoverImagePath: {book.Book?.CoverImagePath}");
+            }
+            Console.WriteLine("---");
+
+            return response;
         }
 
         private async Task<ReadingListResponse> GetReadingListResponseWithBooksAsync(int listId)

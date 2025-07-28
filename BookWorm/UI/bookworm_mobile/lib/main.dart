@@ -12,6 +12,7 @@ import 'package:bookworm_mobile/providers/country_provider.dart';
 import 'package:bookworm_mobile/providers/author_provider.dart';
 import 'package:bookworm_mobile/providers/bookReview_provider.dart';
 import 'package:bookworm_mobile/providers/quote_provider.dart';
+import 'package:bookworm_mobile/providers/reading_list_provider.dart';
 
 void main() {
   runApp(
@@ -24,6 +25,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => BookReviewProvider()),
         ChangeNotifierProvider(create: (_) => QuoteProvider()),
         ChangeNotifierProvider(create: (_) => BookProvider()),
+        ChangeNotifierProvider(create: (_) => ReadingListProvider()),
       ],
       child: LoginPageApp(),
     ),
