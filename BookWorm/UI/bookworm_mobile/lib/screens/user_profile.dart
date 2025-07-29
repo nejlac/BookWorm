@@ -3,6 +3,7 @@ import '../model/user.dart';
 import '../model/country.dart';
 import '../providers/country_provider.dart';
 import '../providers/base_provider.dart';
+import 'my_lists.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final User user;
@@ -116,6 +117,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
             ),
             
+            const SizedBox(height: 24),
+            
+          
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MyListsScreen(showAppBar: true, targetUser: widget.user),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.list, color: Color(0xFF5D4037)),
+                label: Text(
+                  '${widget.user.firstName}\'s lists',
+                  style: const TextStyle(
+                    color: Color(0xFF5D4037),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF6E3B4),
+                  elevation: 0,
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                ),
+              ),
+            ),
+            
             const SizedBox(height: 32),
             
           
@@ -195,7 +230,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
             ),
             
-            const SizedBox(height: 32),
+
           ],
         ),
       ),

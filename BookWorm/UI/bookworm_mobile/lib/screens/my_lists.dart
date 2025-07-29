@@ -3,14 +3,20 @@ import 'package:provider/provider.dart';
 import 'package:bookworm_mobile/providers/reading_list_provider.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/model/reading_list.dart';
+import 'package:bookworm_mobile/model/reading_list_book.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
+import 'package:bookworm_mobile/providers/book_provider.dart';
+import 'package:bookworm_mobile/model/user.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:bookworm_mobile/screens/list_details.dart';
 
 class MyListsScreen extends StatefulWidget {
-  const MyListsScreen({Key? key}) : super(key: key);
+  final bool showAppBar;
+  final User? targetUser; 
+  
+  const MyListsScreen({Key? key, this.showAppBar = false, this.targetUser}) : super(key: key);
 
   static bool shouldShowCreateDialog = false;
 
@@ -28,7 +34,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
     super.initState();
     _loadReadingLists();
     
-    // Check if we should show the create dialog
+  
     if (MyListsScreen.shouldShowCreateDialog) {
       MyListsScreen.shouldShowCreateDialog = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,9 +51,23 @@ class _MyListsScreenState extends State<MyListsScreen> {
     try {
       final provider = Provider.of<ReadingListProvider>(context, listen: false);
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      User? targetUser;
+      User? currentUser;
+      
       final username = AuthProvider.username;
+      if (username != null) {
+        final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+        currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+      }
       
-      if (username == null) {
+      if (widget.targetUser != null) {
+        targetUser = widget.targetUser;
+      } else {
+        targetUser = currentUser;
+      }
+      
+      if (targetUser == null) {
         setState(() {
           _readingLists = [];
           _isLoading = false;
@@ -55,24 +75,52 @@ class _MyListsScreenState extends State<MyListsScreen> {
         return;
       }
       
-      // Get current user by username
-      final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
-      final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+     
+      final lists = await provider.getUserReadingLists(targetUser.id);
       
-      if (currentUser == null) {
-        setState(() {
-          _readingLists = [];
-          _isLoading = false;
-        });
-        return;
-      }
       
-      // Get reading lists for the current user
-      final lists = await provider.getUserReadingLists(currentUser.id);
-      
-      // Debug: Print each list and its books
-      print('=== DEBUG: Reading Lists Data ===');
+      List<ReadingList> filteredLists = [];
       for (var list in lists) {
+        if (targetUser.id == currentUser?.id) {
+          
+          filteredLists.add(list);
+        } else {
+       
+          List<ReadingListBook> approvedBooks = [];
+          for (var book in list.books) {
+            try {
+           
+              final bookProvider = BookProvider();
+              final fullBook = await bookProvider.getById(book.bookId);
+           
+              if (fullBook.bookState == 'Accepted') {
+                approvedBooks.add(book);
+              }
+            } catch (e) {
+              print('Error fetching book details for filtering: $e');
+              
+            }
+          }
+          
+     
+          final filteredList = ReadingList(
+            id: list.id,
+            userId: list.userId,
+            userName: list.userName,
+            name: list.name,
+            description: list.description,
+            isPublic: list.isPublic,
+            createdAt: list.createdAt,
+            coverImagePath: list.coverImagePath,
+            books: approvedBooks,
+          );
+          filteredLists.add(filteredList);
+        }
+      }
+      
+     
+      print('=== DEBUG: Reading Lists Data ===');
+      for (var list in filteredLists) {
         print('List: ${list.name}');
         print('  - CoverImagePath: ${list.coverImagePath}');
         print('  - Books count: ${list.books.length}');
@@ -84,7 +132,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
       }
       
       setState(() {
-        _readingLists = lists;
+        _readingLists = filteredLists;
         _isLoading = false;
       });
     } catch (e) {
@@ -109,7 +157,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Image picker section
+               
                 if (selectedImage != null)
                   Container(
                     height: 100,
@@ -148,7 +196,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
                 ),
                 SizedBox(height: 16),
                 
-                // Name Field
+               
                 TextFormField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -169,7 +217,6 @@ class _MyListsScreenState extends State<MyListsScreen> {
                 ),
                 SizedBox(height: 16),
                 
-                // Description Field
                 TextFormField(
                   controller: descriptionController,
                   decoration: InputDecoration(
@@ -199,25 +246,24 @@ class _MyListsScreenState extends State<MyListsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Validate fields
+          
                 String? nameError;
                 String? descriptionError;
-                
-                // Name validation
+          
                 if (nameController.text.trim().isEmpty) {
                   nameError = 'Name is required.';
                 } else if (nameController.text.length > 100) {
                   nameError = 'Name must not exceed 100 characters.';
                 }
                 
-                // Description validation
+
                 if (descriptionController.text.trim().isEmpty) {
                   descriptionError = 'Description is required.';
                 } else if (descriptionController.text.length > 300) {
                   descriptionError = 'Description must not exceed 300 characters.';
                 }
                 
-                // Show validation errors if any
+              
                 if (nameError != null || descriptionError != null) {
                   String errorMessage = '';
                   if (nameError != null) errorMessage += nameError + '\n';
@@ -232,7 +278,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
                   return;
                 }
                 
-                // If validation passes, return the data
+              
                 Navigator.of(context).pop({
                   'name': nameController.text.trim(),
                   'description': descriptionController.text.trim(),
@@ -253,18 +299,25 @@ class _MyListsScreenState extends State<MyListsScreen> {
         });
 
         final provider = Provider.of<ReadingListProvider>(context, listen: false);
+      
+        if (!_canEditLists()) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You can only create lists for your own account'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
         
-        // Get current user ID
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final username = AuthProvider.username;
         
         if (username != null) {
-          // Get the current user by username
           final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
           final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
           
           if (currentUser != null) {
-            // Create the reading list
             var newList = await provider.create({
               'userId': currentUser.id,
               'name': result['name'],
@@ -273,7 +326,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
               'bookIds': [],
             });
 
-            // Upload cover image if selected
+         
             if (result['image'] != null) {
               final updatedList = await provider.uploadCover(newList.id, result['image']);
               if (updatedList != null) {
@@ -328,36 +381,56 @@ class _MyListsScreenState extends State<MyListsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.showAppBar ? AppBar(
+        backgroundColor: const Color(0xFF8D6748),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        title: Text(
+          widget.targetUser != null ? '${widget.targetUser!.firstName}\'s Library' : 'My Library',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ) : null,
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF8D6748)))
           : RefreshIndicator(
               onRefresh: _loadReadingLists,
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Default lists section
-                    _buildDefaultLists(),
-                    SizedBox(height: 24),
-                    
-                    // Custom lists section
-                    if (_hasCustomLists()) ...[
-                      Text(
-                        'My custom lists',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
-                        ),
+                padding: const EdgeInsets.all(16),
+                              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDefaultLists(),
+                  const SizedBox(height: 24),
+                 
+                  if (_hasCustomLists()) ...[
+                    Text(
+                      widget.targetUser != null ? '${widget.targetUser!.firstName}\'s custom lists' : 'My custom lists',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
                       ),
-                      SizedBox(height: 12),
-                      _buildCustomLists(),
-                    ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCustomLists(),
                   ],
-                ),
+                ],
+              ),
               ),
             ),
+      floatingActionButton: _canEditLists() ? FloatingActionButton(
+        onPressed: createNewList,
+        backgroundColor: const Color(0xFF8D6748),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+      ) : null,
     );
   }
 
@@ -411,13 +484,26 @@ class _MyListsScreenState extends State<MyListsScreen> {
           ),
           child: _buildListCover(list),
         ),
-        title: Text(
-          list.name,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF4E342E),
-          ),
+        title: Row(
+          children: [
+            Text(
+              list.name,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4E342E),
+              ),
+            ),
+            if (!_isCustomList(list))
+              Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.lock,
+                  size: 16,
+                  color: Color(0xFF8D6748),
+                ),
+              ),
+          ],
         ),
         subtitle: Text(
           '${list.bookCount} books',
@@ -426,20 +512,21 @@ class _MyListsScreenState extends State<MyListsScreen> {
             color: Colors.grey[600],
           ),
         ),
-        trailing: PopupMenuButton<String>(
+        trailing: _canEditLists() ? PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, color: Color(0xFF8D6E63)),
           onSelected: (value) => _handleListAction(value, list),
           itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 18),
-                  SizedBox(width: 8),
-                  Text('Edit'),
-                ],
+            if (_isCustomList(list))
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit'),
+                  ],
+                ),
               ),
-            ),
             if (_isCustomList(list))
               PopupMenuItem(
                 value: 'delete',
@@ -452,7 +539,7 @@ class _MyListsScreenState extends State<MyListsScreen> {
                 ),
               ),
           ],
-        ),
+        ) : null,
         onTap: () => _navigateToListDetails(list),
       ),
     );
@@ -465,13 +552,12 @@ class _MyListsScreenState extends State<MyListsScreen> {
     print('List books count: ${list.books.length}');
     
     String? imageUrl;
-    
-    // First try to use the list's own cover image
+  
     if (list.coverImagePath != null && list.coverImagePath!.isNotEmpty) {
       imageUrl = _buildImageUrl(list.coverImagePath!);
       print('Using list cover URL: $imageUrl');
     }
-    // Fall back to the first book's cover
+
     else if (list.books.isNotEmpty && list.books.first.coverImagePath != null) {
       imageUrl = _buildImageUrl(list.books.first.coverImagePath!);
       print('Using book cover URL: $imageUrl');
@@ -534,6 +620,16 @@ class _MyListsScreenState extends State<MyListsScreen> {
            list.name != 'Read';
   }
 
+  bool _canEditLists() {
+   
+    if (widget.targetUser == null) return true;
+    
+    final username = AuthProvider.username;
+    if (username == null) return false;
+    
+    return widget.targetUser!.username == username;
+  }
+
   void _handleListAction(String action, ReadingList list) {
     switch (action) {
       case 'edit':
@@ -545,14 +641,297 @@ class _MyListsScreenState extends State<MyListsScreen> {
     }
   }
 
-  void _editList(ReadingList list) {
-    // TODO: Implement edit functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit functionality coming soon!')),
+  Future<void> _editList(ReadingList list) async {
+    if (!_canEditLists()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only edit your own lists'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+   
+    if (!_isCustomList(list)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Default lists cannot be edited'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    final nameController = TextEditingController(text: list.name);
+    final descriptionController = TextEditingController(text: list.description ?? '');
+    File? selectedImage;
+    String? currentImagePath = list.coverImagePath;
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Reading List'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+             
+                if (selectedImage != null)
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF8D6E63)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        selectedImage!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  )
+                else if (currentImagePath != null && currentImagePath!.isNotEmpty)
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF8D6E63)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        _buildImageUrl(currentImagePath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: const Color(0xFF8D6E63),
+                            child: const Icon(
+                              Icons.image,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.image,
+                      allowMultiple: false,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      setDialogState(() {
+                        selectedImage = File(result.files.first.path!);
+                        currentImagePath = null; 
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.image),
+                  label: Text(selectedImage != null || currentImagePath != null ? 'Change Image' : 'Add Cover Image'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8D6E63),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+               
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'List Name *',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter list name',
+                  ),
+                  maxLength: 100,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Name is required.';
+                    }
+                    if (value.length > 100) {
+                      return 'Name must not exceed 100 characters.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                
+              
+                TextFormField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description *',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter list description',
+                  ),
+                  maxLength: 300,
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Description is required.';
+                    }
+                    if (value.length > 300) {
+                      return 'Description must not exceed 300 characters.';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+             
+                String? nameError;
+                String? descriptionError;
+                
+                if (nameController.text.trim().isEmpty) {
+                  nameError = 'Name is required.';
+                } else if (nameController.text.length > 100) {
+                  nameError = 'Name must not exceed 100 characters.';
+                }
+                if (descriptionController.text.trim().isEmpty) {
+                  descriptionError = 'Description is required.';
+                } else if (descriptionController.text.length > 300) {
+                  descriptionError = 'Description must not exceed 300 characters.';
+                }
+                if (nameError != null || descriptionError != null) {
+                  String errorMessage = '';
+                  if (nameError != null) errorMessage += nameError + '\n';
+                  if (descriptionError != null) errorMessage += descriptionError;
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage.trim()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+               
+                Navigator.of(context).pop({
+                  'name': nameController.text.trim(),
+                  'description': descriptionController.text.trim(),
+                  'image': selectedImage,
+                  'currentImagePath': currentImagePath,
+                });
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
     );
+
+    if (result != null) {
+      try {
+        setState(() {
+          _isCreating = true;
+        });
+
+        final provider = Provider.of<ReadingListProvider>(context, listen: false);
+        
+        final updateData = {
+          'name': result['name'],
+          'description': result['description'],
+        };
+
+        final updatedList = await provider.update(list.id, updateData);
+        
+                 if (updatedList != null) {
+          
+           if (result['image'] != null) {
+             final updatedListWithImage = await provider.uploadCover(updatedList.id, result['image']);
+             if (updatedListWithImage != null) {
+               setState(() {
+                 final index = _readingLists.indexWhere((l) => l.id == list.id);
+                 if (index != -1) {
+                   _readingLists[index] = updatedListWithImage;
+                 }
+               });
+             } else {
+              
+               setState(() {
+                 final index = _readingLists.indexWhere((l) => l.id == list.id);
+                 if (index != -1) {
+                   _readingLists[index] = updatedList;
+                 }
+               });
+             }
+           } else {
+           
+             setState(() {
+               final index = _readingLists.indexWhere((l) => l.id == list.id);
+               if (index != -1) {
+                 _readingLists[index] = updatedList;
+               }
+             });
+           }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('List updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update list'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print('Error updating list: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isCreating = false;
+        });
+      }
+    }
   }
 
   Future<void> _deleteList(ReadingList list) async {
+  
+    if (!_canEditLists()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only delete your own lists'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+   
+    if (!_isCustomList(list)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Default lists cannot be deleted'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -606,12 +985,16 @@ class _MyListsScreenState extends State<MyListsScreen> {
     }
   }
 
-  void _navigateToListDetails(ReadingList list) {
-    Navigator.push(
+  void _navigateToListDetails(ReadingList list) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ListDetailsScreen(readingList: list),
       ),
     );
+    
+    if (result == true) {
+      _loadReadingLists();
+    }
   }
 } 

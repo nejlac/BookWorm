@@ -55,27 +55,43 @@ class _MasterScreenState extends State<MasterScreen> {
     });
   }
 
-  void _createNewReadingList() {
-    // Set the flag to show create dialog
-    MyListsScreen.shouldShowCreateDialog = true;
-    // Recreate the MyListsScreen to trigger the dialog
+  void _refreshListsScreen() {
     setState(() {
+      // Recreate the MyListsScreen to force a refresh
       _pages[2] = MyListsScreen(key: GlobalKey());
     });
   }
 
+
+
   void _showProfileMenu(BuildContext context) async {
-    final RenderBox button = _profileSettingsKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
+    // Get the position of the settings button
+    final RenderBox? button = _profileSettingsKey.currentContext?.findRenderObject() as RenderBox?;
+    RelativeRect position;
+    
+    if (button != null) {
+      // If we have a key (profile tab), use the button position
+      final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+      final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+      position = RelativeRect.fromLTRB(
+        buttonPosition.dx,
+        buttonPosition.dy + button.size.height,
+        buttonPosition.dx + button.size.width,
+        buttonPosition.dy,
+      );
+    } else {
+      // For other tabs, position the menu in the top-right corner
+      position = RelativeRect.fromLTRB(
+        MediaQuery.of(context).size.width - 200, // 200px from right edge
+        80, // 80px from top
+        20, // 20px from right edge
+        0,
+      );
+    }
+    
     final result = await showMenu(
       context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy + button.size.height,
-        position.dx + button.size.width,
-        position.dy,
-      ),
+      position: position,
       color: const Color(0xFFFFF8E1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       items: [
@@ -166,21 +182,12 @@ class _MasterScreenState extends State<MasterScreen> {
                 }
               },
             )
-          else if (_selectedIndex == 2)
+          // Removed plus button for Lists tab since MyListsScreen has its own floating action button
+          else if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3)
             IconButton(
-              icon: const Icon(Icons.add, color: Color(0xFF8D6748), size: 28),
-              onPressed: _createNewReadingList,
-            )
-          else if (_selectedIndex == 3)
-            IconButton(
-              key: _profileSettingsKey,
+              key: _selectedIndex == 3 ? _profileSettingsKey : null,
               icon: const Icon(Icons.settings, color: Color(0xFF8D6748), size: 28),
               onPressed: () => _showProfileMenu(context),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.search, color: Color(0xFF8D6748), size: 28),
-              onPressed: () {},
             ),
           const SizedBox(width: 8),
         ],

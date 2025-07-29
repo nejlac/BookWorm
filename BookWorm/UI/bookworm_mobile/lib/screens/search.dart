@@ -18,7 +18,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({Key? key}) : super(key: key);
+  final int? preselectedListId;
+  final VoidCallback? onBookAdded;
+  
+  const SearchScreen({Key? key, this.preselectedListId, this.onBookAdded}) : super(key: key);
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -65,9 +68,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     });
     _loadGenres();
-    _loadBooks();
-    _loadAuthors();
-    _loadUsers();
+    _loadBooks(page: 0);
+    _loadAuthors(page: 0);
+    _loadUsers(page: 0);
     _generateYears();
     _generateSizes();
   }
@@ -75,7 +78,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh data when screen becomes visible again
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshData();
@@ -85,11 +88,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   void _refreshData() {
     if (_selectedTab == 'Books') {
-      _loadBooks();
+      _loadBooks(page: 0);
     } else if (_selectedTab == 'Authors') {
-      _loadAuthors();
+      _loadAuthors(page: 0);
     } else if (_selectedTab == 'Users') {
-      _loadUsers();
+      _loadUsers(page: 0);
     }
   }
 
@@ -291,7 +294,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   void _onTabChanged(int index) {
     setState(() {
       _selectedTab = ['Books', 'Authors', 'Users'][index];
-      _currentPage = 0; // Reset to first page when switching tabs
+      _currentPage = 0; 
     });
     
    
@@ -583,7 +586,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     onTap: () {
                       setState(() => _selectedGenre = null);
                       Navigator.pop(context);
-                      _loadBooks();
+                      _loadBooks(page: 0);
                     },
                   ),
                   ..._genres.map((genre) => ListTile(
@@ -591,7 +594,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     onTap: () {
                       setState(() => _selectedGenre = genre);
                       Navigator.pop(context);
-                      _loadBooks();
+                      _loadBooks(page: 0); 
                     },
                   )),
                 ],
@@ -663,7 +666,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                         onPressed: () {
                           setState(() => _selectedYear = null);
                           Navigator.pop(context);
-                          _loadBooks();
+                          _loadBooks(page: 0); 
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE0C9A6),
@@ -683,7 +686,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                             setState(() => _selectedYear = null);
                           }
                           Navigator.pop(context);
-                          _loadBooks();
+                          _loadBooks(page: 0); 
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF8D6748),
@@ -742,7 +745,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   onTap: () {
                     setState(() => _selectedSize = size);
                     Navigator.pop(context);
-                    _loadBooks();
+                    _loadBooks(page: 0); 
                   },
                 )).toList(),
               ),
@@ -1023,15 +1026,22 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
     return GestureDetector(
       onTap: () async {
-        await Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => BookDetailsScreen(book: book),
+            builder: (context) => BookDetailsScreen(
+              book: book,
+              preselectedListId: widget.preselectedListId,
+            ),
           ),
         );
-        // Refresh the books list to update ratings after returning from book details
+       
         if (_selectedTab == 'Books') {
           _loadBooks(page: _currentPage);
+        }
+     
+        if (result == true && widget.onBookAdded != null) {
+          widget.onBookAdded!();
         }
       },
       child: Container(
@@ -1052,7 +1062,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           padding: const EdgeInsets.all(12),
           child: Row(
           children: [
-            // Book Cover
+          
             Container(
               width: 60,
               height: 80,
@@ -1082,7 +1092,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     ),
             ),
             const SizedBox(width: 12),
-            // Book Info
+        
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1307,10 +1317,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _users.length + (_users.isNotEmpty ? 1 : 0), // +1 for pagination if users exist
+      itemCount: _users.length + (_users.isNotEmpty ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _users.length) {
-          // Pagination at the end
+         
           return _buildPaginationControls();
         }
         final user = _users[index];
@@ -1360,7 +1370,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // User Avatar
+           
               Container(
                 width: 60,
                 height: 60,
@@ -1514,10 +1524,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _authors.length + (_authors.isNotEmpty ? 1 : 0), // +1 for pagination if authors exist
+      itemCount: _authors.length + (_authors.isNotEmpty ? 1 : 0), 
       itemBuilder: (context, index) {
         if (index == _authors.length) {
-          // Pagination at the end
+        
           return _buildPaginationControls();
         }
         final author = _authors[index];
@@ -1669,7 +1679,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Page info
+       
           Text(
             'Page $currentPageNumber of $totalPages',
             style: const TextStyle(
@@ -1682,20 +1692,21 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           Row(
             children: [
             
-              IconButton(
-                onPressed: () {
-                  _loadMoreData(_currentPage - 1);
-                },
-                icon: const Icon(
-                  Icons.chevron_left,
-                  color: Color(0xFF8D6748),
-                  size: 16,
+              if (_currentPage > 0)
+                IconButton(
+                  onPressed: () {
+                    _loadMoreData(_currentPage - 1);
+                  },
+                  icon: const Icon(
+                    Icons.chevron_left,
+                    color: Color(0xFF8D6748),
+                    size: 16,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-              ),
               
-              // Page indicator
+           
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1712,7 +1723,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 ),
               ),
               
-              // Next button
+            
               if (_currentPage < totalPages - 1)
                 IconButton(
                   onPressed: () {

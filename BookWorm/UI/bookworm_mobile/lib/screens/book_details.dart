@@ -7,18 +7,23 @@ import '../providers/author_provider.dart';
 import '../providers/bookReview_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/quote_provider.dart';
+import '../providers/reading_list_provider.dart';
 import '../model/book.dart';
 import '../model/author.dart';
 import '../model/bookReview.dart';
 import '../model/user.dart';
 import '../model/quote.dart';
+import '../model/reading_list.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 
 class BookDetailsScreen extends StatefulWidget {
   final Book book;
+  final int? preselectedListId; 
 
-  const BookDetailsScreen({Key? key, required this.book}) : super(key: key);
+  const BookDetailsScreen({Key? key, required this.book, this.preselectedListId}) : super(key: key);
 
   @override
   State<BookDetailsScreen> createState() => _BookDetailsScreenState();
@@ -42,7 +47,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   int _selectedRating = 0;
   final TextEditingController _reviewTextController = TextEditingController();
   bool _isSubmittingReview = false;
-  BookReview? _userReview; // Track if user already has a review
+  BookReview? _userReview; 
   final TextEditingController _quoteTextController = TextEditingController();
   bool _isSubmittingQuote = false;
 
@@ -121,7 +126,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       final reviewProvider = Provider.of<BookReviewProvider>(context, listen: false);
       final filter = {
         'bookId': widget.book.id,
-        'pageSize': 1000, // Load all reviews
+        'pageSize': 1000, 
         'page': 0,
       };
       print('===REVIEWS=== Filter: $filter');
@@ -206,7 +211,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
       final filter = {
         'bookId': widget.book.id,
-        'pageSize': 1000, // Load all quotes
+        'pageSize': 1000, 
         'page': 0,
       };
       print('===QUOTES=== Filter: $filter');
@@ -426,7 +431,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                       
+                        _showAddToListDialog();
                       },
                       icon: const Icon(Icons.bookmark_add, size: 18),
                       label: const Text('Add To List'),
@@ -892,7 +897,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   Widget _buildQuotesTab() {
     return Column(
       children: [
-        // Add Quote Button
         Container(
           margin: const EdgeInsets.all(16),
           child: ElevatedButton(
@@ -1877,7 +1881,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Quote text
+         
           Text(
             quote.quoteText,
             style: const TextStyle(
@@ -1888,7 +1892,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
             ),
           ),
           
-          // Edit/Delete buttons for current user's quote
           if (isCurrentUserQuote) ...[
             const SizedBox(height: 12),
             Row(
@@ -1937,7 +1940,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
+               
                   Row(
                     children: [
                       const Icon(
@@ -1966,8 +1969,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   ),
                   
                   const SizedBox(height: 20),
-                  
-                  // Book info
+                 
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1977,7 +1979,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                     ),
                     child: Row(
                       children: [
-                        // Book cover
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: widget.book.coverImagePath != null && widget.book.coverImagePath!.isNotEmpty
@@ -2046,7 +2047,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   
                   const SizedBox(height: 24),
                   
-                  // Quote text
+                
                   const Text(
                     'Share your favorite quote',
                     style: TextStyle(
@@ -2080,8 +2081,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   ),
                   
                   const SizedBox(height: 24),
-                  
-                  // Buttons
+                
                   Row(
                     children: [
                       Expanded(
@@ -2156,7 +2156,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
                   Row(
                     children: [
                       const Icon(
@@ -2186,7 +2185,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   
                   const SizedBox(height: 20),
                   
-                  // Book info
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -2196,7 +2194,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                     ),
                     child: Row(
                       children: [
-                        // Book cover
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: widget.book.coverImagePath != null && widget.book.coverImagePath!.isNotEmpty
@@ -2265,7 +2262,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   
                   const SizedBox(height: 24),
                   
-                  // Quote text
                   const Text(
                     'Edit your quote',
                     style: TextStyle(
@@ -2299,8 +2295,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   ),
                   
                   const SizedBox(height: 24),
-                  
-                  // Buttons
+                 
                   Row(
                     children: [
                       Expanded(
@@ -2612,6 +2607,537 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _showAddToListDialog() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final readingListProvider = Provider.of<ReadingListProvider>(context, listen: false);
+    final username = AuthProvider.username;
+    if (username == null) return;
+    final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+    final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+    if (currentUser == null) return;
+    final lists = await readingListProvider.getUserReadingLists(currentUser.id);
+    final defaultListNames = ['Read', 'Want to read', 'Currently reading'];
+    final defaultLists = lists.where((l) => defaultListNames.contains(l.name)).toList();
+    final customLists = lists.where((l) => !defaultListNames.contains(l.name)).toList();
+
+    int? selectedDefaultListId;
+    Set<int> selectedCustomListIds = {};
+
+    if (widget.preselectedListId != null) {
+      final preselected = lists.firstWhere((l) => l.id == widget.preselectedListId, orElse: () => defaultLists.isNotEmpty ? defaultLists.first : lists.first);
+      if (defaultListNames.contains(preselected.name)) {
+        selectedDefaultListId = preselected.id;
+      } else {
+        selectedCustomListIds.add(preselected.id);
+      }
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: const Color(0xFFFFF8E1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          'Add book to your library',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8D6748)),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      ...defaultLists.map((list) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Material(
+                          color: Color(0xFFD7B899),
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              setDialogState(() {
+                                selectedDefaultListId = list.id;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                    child: Text(
+                                      list.name,
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF4E342E)),
+                                    ),
+                                  ),
+                                ),
+                                Radio<int>(
+                                  value: list.id,
+                                  groupValue: selectedDefaultListId,
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      selectedDefaultListId = val;
+                                    });
+                                  },
+                                  activeColor: Color(0xFF8D6748),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )),
+                      SizedBox(height: 16),
+                      Text('Your custom lists', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF8D6748))),
+                      SizedBox(height: 8),
+                      Material(
+                        color: Color(0xFFFFE0B2),
+                        borderRadius: BorderRadius.circular(24),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: () async {
+                            await _showCreateListDialog(context, setDialogState);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Icon(Icons.add, color: Color(0xFF8D6748)),
+                                SizedBox(width: 8),
+                                Text('Create a new list', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF8D6748))),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                 
+                      ...customLists.map((list) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Material(
+                          color: Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(24),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () {
+                              setDialogState(() {
+                                if (selectedCustomListIds.contains(list.id)) {
+                                  selectedCustomListIds.remove(list.id);
+                                } else {
+                                  selectedCustomListIds.add(list.id);
+                                }
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                if (list.coverImagePath != null && list.coverImagePath!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: CircleAvatar(
+                                      backgroundImage: NetworkImage(_buildImageUrl(list.coverImagePath!)),
+                                      radius: 18,
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                    child: Text(
+                                      list.name,
+                                      style: TextStyle(fontSize: 15, color: Color(0xFF4E342E)),
+                                    ),
+                                  ),
+                                ),
+                                Checkbox(
+                                  value: selectedCustomListIds.contains(list.id),
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      if (val == true) {
+                                        selectedCustomListIds.add(list.id);
+                                      } else {
+                                        selectedCustomListIds.remove(list.id);
+                                      }
+                                    });
+                                  },
+                                  activeColor: Color(0xFF8D6748),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )),
+                      SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text('Cancel'),
+                          ),
+                          SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () async {
+                              List<String> alreadyInLists = [];
+                              
+                              if (selectedDefaultListId != null) {
+                                final defaultList = lists.firstWhere((l) => l.id == selectedDefaultListId);
+                                if (defaultList.books.any((book) => book.bookId == widget.book.id)) {
+                                  alreadyInLists.add(defaultList.name);
+                                }
+                              }
+                              
+                              for (final listId in selectedCustomListIds) {
+                                final customList = lists.firstWhere((l) => l.id == listId);
+                                if (customList.books.any((book) => book.bookId == widget.book.id)) {
+                                  alreadyInLists.add(customList.name);
+                                }
+                              }
+                             
+                              List<String> inOtherDefaultLists = [];
+                              for (final defaultList in defaultLists) {
+                                if (defaultList.id != selectedDefaultListId && 
+                                    defaultList.books.any((book) => book.bookId == widget.book.id)) {
+                                  inOtherDefaultLists.add(defaultList.name);
+                                }
+                              }
+                              
+                              if (alreadyInLists.isNotEmpty) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Book Already in Lists'),
+                                    content: Text('This book is already in: ${alreadyInLists.join(', ')}'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          Navigator.of(context).pop(); 
+                                        },
+                                        child: Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              if (selectedDefaultListId != null && inOtherDefaultLists.isNotEmpty) {
+                                final shouldContinue = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Moving Book'),
+                                    content: Text('This book will be moved from: ${inOtherDefaultLists.join(', ')}'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: Text('Continue'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (shouldContinue != true) {
+                                  return;
+                                }
+                              }
+                              
+                              final readingListProvider = Provider.of<ReadingListProvider>(context, listen: false);
+                              bool hasError = false;
+                              String errorMessage = '';
+                              
+                              if (selectedDefaultListId != null) {
+                               
+                                for (final defaultList in defaultLists) {
+                                  if (defaultList.id != selectedDefaultListId && 
+                                      defaultList.books.any((book) => book.bookId == widget.book.id)) {
+                                    await readingListProvider.removeBookFromList(defaultList.id, widget.book.id);
+                                  }
+                                }
+                                
+                                final result = await readingListProvider.addBookToList(selectedDefaultListId!, widget.book.id);
+                                if (result == null) {
+                                  hasError = true;
+                                  errorMessage = 'Failed to add book to default list';
+                                }
+                              }
+                              for (final listId in selectedCustomListIds) {
+                                final result = await readingListProvider.addBookToList(listId, widget.book.id);
+                                if (result == null) {
+                                  hasError = true;
+                                  errorMessage = 'Failed to add book to custom list';
+                                  break;
+                                }
+                              }
+                              
+                              Navigator.of(context).pop();
+                              
+                           
+                              if (hasError) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMessage),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Book added to selected lists successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                               
+                                Navigator.of(context).pop(true);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF8D6748),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text('Add'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showCreateListDialog(BuildContext context, StateSetter setDialogState) async {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    File? selectedImage;
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setCreateDialogState) => AlertDialog(
+          title: Text('Create New Reading List'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (selectedImage != null)
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Color(0xFF8D6E63)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        selectedImage!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.image,
+                      allowMultiple: false,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      setCreateDialogState(() {
+                        selectedImage = File(result.files.first.path!);
+                      });
+                    }
+                  },
+                  icon: Icon(Icons.image),
+                  label: Text(selectedImage != null ? 'Change Image' : 'Add Cover Image'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF8D6E63),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'List Name *',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter list name',
+                  ),
+                  maxLength: 100,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Name is required.';
+                    }
+                    if (value.length > 100) {
+                      return 'Name must not exceed 100 characters.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description *',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter list description',
+                  ),
+                  maxLength: 300,
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Description is required.';
+                    }
+                    if (value.length > 300) {
+                      return 'Description must not exceed 300 characters.';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+              
+                String? nameError;
+                String? descriptionError;
+               
+                if (nameController.text.trim().isEmpty) {
+                  nameError = 'Name is required.';
+                } else if (nameController.text.length > 100) {
+                  nameError = 'Name must not exceed 100 characters.';
+                }
+               
+                if (descriptionController.text.trim().isEmpty) {
+                  descriptionError = 'Description is required.';
+                } else if (descriptionController.text.length > 300) {
+                  descriptionError = 'Description must not exceed 300 characters.';
+                }
+                
+                if (nameError != null || descriptionError != null) {
+                  String errorMessage = '';
+                  if (nameError != null) errorMessage += nameError + '\n';
+                  if (descriptionError != null) errorMessage += descriptionError;
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage.trim()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                Navigator.of(context).pop({
+                  'name': nameController.text.trim(),
+                  'description': descriptionController.text.trim(),
+                  'image': selectedImage,
+                });
+              },
+              child: Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      try {
+        final provider = Provider.of<ReadingListProvider>(context, listen: false);
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final username = AuthProvider.username;
+        
+        if (username != null) {
+          final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+          final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+          
+          if (currentUser != null) {
+            var newList = await provider.create({
+              'userId': currentUser.id,
+              'name': result['name'],
+              'description': result['description'],
+              'isPublic': true,
+              'bookIds': [],
+            });
+
+            if (result['image'] != null) {
+              final updatedList = await provider.uploadCover(newList.id, result['image']);
+              if (updatedList != null) {
+                newList = updatedList;
+              }
+            }
+
+            await provider.addBookToList(newList.id, widget.book.id);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Reading list created and book added successfully!')),
+            );
+
+            Navigator.of(context).pop(true);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('User not found'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Not logged in'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating reading list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _buildImageUrl(String imagePath) {
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    } else {
+      String base = BaseProvider.baseUrl ?? '';
+      if (base.endsWith('/api/')) {
+        base = base.substring(0, base.length - 5);
+      }
+      return '$base/$imagePath';
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:bookworm_mobile/screens/edit_profile.dart';
+import 'package:bookworm_mobile/screens/my_lists.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -100,7 +101,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MyListsScreen(showAppBar: true, targetUser: user),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.list, color: Color(0xFF5D4037)),
                     label: const Text('My lists', style: TextStyle(color: Color(0xFF5D4037), fontWeight: FontWeight.bold, fontSize: 18)),
                     style: ElevatedButton.styleFrom(
