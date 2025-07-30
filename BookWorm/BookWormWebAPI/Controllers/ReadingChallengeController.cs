@@ -64,6 +64,15 @@ namespace BookWormWebAPI.Controllers
             return Ok();
         }
 
+        [HttpDelete("remove-book")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> RemoveBookFromChallenge([FromBody] AddBookToChallengeRequest request)
+        {
+            var service = (IReadingChallengeService)base._crudService;
+            await service.RemoveBookFromChallengeAsync(request.UserId, request.Year, request.BookId);
+            return Ok();
+        }
+
         [HttpGet("summary")]
         [Authorize(Roles = "Admin,User")]
         public async Task<IActionResult> GetSummary([FromQuery] int? year = null, [FromQuery] int topN = 3)

@@ -1,11 +1,14 @@
 import 'package:bookworm_mobile/screens/edit_profile.dart';
 import 'package:bookworm_mobile/screens/my_lists.dart';
+import 'package:bookworm_mobile/screens/challenge_details.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/base_provider.dart';
+import '../providers/challenge_provider.dart';
 import '../model/user.dart';
+import '../model/challenge.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -16,7 +19,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   User? user;
+  Challenge? currentChallenge;
   bool isLoading = true;
+  bool isLoadingChallenge = false;
 
   @override
   void initState() {
@@ -33,6 +38,385 @@ class _ProfileScreenState extends State<ProfileScreen> {
       user = result.items != null && result.items!.isNotEmpty ? result.items!.first : null;
       isLoading = false;
     });
+    
+    // Load challenge after user is loaded
+    if (user != null) {
+      _loadCurrentChallenge();
+    }
+  }
+
+  Future<void> _loadCurrentChallenge() async {
+    if (user == null) return;
+    
+    setState(() {
+      isLoadingChallenge = true;
+    });
+
+    try {
+      final challengeProvider = ChallengeProvider();
+      final currentYear = DateTime.now().year;
+      final challenge = await challengeProvider.getUserChallenge(user!.id, currentYear);
+      
+      setState(() {
+        currentChallenge = challenge;
+        isLoadingChallenge = false;
+      });
+    } catch (e) {
+      print('Error loading challenge: $e');
+      setState(() {
+        isLoadingChallenge = false;
+      });
+    }
+  }
+
+  Future<void> _createNewChallenge() async {
+    if (user == null) return;
+
+    final goalController = TextEditingController();
+    final currentYear = DateTime.now().year;
+    
+    final result = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.elasticOut,
+        builder: (context, value, child) => Transform.scale(
+          scale: value,
+          child: AlertDialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: const Color(0xFFFFF8E1),
+            title: Text(
+              'Join Reading Challenge $currentYear',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Color(0xFF5D4037),
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                    builder: (context, textValue, child) => Opacity(
+                      opacity: textValue,
+                      child: Transform.translate(
+                        offset: Offset(0, 20 * (1 - textValue)),
+                        child: Text(
+                          'Set your reading goal for $currentYear:',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF8D6748),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutBack,
+                    builder: (context, fieldValue, child) => Transform.scale(
+                      scale: fieldValue,
+                      child: TextField(
+                        controller: goalController,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: 'Number of books',
+                          hintText: 'e.g., 30',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(Icons.book, color: Color(0xFF8D6748)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutBack,
+                builder: (context, buttonValue, child) => Transform.scale(
+                  scale: buttonValue,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Color(0xFF8D6748)),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final goal = int.tryParse(goalController.text);
+                          final currentYear = DateTime.now().year;
+                          
+                          // Validate goal
+                          if (goal == null || goal < 1 || goal > 1000) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Goal must be between 1 and 1000'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          
+                          if (currentYear < 2000 || currentYear > DateTime.now().year + 1) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Year must be between 2000 and ${DateTime.now().year + 1}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                       
+                          // Let the backend handle duplicate validation
+                          Navigator.pop(context, goal);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8D6748),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          'Join Challenge',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      try {
+        setState(() {
+          isLoadingChallenge = true;
+        });
+
+        final challengeProvider = ChallengeProvider();
+        final newChallenge = await challengeProvider.createChallenge(user!.id, result, currentYear);
+        
+        setState(() {
+          currentChallenge = newChallenge;
+          isLoadingChallenge = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully joined the $currentYear reading challenge!')),
+        );
+      } catch (e) {
+        setState(() {
+          isLoadingChallenge = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating challenge: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _editChallenge(Challenge challenge) async {
+    if (user == null) return;
+
+    final goalController = TextEditingController(text: challenge.goal.toString());
+    final currentYear = DateTime.now().year;
+    
+    final result = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.elasticOut,
+        builder: (context, value, child) => Transform.scale(
+          scale: value,
+          child: AlertDialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: const Color(0xFFFFF8E1),
+            title: Text(
+              'Edit Reading Challenge $currentYear',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Color(0xFF5D4037),
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                    builder: (context, textValue, child) => Opacity(
+                      opacity: textValue,
+                      child: Transform.translate(
+                        offset: Offset(0, 20 * (1 - textValue)),
+                        child: Text(
+                          'Update your reading goal for $currentYear:',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF8D6748),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutBack,
+                    builder: (context, fieldValue, child) => Transform.scale(
+                      scale: fieldValue,
+                      child: TextField(
+                        controller: goalController,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: 'Number of books',
+                          hintText: 'e.g., 30',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(Icons.book, color: Color(0xFF8D6748)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutBack,
+                builder: (context, buttonValue, child) => Transform.scale(
+                  scale: buttonValue,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Color(0xFF8D6748)),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final goal = int.tryParse(goalController.text);
+                          
+                          // Validate goal only - no need to check year or duplicates for editing
+                          if (goal == null || goal < 1 || goal > 1000) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Goal must be between 1 and 1000'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          Navigator.pop(context, goal);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8D6748),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          'Update Goal',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      try {
+        setState(() {
+          isLoadingChallenge = true;
+        });
+
+        final challengeProvider = ChallengeProvider();
+        final updatedChallenge = await challengeProvider.updateChallenge(
+          challenge.id,
+          result,
+          currentYear,
+        );
+        
+        setState(() {
+          currentChallenge = updatedChallenge;
+          isLoadingChallenge = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully updated your reading goal to $result books!')),
+        );
+      } catch (e) {
+        setState(() {
+          isLoadingChallenge = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating challenge: $e')),
+        );
+      }
+    }
   }
 
   String? _getUserImageUrl(User user) {
@@ -139,58 +523,467 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 36),
-            // Reading goal
+            // Reading Challenge Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 64,
-                        height: 64,
-                        child: CircularProgressIndicator(
-                          value: 0.93, // Example: 93%
-                          strokeWidth: 7,
-                          backgroundColor: const Color(0xFFF6E3B4),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFC107)),
+                  // Enhanced Header with Animation
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) => Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8D6748), Color(0xFF5D4037)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF8D6748).withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.emoji_events,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Reading Challenge ${DateTime.now().year}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Text('93%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFB87333))),
-                    ],
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Reading goal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF5D4037))),
-                        SizedBox(height: 4),
-                        Text('You have read 28 out of 30 books this year.\nKeep up until you reach your goal!', style: TextStyle(fontSize: 13, color: Color(0xFF8D6748))),
-                      ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  
+                  if (isLoadingChallenge)
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) => Opacity(
+                        opacity: value,
+                        child: Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(color: Color(0xFF8D6748)),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (currentChallenge == null)
+                    // Enhanced No Challenge Card
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF8E1), Color(0xFFF6E3B4)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE0C9A6), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8D6748).withOpacity(0.2),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8D6748).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                child: const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 48,
+                                  color: Color(0xFF8D6748),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No Active Challenge',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Color(0xFF5D4037),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Join the reading challenge and set your goal for this year!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF8D6748),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                duration: const Duration(milliseconds: 1000),
+                                curve: Curves.elasticOut,
+                                builder: (context, buttonValue, child) => Transform.scale(
+                                  scale: buttonValue,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF8D6748), Color(0xFF5D4037)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(25),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF8D6748).withOpacity(0.4),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton.icon(
+                                      onPressed: _createNewChallenge,
+                                      icon: const Icon(Icons.emoji_events, color: Colors.white),
+                                      label: const Text(
+                                        'Join Challenge',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    // Enhanced Challenge Progress Card
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF8E1), Color(0xFFF6E3B4)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE0C9A6), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8D6748).withOpacity(0.2),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  // Enhanced Progress Circle
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Container(
+                                        width: 100,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFFE0C9A6), Color(0xFFD4C4A8)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF8D6748).withOpacity(0.2),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: TweenAnimationBuilder<double>(
+                                          tween: Tween(begin: 0.0, end: currentChallenge!.goal > 0 
+                                              ? (currentChallenge!.numberOfBooksRead / currentChallenge!.goal).clamp(0.0, 1.0)
+                                              : 0.0),
+                                          duration: const Duration(milliseconds: 1500),
+                                          curve: Curves.easeOutCubic,
+                                          builder: (context, progressValue, child) => CircularProgressIndicator(
+                                            value: progressValue,
+                                            strokeWidth: 10,
+                                            backgroundColor: const Color(0xFFE0C9A6),
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              currentChallenge!.isCompleted 
+                                                  ? const Color(0xFF4CAF50)
+                                                  : const Color(0xFF8D6748),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Column(
+                                        children: [
+                                          TweenAnimationBuilder<int>(
+                                            tween: IntTween(begin: 0, end: currentChallenge!.numberOfBooksRead),
+                                            duration: const Duration(milliseconds: 1000),
+                                            curve: Curves.easeOutCubic,
+                                            builder: (context, value, child) => Text(
+                                              '$value',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 24,
+                                                color: Color(0xFF5D4037),
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            'of ${currentChallenge!.goal}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF8D6748),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: currentChallenge!.isCompleted 
+                                                ? const Color(0xFF4CAF50).withOpacity(0.2)
+                                                : const Color(0xFF8D6748).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                          child: Text(
+                                            currentChallenge!.isCompleted 
+                                                ? '🎉 Challenge Completed!'
+                                                : '📚 Reading Progress',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: currentChallenge!.isCompleted 
+                                                  ? const Color(0xFF4CAF50)
+                                                  : const Color(0xFF5D4037),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          currentChallenge!.isCompleted
+                                              ? 'Congratulations! You\'ve reached your goal of ${currentChallenge!.goal} books.'
+                                              : 'You have read ${currentChallenge!.numberOfBooksRead} out of ${currentChallenge!.goal} books this year.\nKeep going until you reach your goal!',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF8D6748),
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF8D6748).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            'Progress: ${((currentChallenge!.numberOfBooksRead / currentChallenge!.goal) * 100).toStringAsFixed(1)}%',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: Color(0xFF8D6748),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              // Enhanced Action Buttons
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween(begin: 0.0, end: 1.0),
+                                    duration: const Duration(milliseconds: 1200),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, value, child) => Transform.scale(
+                                      scale: value,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFF5D4037), Color(0xFF8D6748)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF5D4037).withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _editChallenge(currentChallenge!),
+                                          icon: const Icon(Icons.edit, color: Colors.white, size: 16),
+                                          label: const Text(
+                                            'Edit Goal',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween(begin: 0.0, end: 1.0),
+                                    duration: const Duration(milliseconds: 1400),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, value, child) => Transform.scale(
+                                      scale: value,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFF8D6748), Color(0xFF5D4037)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF8D6748).withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => ChallengeDetailsScreen(challenge: currentChallenge!),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.visibility, color: Colors.white, size: 16),
+                                          label: const Text(
+                                            'See Details',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8D6748),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('See more', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
               ),
             ),
             const SizedBox(height: 32),

@@ -43,6 +43,14 @@ namespace BookWorm.Services
 
         public async Task<ReadingListResponse> CreateAsync(ReadingListCreateUpdateRequest request)
         {
+            // Validate that the name is not a default list name
+            var defaultNames = new[] { "Want to read", "Currently reading", "Read" };
+            if (defaultNames.Any(defaultName => 
+                string.Equals(defaultName, request.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ReadingListException("This name is reserved for default lists. Please choose a different name.");
+            }
+
             var list = new ReadingList
             {
                 UserId = request.UserId,
@@ -66,6 +74,13 @@ namespace BookWorm.Services
                             readAt = DateTime.Now;
                         var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now, ReadAt = readAt };
                         _context.ReadingListBooks.Add(rlb);
+                        
+                        // Update challenge progress if book was read AND it's being added to a "Read" list
+                        if (readAt.HasValue && request.Name.ToLower() == "read")
+                        {
+                            var year = readAt.Value.Year;
+                            await _readingChallengeService.AddBookToChallengeAsync(request.UserId, year, bookId, readAt.Value);
+                        }
                     }
                 }
                 await _context.SaveChangesAsync();
@@ -78,6 +93,15 @@ namespace BookWorm.Services
             var list = await _context.ReadingLists.FindAsync(id);
             if (list == null)
                 return null;
+                
+            // Validate that the name is not a default list name
+            var defaultNames = new[] { "Want to read", "Currently reading", "Read" };
+            if (defaultNames.Any(defaultName => 
+                string.Equals(defaultName, request.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ReadingListException("This name is reserved for default lists. Please choose a different name.");
+            }
+            
             list.Name = request.Name;
             list.Description = request.Description;
             list.IsPublic = request.IsPublic;
@@ -96,6 +120,13 @@ namespace BookWorm.Services
                             readAt = DateTime.Now;
                         var rlb = new ReadingListBook { ReadingListId = list.Id, BookId = bookId, AddedAt = DateTime.Now, ReadAt = readAt };
                         _context.ReadingListBooks.Add(rlb);
+                        
+                        // Update challenge progress if book was read AND it's being added to a "Read" list
+                        if (readAt.HasValue && request.Name.ToLower() == "read")
+                        {
+                            var year = readAt.Value.Year;
+                            await _readingChallengeService.AddBookToChallengeAsync(list.UserId, year, bookId, readAt.Value);
+                        }
                     }
                 }
             }
@@ -134,7 +165,8 @@ namespace BookWorm.Services
             await _context.SaveChangesAsync();
 
            
-            if (actualReadAt != null)
+            // Update challenge progress if book was read AND it's being added to a "Read" list
+            if (actualReadAt != null && list.Name.ToLower() == "read")
             {
                 var year = actualReadAt.Year;
                 await _readingChallengeService.AddBookToChallengeAsync(list.UserId, year, bookId, actualReadAt);
@@ -153,8 +185,19 @@ namespace BookWorm.Services
             if (bookInList == null)
                 throw new ReadingListException("Book not found in the list");
             
+            // Store the read date and user ID before removing the book
+            var readAt = bookInList.ReadAt;
+            var userId = list.UserId;
+            
             _context.ReadingListBooks.Remove(bookInList);
             await _context.SaveChangesAsync();
+
+            // If the book was read AND it was from a "Read" list, update challenge progress for that year
+            if (readAt.HasValue && list.Name.ToLower() == "read")
+            {
+                var year = readAt.Value.Year;
+                await _readingChallengeService.RemoveBookFromChallengeAsync(userId, year, bookId);
+            }
 
             return await GetReadingListResponseWithBooksAsync(readingListId);
         }

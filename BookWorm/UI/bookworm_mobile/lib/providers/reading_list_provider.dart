@@ -46,7 +46,7 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
     }
   }
 
-  // Create new reading list
+ 
   Future<ReadingList> create(Map<String, dynamic> request) async {
     try {
       var url = "${baseUrl}ReadingList";
@@ -70,7 +70,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
     }
   }
 
-  // Update reading list
   Future<ReadingList> update(int id, [dynamic request]) async {
     try {
       var url = "${baseUrl}ReadingList/$id";
@@ -94,7 +93,7 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
     }
   }
 
-  // Delete reading list
+
   Future<bool> delete(int id) async {
     try {
       var url = "${baseUrl}ReadingList/$id";
@@ -139,7 +138,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
     }
   }
 
-  // Remove book from reading list
   Future<ReadingList?> removeBookFromList(int readingListId, int bookId) async {
     try {
       var url = "${baseUrl}ReadingList/$readingListId/books/$bookId";

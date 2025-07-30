@@ -40,23 +40,51 @@ namespace BookWorm.Services
 
         protected override ReadingChallengeResponse MapToResponse(ReadingChallenge entity)
         {
+       
+            var manualBooks = entity.ReadingChallengeBooks.Select(rcb => new ReadingChallengeBookResponse
+            {
+                BookId = rcb.BookId,
+                Title = rcb.Book?.Title ?? string.Empty,
+                CompletedAt = rcb.CompletedAt
+            }).ToList();
+
+  
+            var manualBookIds = entity.ReadingChallengeBooks.Select(rcb => rcb.BookId).ToHashSet();
+            var readListBooks = _context.ReadingListBooks
+                .Include(rlb => rlb.ReadingList)
+                .Include(rlb => rlb.Book)
+                .Where(rlb => rlb.ReadingList.UserId == entity.UserId && 
+                             rlb.ReadingList.Name.ToLower() == "read" &&
+                             rlb.ReadAt != null &&
+                             rlb.ReadAt.Value.Year == entity.Year &&
+                             !manualBookIds.Contains(rlb.BookId))
+                .ToList()
+                .Select(rlb => new ReadingChallengeBookResponse
+                {
+                    BookId = rlb.BookId,
+                    Title = rlb.Book?.Title ?? string.Empty,
+                    CompletedAt = rlb.ReadAt.Value
+                })
+                .ToList();
+
+        
+            var allBooks = manualBooks.Concat(readListBooks).ToList();
+           
+            var actualNumberOfBooksRead = allBooks.Count;
+            var isCompleted = actualNumberOfBooksRead >= entity.Goal;
+
             return new ReadingChallengeResponse
             {
                 Id = entity.Id,
                 UserId = entity.UserId,
                 UserName = entity.User?.Username ?? string.Empty,
                 Goal = entity.Goal,
-                NumberOfBooksRead = entity.NumberOfBooksRead,
+                NumberOfBooksRead = actualNumberOfBooksRead,
                 Year = entity.Year,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
-                IsCompleted = entity.IsCompleted,
-                Books = entity.ReadingChallengeBooks.Select(rcb => new ReadingChallengeBookResponse
-                {
-                    BookId = rcb.BookId,
-                    Title = rcb.Book?.Title ?? string.Empty,
-                    CompletedAt = rcb.CompletedAt
-                }).ToList()
+                IsCompleted = isCompleted,
+                Books = allBooks
             };
         }
 
@@ -134,8 +162,9 @@ namespace BookWorm.Services
             if (request.BookIds != null && request.BookIds.Count > 0)
             {
                 await AddBooksToChallenge(result.Id, request.BookIds);
-                await UpdateChallengeProgress(result.Id);
             }
+           
+            await UpdateChallengeProgress(result.Id);
             
             return await GetByIdAsync(result.Id) ?? result;
         }
@@ -147,7 +176,10 @@ namespace BookWorm.Services
             if (result != null)
             {
                
-                await UpdateBooksInChallenge(id, request.BookIds ?? new List<int>());
+                if (request.BookIds != null && request.BookIds.Count > 0)
+                {
+                    await UpdateBooksInChallenge(id, request.BookIds);
+                }
                 await UpdateChallengeProgress(id);
                 
                 return await GetByIdAsync(id) ?? result;
@@ -191,11 +223,26 @@ namespace BookWorm.Services
             var challenge = await _context.ReadingChallenges.FindAsync(challengeId);
             if (challenge != null)
             {
-                var bookCount = await _context.ReadingChallengeBooks
-                    .CountAsync(rcb => rcb.ReadingChallengeId == challengeId);
+                var challengeBookIds = await _context.ReadingChallengeBooks
+                    .Where(rcb => rcb.ReadingChallengeId == challengeId)
+                    .Select(rcb => rcb.BookId)
+                    .ToListAsync();
+               
+                var readingListBookCount = await _context.ReadingListBooks
+                    .Include(rlb => rlb.ReadingList)
+                    .Where(rlb => rlb.ReadingList.UserId == challenge.UserId && 
+                                 rlb.ReadingList.Name.ToLower() == "read" &&
+                                 rlb.ReadAt != null &&
+                                 rlb.ReadAt.Value.Year == challenge.Year &&
+                                 !challengeBookIds.Contains(rlb.BookId))
+                    .Select(rlb => rlb.BookId)
+                    .Distinct()
+                    .CountAsync();
                 
-                challenge.NumberOfBooksRead = bookCount;
-                challenge.IsCompleted = bookCount >= challenge.Goal;
+                var totalBookCount = challengeBookIds.Count + readingListBookCount;
+                
+                challenge.NumberOfBooksRead = totalBookCount;
+                challenge.IsCompleted = totalBookCount >= challenge.Goal;
                 
                 await _context.SaveChangesAsync();
             }
@@ -218,7 +265,74 @@ namespace BookWorm.Services
             };
             _context.ReadingChallengeBooks.Add(rcb);
             await _context.SaveChangesAsync();
+           
+            await AddBookToReadListIfNotExists(userId, bookId, completedAt);
+            
             await UpdateChallengeProgress(challenge.Id);
+        }
+
+        public async Task RemoveBookFromChallengeAsync(int userId, int year, int bookId)
+        {
+            var challenge = await _context.ReadingChallenges
+                .Include(rc => rc.ReadingChallengeBooks)
+                .FirstOrDefaultAsync(rc => rc.UserId == userId && rc.Year == year);
+            if (challenge == null)
+                return;
+
+            var bookToRemove = challenge.ReadingChallengeBooks
+                .FirstOrDefault(rcb => rcb.BookId == bookId);
+            if (bookToRemove == null)
+                return;
+
+            _context.ReadingChallengeBooks.Remove(bookToRemove);
+            await _context.SaveChangesAsync();
+            await UpdateChallengeProgress(challenge.Id);
+        }
+
+        private async Task AddBookToReadListIfNotExists(int userId, int bookId, DateTime completedAt)
+        {
+            try
+            {
+              
+                var readList = await _context.ReadingLists
+                    .FirstOrDefaultAsync(rl => rl.UserId == userId && rl.Name.ToLower() == "read");
+                
+                if (readList == null)
+                {
+                    readList = new ReadingList
+                    {
+                        UserId = userId,
+                        Name = "Read",
+                        Description = "Books I have read",
+                        IsPublic = true,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.ReadingLists.Add(readList);
+                    await _context.SaveChangesAsync();
+                }
+                
+               
+                var existingBook = await _context.ReadingListBooks
+                    .FirstOrDefaultAsync(rlb => rlb.ReadingListId == readList.Id && rlb.BookId == bookId);
+                
+                if (existingBook == null)
+                {
+                    var rlb = new ReadingListBook
+                    {
+                        ReadingListId = readList.Id,
+                        BookId = bookId,
+                        AddedAt = DateTime.Now,
+                        ReadAt = completedAt
+                    };
+                    _context.ReadingListBooks.Add(rlb);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding book to Read list when adding to challenge");
+                
+            }
         }
 
         public async Task<ReadingChallengeSummaryResponse> GetSummaryAsync(int? year = null, int topN = 3)

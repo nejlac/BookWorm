@@ -33,16 +33,14 @@ class ReadingList {
 
   Map<String, dynamic> toJson() => _$ReadingListToJson(this);
 
-  // Helper method to get book count
   int get bookCount => books.length;
 
-  // Helper method to get the first book cover for display
   String? get firstBookCoverUrl {
-    // First try to use the list's own cover image
+   
     if (coverImagePath != null && coverImagePath!.isNotEmpty) {
       return coverImagePath;
     }
-    // Fall back to the first book's cover
+  
     if (books.isNotEmpty) {
       return books.first.coverImagePath;
     }

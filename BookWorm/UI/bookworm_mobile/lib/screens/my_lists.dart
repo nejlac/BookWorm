@@ -24,14 +24,16 @@ class MyListsScreen extends StatefulWidget {
   State<MyListsScreen> createState() => _MyListsScreenState();
 }
 
-class _MyListsScreenState extends State<MyListsScreen> {
+class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserver {
   List<ReadingList> _readingLists = [];
   bool _isLoading = true;
   bool _isCreating = false;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadReadingLists();
     
   
@@ -41,6 +43,33 @@ class _MyListsScreenState extends State<MyListsScreen> {
         createNewList();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && _hasInitialized) {
+      // Refresh when returning to the app
+      _loadReadingLists();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+    }
+  }
+
+  Future<void> _refreshLists() async {
+    await _loadReadingLists();
   }
 
   Future<void> _loadReadingLists() async {
@@ -254,6 +283,14 @@ class _MyListsScreenState extends State<MyListsScreen> {
                   nameError = 'Name is required.';
                 } else if (nameController.text.length > 100) {
                   nameError = 'Name must not exceed 100 characters.';
+                } else {
+                  // Check for default list names
+                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                  final inputName = nameController.text.trim();
+                  if (defaultNames.any((defaultName) => 
+                      defaultName.toLowerCase() == inputName.toLowerCase())) {
+                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                  }
                 }
                 
 
@@ -801,12 +838,23 @@ class _MyListsScreenState extends State<MyListsScreen> {
                   nameError = 'Name is required.';
                 } else if (nameController.text.length > 100) {
                   nameError = 'Name must not exceed 100 characters.';
+                } else {
+                  // Check for default list names
+                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                  final inputName = nameController.text.trim();
+                  if (defaultNames.any((defaultName) => 
+                      defaultName.toLowerCase() == inputName.toLowerCase())) {
+                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                  }
                 }
+                
+
                 if (descriptionController.text.trim().isEmpty) {
                   descriptionError = 'Description is required.';
                 } else if (descriptionController.text.length > 300) {
                   descriptionError = 'Description must not exceed 300 characters.';
                 }
+                
                 if (nameError != null || descriptionError != null) {
                   String errorMessage = '';
                   if (nameError != null) errorMessage += nameError + '\n';

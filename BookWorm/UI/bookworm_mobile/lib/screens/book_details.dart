@@ -2651,9 +2651,23 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(
-                        child: Text(
-                          'Add book to your library',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8D6748)),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Add book to your library',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8D6748)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Note: Adding to "Read" list will ask for the date you finished reading.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                       SizedBox(height: 24),
@@ -2869,14 +2883,35 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                   }
                                 }
                                 
-                                final result = await readingListProvider.addBookToList(selectedDefaultListId!, widget.book.id);
+                                // Check if this is the "Read" list and ask for read date
+                                DateTime? readAt;
+                                if (defaultLists.any((list) => list.id == selectedDefaultListId && list.name.toLowerCase() == "read")) {
+                                  readAt = await _showReadDateDialog(context);
+                                  if (readAt == null) {
+                                    // User cancelled the date selection
+                                    return;
+                                  }
+                                }
+                                
+                                final result = await readingListProvider.addBookToList(selectedDefaultListId!, widget.book.id, readAt: readAt);
                                 if (result == null) {
                                   hasError = true;
                                   errorMessage = 'Failed to add book to default list';
                                 }
                               }
                               for (final listId in selectedCustomListIds) {
-                                final result = await readingListProvider.addBookToList(listId, widget.book.id);
+                                // Check if this is a "Read" list and ask for read date
+                                DateTime? readAt;
+                                final customList = customLists.firstWhere((list) => list.id == listId);
+                                if (customList.name.toLowerCase() == "read") {
+                                  readAt = await _showReadDateDialog(context);
+                                  if (readAt == null) {
+                                    // User cancelled the date selection
+                                    return;
+                                  }
+                                }
+                                
+                                final result = await readingListProvider.addBookToList(listId, widget.book.id, readAt: readAt);
                                 if (result == null) {
                                   hasError = true;
                                   errorMessage = 'Failed to add book to custom list';
@@ -2922,6 +2957,84 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
           },
         );
       },
+    );
+  }
+
+  Future<DateTime?> _showReadDateDialog(BuildContext context) async {
+    DateTime selectedDate = DateTime.now();
+    
+    return await showDialog<DateTime>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 400,
+            maxHeight: 500,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'When did you read this book?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8D6748),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select the date you finished reading this book:',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: CalendarDatePicker(
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(1900),
+                  lastDate: DateTime.now(),
+                  onDateChanged: (date) {
+                    selectedDate = date;
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(selectedDate),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8D6748),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Confirm'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -3034,6 +3147,14 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   nameError = 'Name is required.';
                 } else if (nameController.text.length > 100) {
                   nameError = 'Name must not exceed 100 characters.';
+                } else {
+                  // Check for default list names
+                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                  final inputName = nameController.text.trim();
+                  if (defaultNames.any((defaultName) => 
+                      defaultName.toLowerCase() == inputName.toLowerCase())) {
+                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                  }
                 }
                
                 if (descriptionController.text.trim().isEmpty) {
@@ -3095,7 +3216,17 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               }
             }
 
-            await provider.addBookToList(newList.id, widget.book.id);
+            // Check if this is a "Read" list and ask for read date
+            DateTime? readAt;
+            if (result['name'].toString().toLowerCase() == "read") {
+              readAt = await _showReadDateDialog(context);
+              if (readAt == null) {
+                // User cancelled the date selection
+                return;
+              }
+            }
+            
+            await provider.addBookToList(newList.id, widget.book.id, readAt: readAt);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Reading list created and book added successfully!')),

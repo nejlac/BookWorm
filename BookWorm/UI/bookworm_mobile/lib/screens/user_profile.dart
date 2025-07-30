@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../model/user.dart';
 import '../model/country.dart';
+import '../model/challenge.dart';
 import '../providers/country_provider.dart';
+import '../providers/challenge_provider.dart';
 import '../providers/base_provider.dart';
 import 'my_lists.dart';
+import 'challenge_details.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final User user;
@@ -17,11 +20,14 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final CountryProvider _countryProvider = CountryProvider();
   Country? _userCountry;
+  Challenge? _userChallenge;
+  bool _isLoadingChallenge = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserCountry();
+    _loadUserChallenge();
   }
 
   Future<void> _loadUserCountry() async {
@@ -36,6 +42,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       });
     } catch (e) {
       print('Error loading country: $e');
+    }
+  }
+
+  Future<void> _loadUserChallenge() async {
+    setState(() {
+      _isLoadingChallenge = true;
+    });
+
+    try {
+      final challengeProvider = ChallengeProvider();
+      final currentYear = DateTime.now().year;
+      
+      // Get the selected user's challenge by their username
+      final filter = {
+        'username': widget.user.username,
+        'year': currentYear,
+        'pageSize': 1,
+      };
+
+      final result = await challengeProvider.get(filter: filter);
+      final challenge = result.items?.isNotEmpty == true ? result.items!.first : null;
+      
+      setState(() {
+        _userChallenge = challenge;
+        _isLoadingChallenge = false;
+      });
+    } catch (e) {
+      print('Error loading user challenge: $e');
+      setState(() {
+        _isLoadingChallenge = false;
+      });
     }
   }
 
@@ -204,11 +241,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.book, color: Color(0xFF8D6748), size: 24),
+                      const Icon(Icons.emoji_events, color: Color(0xFF8D6748), size: 24),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Reading Goal',
-                        style: TextStyle(
+                      Text(
+                        'Reading Challenge ${DateTime.now().year}',
+                        style: const TextStyle(
                           fontFamily: 'Literata',
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -218,18 +255,159 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'This user\'s reading goals and statistics will be displayed here.',
-                    style: TextStyle(
-                      fontFamily: 'Literata',
-                      fontSize: 16,
-                      color: Color(0xFF8D6748),
+                  
+                  if (_isLoadingChallenge)
+                    const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF8D6748)),
+                    )
+                  else if (_userChallenge == null)
+                    // No challenge - show message
+                    Column(
+                      children: [
+                        const Icon(
+                          Icons.book_outlined,
+                          size: 48,
+                          color: Color(0xFF8D6748),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No Reading Goal',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Color(0xFF5D4037),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${widget.user.firstName} hasn\'t set a reading goal for this year.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF8D6748),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    // Has challenge - show progress
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 80,
+                                  height: 80,
+                                  child: CircularProgressIndicator(
+                                    value: _userChallenge!.goal > 0 
+                                        ? (_userChallenge!.numberOfBooksRead / _userChallenge!.goal).clamp(0.0, 1.0)
+                                        : 0.0,
+                                    strokeWidth: 8,
+                                    backgroundColor: const Color(0xFFE0C9A6),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8D6748)),
+                                  ),
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      '${_userChallenge!.numberOfBooksRead}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        color: Color(0xFF5D4037),
+                                      ),
+                                    ),
+                                    Text(
+                                      'of ${_userChallenge!.goal}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF8D6748),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _userChallenge!.isCompleted 
+                                        ? 'Challenge Completed! 🎉'
+                                        : 'Reading Progress',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: _userChallenge!.isCompleted 
+                                          ? const Color(0xFF4CAF50)
+                                          : const Color(0xFF5D4037),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _userChallenge!.isCompleted
+                                        ? '${widget.user.firstName} has reached their goal of ${_userChallenge!.goal} books!'
+                                        : '${widget.user.firstName} has read ${_userChallenge!.numberOfBooksRead} out of ${_userChallenge!.goal} books this year.',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF8D6748),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Progress: ${((_userChallenge!.numberOfBooksRead / _userChallenge!.goal) * 100).toStringAsFixed(1)}%',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Color(0xFF8D6748),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChallengeDetailsScreen(challenge: _userChallenge!),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.visibility, color: Colors.white, size: 16),
+                            label: const Text(
+                              'See Details',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8D6748),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
                 ],
               ),
             ),
-            
+            const SizedBox(height: 32),
 
           ],
         ),
