@@ -19,5 +19,7 @@ namespace BookWorm.Services
         Task<UserResponse?> AuthenticateAsync(UserLoginRequest request);
         Task<List<AgeDistributionResponse>> GetUserAgeDistribution();
         Task<int> GetUsersCount();
+        Task<List<GenreStatisticResponse>> GetUserMostReadGenres(int userId, int? year = null);
+        Task<UserRatingStatisticsResponse> GetUserRatingStatistics(int userId, int? year = null);
     }
 }

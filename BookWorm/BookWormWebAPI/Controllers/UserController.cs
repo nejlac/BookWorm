@@ -127,8 +127,25 @@ namespace BookWormWebAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<List<AgeDistributionResponse>>> GetUserAgeDistribution()
         {
-            var result = await _userService.GetUserAgeDistribution();
-            return Ok(result);
+            return await _userService.GetUserAgeDistribution();
+        }
+
+        [HttpGet("{userId}/most-read-genres")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<GenreStatisticResponse>>> GetUserMostReadGenres(
+            int userId, 
+            [FromQuery] int? year = null)
+        {
+            return await _userService.GetUserMostReadGenres(userId, year);
+        }
+
+        [HttpGet("{userId}/rating-statistics")]
+        [AllowAnonymous]
+        public async Task<ActionResult<UserRatingStatisticsResponse>> GetUserRatingStatistics(
+            int userId, 
+            [FromQuery] int? year = null)
+        {
+            return await _userService.GetUserRatingStatistics(userId, year);
         }
     }
 

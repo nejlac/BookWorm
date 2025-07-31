@@ -444,6 +444,114 @@ namespace BookWorm.Services
             }).ToList();
             return result;
         }
+
+        public async Task<List<GenreStatisticResponse>> GetUserMostReadGenres(int userId, int? year = null)
+        {
+            var query = _context.ReadingListBooks
+                .Include(rlb => rlb.ReadingList)
+                .Include(rlb => rlb.Book)
+                .ThenInclude(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
+                .Where(rlb => rlb.ReadingList.UserId == userId && 
+                             rlb.ReadingList.Name.ToLower() == "read" &&
+                             rlb.ReadAt != null);
+
+            if (year.HasValue)
+            {
+                query = query.Where(rlb => rlb.ReadAt.Value.Year == year.Value);
+            }
+
+            var readBooks = await query.ToListAsync();
+
+            var genreCounts = new Dictionary<string, int>();
+            var totalBooks = 0;
+
+            foreach (var readBook in readBooks)
+            {
+                if (readBook.Book?.BookGenres != null)
+                {
+                    foreach (var bookGenre in readBook.Book.BookGenres)
+                    {
+                        var genreName = bookGenre.Genre.Name;
+                        if (!genreCounts.ContainsKey(genreName))
+                        {
+                            genreCounts[genreName] = 0;
+                        }
+                        genreCounts[genreName]++;
+                        totalBooks++;
+                    }
+                }
+            }
+
+            if (totalBooks == 0)
+            {
+                return new List<GenreStatisticResponse>();
+            }
+
+            var result = genreCounts
+                .OrderByDescending(x => x.Value)
+                .Take(5)
+                .Select(x => new GenreStatisticResponse
+                {
+                    GenreName = x.Key,
+                    Percentage = Math.Round((double)x.Value / totalBooks * 100, 1)
+                })
+                .ToList();
+
+            return result;
+        }
+
+        public async Task<UserRatingStatisticsResponse> GetUserRatingStatistics(int userId, int? year = null)
+        {
+            var query = _context.BookReviews
+                .Include(br => br.Book)
+                .Where(br => br.UserId == userId);
+
+            if (year.HasValue)
+            {
+                query = query.Where(br => br.CreatedAt.Year == year.Value);
+            }
+
+            var reviews = await query.ToListAsync();
+
+            if (!reviews.Any())
+            {
+                return new UserRatingStatisticsResponse
+                {
+                    AverageRating = 0,
+                    TotalReviews = 0,
+                    RatingDistribution = new Dictionary<double, int>
+                    {
+                        { 1.0, 0 }, { 1.5, 0 }, { 2.0, 0 }, { 2.5, 0 },
+                        { 3.0, 0 }, { 3.5, 0 }, { 4.0, 0 }, { 4.5, 0 }, { 5.0, 0 }
+                    }
+                };
+            }
+
+            var averageRating = Math.Round(reviews.Average(r => r.Rating), 1);
+            var totalReviews = reviews.Count;
+
+            var ratingDistribution = new Dictionary<double, int>
+            {
+                { 1.0, 0 }, { 1.5, 0 }, { 2.0, 0 }, { 2.5, 0 },
+                { 3.0, 0 }, { 3.5, 0 }, { 4.0, 0 }, { 4.5, 0 }, { 5.0, 0 }
+            };
+
+            foreach (var review in reviews)
+            {
+                if (ratingDistribution.ContainsKey(review.Rating))
+                {
+                    ratingDistribution[review.Rating]++;
+                }
+            }
+
+            return new UserRatingStatisticsResponse
+            {
+                AverageRating = averageRating,
+                TotalReviews = totalReviews,
+                RatingDistribution = ratingDistribution
+            };
+        }
     }
 
 }

@@ -7,8 +7,12 @@ import '../providers/user_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/base_provider.dart';
 import '../providers/challenge_provider.dart';
+import '../providers/user_statistics_provider.dart';
 import '../model/user.dart';
 import '../model/challenge.dart';
+import '../model/user_statistics.dart';
+import '../widgets/genre_pie_chart.dart';
+import '../utils/genre_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -22,6 +26,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Challenge? currentChallenge;
   bool isLoading = true;
   bool isLoadingChallenge = false;
+  bool isLoadingStatistics = false;
+  List<UserGenreStatistic>? userGenres;
+  UserRatingStatistics? userRatingStats;
 
   @override
   void initState() {
@@ -39,9 +46,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isLoading = false;
     });
     
-    // Load challenge after user is loaded
+  
     if (user != null) {
       _loadCurrentChallenge();
+      _loadUserStatistics();
     }
   }
 
@@ -65,6 +73,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('Error loading challenge: $e');
       setState(() {
         isLoadingChallenge = false;
+      });
+    }
+  }
+
+  Future<void> _loadUserStatistics() async {
+    if (user == null) return;
+    
+    setState(() {
+      isLoadingStatistics = true;
+    });
+
+    try {
+      final statisticsProvider = UserStatisticsProvider();
+      final currentYear = DateTime.now().year;
+      
+      final results = await Future.wait([
+        statisticsProvider.getUserMostReadGenres(user!.id, year: currentYear),
+        statisticsProvider.getUserRatingStatistics(user!.id, year: currentYear),
+      ]);
+      
+      setState(() {
+        userGenres = results[0] as List<UserGenreStatistic>;
+        userRatingStats = results[1] as UserRatingStatistics;
+        isLoadingStatistics = false;
+      });
+    } catch (e) {
+      print('Error loading user statistics: $e');
+      setState(() {
+        isLoadingStatistics = false;
       });
     }
   }
@@ -170,8 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () async {
                           final goal = int.tryParse(goalController.text);
                           final currentYear = DateTime.now().year;
-                          
-                          // Validate goal
+                        
                           if (goal == null || goal < 1 || goal > 1000) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -192,9 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                             return;
                           }
-                          
-                       
-                          // Let the backend handle duplicate validation
+                        
                           Navigator.pop(context, goal);
                         },
                         style: ElevatedButton.styleFrom(
@@ -350,7 +384,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () async {
                           final goal = int.tryParse(goalController.text);
                           
-                          // Validate goal only - no need to check year or duplicates for editing
                           if (goal == null || goal < 1 || goal > 1000) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -523,13 +556,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 36),
-            // Reading Challenge Section
+       
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Enhanced Header with Animation
+               
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: const Duration(milliseconds: 800),
@@ -611,7 +644,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     )
                   else if (currentChallenge == null)
-                    // Enhanced No Challenge Card
+                
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
                       duration: const Duration(milliseconds: 800),
@@ -721,7 +754,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     )
                   else
-                    // Enhanced Challenge Progress Card
+                 
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
                       duration: const Duration(milliseconds: 800),
@@ -750,7 +783,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Row(
                                 children: [
-                                  // Enhanced Progress Circle
                                   Stack(
                                     alignment: Alignment.center,
                                     children: [
@@ -875,7 +907,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              // Enhanced Action Buttons
+                        
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
@@ -986,6 +1018,292 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+        
+            if (!isLoadingStatistics && (userGenres != null || userRatingStats != null))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 1000),
+                      curve: Curves.easeOutBack,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF8D6748), Color(0xFF5D4037)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8D6748).withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.analytics,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Reading Statistics ${DateTime.now().year}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    if (userGenres != null && userGenres!.isNotEmpty)
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) => Transform.scale(
+                          scale: value,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFF8E1), Color(0xFFF6E3B4)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE0C9A6), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF8D6748).withOpacity(0.2),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Most Read Genres',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Color(0xFF5D4037),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${DateTime.now().year}',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF8D6748),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                             
+                                Center(
+                                  child: GenrePieChart(
+                                    genres: userGenres!,
+                                    size: 160,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                            
+                                ...userGenres!.map((genre) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: GenreColors.getGenreColor(genre.genreName),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          genre.genreName,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF5D4037),
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${genre.percentage.toStringAsFixed(1)}%',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Color(0xFF8D6748),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )).toList(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    ,
+                    const SizedBox(height: 16),
+                    
+                    if (userRatingStats != null)
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 1400),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) => Transform.scale(
+                          scale: value,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFF8E1), Color(0xFFF6E3B4)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE0C9A6), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF8D6748).withOpacity(0.2),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Average rating ${userRatingStats!.averageRating}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Color(0xFF5D4037),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${userRatingStats!.totalReviews} reviews',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF8D6748),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                             
+                                ...userRatingStats!.ratingDistribution.entries.map((entry) {
+                                  final rating = entry.key;
+                                  final count = entry.value;
+                                  final maxCount = userRatingStats!.ratingDistribution.values.reduce((a, b) => a > b ? a : b);
+                                  final percentage = maxCount > 0 ? count / maxCount : 0.0;
+                                  
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 40,
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                rating.toString(),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF8D6748),
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.star,
+                                                size: 12,
+                                                color: Color(0xFF8D6748),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Container(
+                                            height: 20,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE0C9A6),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: FractionallySizedBox(
+                                              alignment: Alignment.centerLeft,
+                                              widthFactor: percentage,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: const LinearGradient(
+                                                    colors: [Color(0xFF8D6748), Color(0xFF5D4037)],
+                                                    begin: Alignment.centerLeft,
+                                                    end: Alignment.centerRight,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        SizedBox(
+                                          width: 30,
+                                          child: Text(
+                                            count.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF8D6748),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 32),
           ],
         ),
