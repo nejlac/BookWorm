@@ -25,6 +25,7 @@ namespace BookWorm.Services.DataBase
         public DbSet<ReadingChallengeBook> ReadingChallengeBooks { get; set; }
         public DbSet<UserFriend> UserFriends { get; set; }
         public DbSet<Country>Countries { get; set; }
+        public DbSet<ReadingStreak> ReadingStreaks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

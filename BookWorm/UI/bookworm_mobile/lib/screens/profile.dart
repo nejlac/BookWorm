@@ -8,9 +8,11 @@ import '../providers/auth_provider.dart';
 import '../providers/base_provider.dart';
 import '../providers/challenge_provider.dart';
 import '../providers/user_statistics_provider.dart';
+import '../providers/user_friend_provider.dart';
 import '../model/user.dart';
 import '../model/challenge.dart';
 import '../model/user_statistics.dart';
+import '../model/user_friend.dart';
 import '../widgets/genre_pie_chart.dart';
 import '../utils/genre_colors.dart';
 
@@ -29,6 +31,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoadingStatistics = false;
   List<UserGenreStatistic>? userGenres;
   UserRatingStatistics? userRatingStats;
+  List<UserFriend>? userFriends;
+  bool isLoadingFriends = false;
 
   @override
   void initState() {
@@ -46,10 +50,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isLoading = false;
     });
     
-  
     if (user != null) {
       _loadCurrentChallenge();
       _loadUserStatistics();
+      _loadUserFriends();
     }
   }
 
@@ -103,6 +107,184 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         isLoadingStatistics = false;
       });
+    }
+  }
+
+  Future<void> _loadUserFriends() async {
+    if (user == null) return;
+    
+    setState(() {
+      isLoadingFriends = true;
+    });
+
+    try {
+      final userFriendProvider = UserFriendProvider();
+      final friends = await userFriendProvider.getUserFriends(user!.id);
+      
+      setState(() {
+        userFriends = friends;
+        isLoadingFriends = false;
+      });
+    } catch (e) {
+      print('Error loading user friends: $e');
+      setState(() {
+        isLoadingFriends = false;
+      });
+    }
+  }
+
+  void _showFriendsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'My Friends',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5D4037),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Color(0xFF8D6748)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (isLoadingFriends)
+                const Center(child: CircularProgressIndicator())
+              else if (userFriends == null || userFriends!.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text(
+                    'No friends yet.\nStart adding friends to see them here!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF8D6748),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: userFriends!.length,
+                    itemBuilder: (context, index) {
+                      final friend = userFriends![index];
+                      final friendName = friend.userId == user!.id 
+                          ? friend.friendName 
+                          : friend.userName;
+                      final friendPhotoUrl = friend.userId == user!.id 
+                          ? friend.friendPhotoUrl 
+                          : friend.userPhotoUrl;
+                      
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: _getUserImageUrl(friendPhotoUrl) != null 
+                                ? NetworkImage(_getUserImageUrl(friendPhotoUrl)!) 
+                                : null,
+                            child: _getUserImageUrl(friendPhotoUrl) == null 
+                                ? const Icon(Icons.person, color: Color(0xFF8D6748))
+                                : null,
+                          ),
+                          title: Text(
+                            friendName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5D4037),
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Friends since ${_formatDate(friend.requestedAt)}',
+                            style: const TextStyle(
+                              color: Color(0xFF8D6748),
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            onPressed: () => _removeFriend(friend),
+                            icon: const Icon(Icons.person_remove, color: Color(0xFFF44336)),
+                            tooltip: 'Remove friend',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _removeFriend(UserFriend friendship) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Friend'),
+        content: Text('Are you sure you want to remove this friend?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final userFriendProvider = UserFriendProvider();
+      final friendId = friendship.userId == user!.id 
+          ? friendship.friendId 
+          : friendship.userId;
+      
+      await userFriendProvider.removeFriend(user!.id, friendId);
+      await _loadUserFriends(); 
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Friend removed successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error removing friend: $e')),
+      );
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String? _getUserImageUrl(String photoUrl) {
+    if (photoUrl.isEmpty) return null;
+    if (photoUrl.startsWith('http')) {
+      return photoUrl;
+    } else {
+      String base = BaseProvider.baseUrl ?? '';
+      if (base.endsWith('/api/')) {
+        base = base.substring(0, base.length - 5);
+      }
+      return '$base/$photoUrl';
     }
   }
 
@@ -452,20 +634,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String? _getUserImageUrl(User user) {
-    final hasImage = user.photoUrl != null && user.photoUrl!.isNotEmpty;
-    if (!hasImage) return null;
-    if (user.photoUrl!.startsWith('http')) {
-      return user.photoUrl!;
-    } else {
-      String base = BaseProvider.baseUrl ?? '';
-      if (base.endsWith('/api/')) {
-        base = base.substring(0, base.length - 5);
-      }
-      return '$base/${user.photoUrl}';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -474,7 +642,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user == null) {
       return const Center(child: Text('User not found'));
     }
-    final imageUrl = _getUserImageUrl(user!);
+    final imageUrl = _getUserImageUrl(user!.photoUrl ?? '');
     return Container(
       color: const Color(0xFFFFFAF4),
       child: SingleChildScrollView(
@@ -545,6 +713,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     icon: const Icon(Icons.edit, color: Color(0xFF5D4037)),
                     label: const Text('Edit Profile', style: TextStyle(color: Color(0xFF5D4037), fontWeight: FontWeight.bold, fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF6E3B4),
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _showFriendsDialog();
+                    },
+                    icon: const Icon(Icons.people, color: Color(0xFF5D4037)),
+                    label: Text(
+                      'My Friends (${userFriends?.length ?? 0})', 
+                      style: const TextStyle(color: Color(0xFF5D4037), fontWeight: FontWeight.bold, fontSize: 18)
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF6E3B4),
                       elevation: 0,
@@ -1128,6 +1313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 32),
                              
                                 Center(
                                   child: GenrePieChart(

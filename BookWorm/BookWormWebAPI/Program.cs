@@ -21,6 +21,8 @@ builder.Services.AddTransient<IBookReviewService, BookReviewService>();
 builder.Services.AddTransient<IQuoteService, QuoteService>();
 builder.Services.AddTransient<IReadingChallengeService, ReadingChallengeService>();
 builder.Services.AddTransient<IUserRoleService, UserRoleService>();
+builder.Services.AddTransient<IUserFriendService, UserFriendService>();
+builder.Services.AddTransient<IReadingStreakService, ReadingStreakService>();
 builder.Services.AddScoped<IGenreService, GenreService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
