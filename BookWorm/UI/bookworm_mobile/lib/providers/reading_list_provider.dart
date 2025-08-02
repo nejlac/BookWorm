@@ -14,19 +14,16 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
 
   String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
 
-  // Get all reading lists for the current user
   Future<List<ReadingList>> getUserReadingLists(int userId) async {
     try {
-      // Filter reading lists by user ID
+      
       final result = await get(filter: {'UserId': userId});
       return result.items ?? [];
     } catch (e) {
-      print('Error fetching reading lists: $e');
       return [];
     }
   }
 
-  // Get reading list by ID
   Future<ReadingList?> getById(int id) async {
     try {
       var url = "${baseUrl}ReadingList/$id";
@@ -37,11 +34,9 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         var data = jsonDecode(response.body);
         return fromJson(data);
       } else {
-        print("Failed to get reading list: ${response.statusCode} - ${response.body}");
         return null;
       }
     } catch (e) {
-      print('Error getting reading list by ID: $e');
       return null;
     }
   }
@@ -65,7 +60,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         throw Exception("Failed to create reading list: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print('Error creating reading list: $e');
       rethrow;
     }
   }
@@ -88,7 +82,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         throw Exception("Failed to update reading list: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print('Error updating reading list: $e');
       rethrow;
     }
   }
@@ -102,7 +95,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
       var response = await http.delete(uri, headers: headers);
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
-      print('Error deleting reading list: $e');
       return false;
     }
   }
@@ -129,11 +121,9 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         var data = jsonDecode(response.body);
         return fromJson(data);
       } else {
-        print("Failed to add book to list: ${response.statusCode} - ${response.body}");
         return null;
       }
     } catch (e) {
-      print('Error adding book to reading list: $e');
       return null;
     }
   }
@@ -148,11 +138,9 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         var data = jsonDecode(response.body);
         return fromJson(data);
       } else {
-        print("Failed to remove book from list: ${response.statusCode} - ${response.body}");
         return null;
       }
     } catch (e) {
-      print('Error removing book from reading list: $e');
       return null;
     }
   }
@@ -160,9 +148,8 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
  
   Future<ReadingList?> uploadCover(int readingListId, File coverImage) async {
     try {
-      print("Uploading reading list cover. File path: ${coverImage.path}");
       var url = "${baseUrl}ReadingList/$readingListId/cover";
-      print("Upload URL: $url");
+   
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
       var headers = createHeaders();
@@ -171,7 +158,6 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
       var stream = http.ByteStream(coverImage.openRead());
       var length = await coverImage.length();
       var filename = coverImage.path.split('/').last;
-      print("Creating multipart file: $filename, size: $length");
       var multipartFile = http.MultipartFile(
         'coverImage',
         stream,
@@ -179,22 +165,15 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
         filename: filename,
       );
       request.files.add(multipartFile);
-      print("Sending request...");
       var streamedResponse = await request.send();
-      print("Response status: ${streamedResponse.statusCode}");
       var response = await http.Response.fromStream(streamedResponse);
-      print("Response body: ${response.body}");
       if (response.statusCode >= 200 && response.statusCode < 300) {
         var data = jsonDecode(response.body);
-        print("Upload successful!");
         return fromJson(data);
       } else {
-        print("Upload failed with status: ${response.statusCode}");
-        print("Response body: ${response.body}");
         throw Exception("Failed to upload reading list cover: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print("Error in uploadCover: $e");
       rethrow;
     }
   }

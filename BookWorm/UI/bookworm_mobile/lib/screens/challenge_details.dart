@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/model/challenge.dart';
-import 'package:bookworm_mobile/providers/challenge_provider.dart';
-import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/book_provider.dart';
 import 'package:bookworm_mobile/screens/book_details.dart';
 
@@ -30,14 +28,12 @@ class _ChallengeDetailsScreenState extends State<ChallengeDetailsScreen> {
     });
 
     try {
-      // Use the passed challenge data directly since we already have the correct challenge
-      // from the user profile screen
+    
       setState(() {
         currentChallenge = widget.challenge;
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading challenge details: $e');
       setState(() {
         isLoading = false;
       });
@@ -87,7 +83,6 @@ class _ChallengeDetailsScreenState extends State<ChallengeDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Challenge Progress Card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -180,7 +175,6 @@ class _ChallengeDetailsScreenState extends State<ChallengeDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Info Card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -213,7 +207,6 @@ class _ChallengeDetailsScreenState extends State<ChallengeDetailsScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Books Section
                   Row(
                     children: [
                       const Icon(Icons.book, color: Color(0xFF8D6748), size: 20),

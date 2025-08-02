@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:bookworm_mobile/providers/reading_list_provider.dart';
 import 'package:bookworm_mobile/model/reading_list.dart';
-import 'package:bookworm_mobile/model/reading_list_book.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:bookworm_mobile/screens/book_details.dart';
 import 'package:bookworm_mobile/screens/search.dart';
@@ -15,8 +14,6 @@ import 'package:bookworm_mobile/providers/book_provider.dart';
 import 'package:bookworm_mobile/providers/genre_provider.dart'; 
 import 'package:bookworm_mobile/model/genre.dart'; 
 import 'package:bookworm_mobile/providers/auth_provider.dart'; 
-import 'package:bookworm_mobile/providers/user_provider.dart'; 
-import 'package:bookworm_mobile/model/user.dart'; 
 
 class ListDetailsScreen extends StatefulWidget {
   final ReadingList readingList;
@@ -105,7 +102,6 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading list details: $e');
       setState(() {
         _currentList = widget.readingList;
         _isLoading = false;
@@ -573,7 +569,7 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
                             ),
                             child: const Text(
                               'Try Again',
-                                                          style: const TextStyle(
+                                                          style:  TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1001,7 +997,6 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
         return null;
       }
     } catch (e) {
-      print('Error fetching book rating: $e');
       return null;
     }
   }
@@ -1019,7 +1014,6 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
         _isLoadingGenres = false;
       });
     } catch (e) {
-      print('Error loading genres: $e');
       setState(() {
         _isLoadingGenres = false;
       });
@@ -1079,8 +1073,7 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
           
           filteredBooks.add(book);
         } catch (e) {
-          print('Error fetching book details for filtering: $e');
-       
+        
           filteredBooks.add(book);
         }
       }
@@ -1119,7 +1112,6 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
           'rating': averageRating,
         });
       } catch (e) {
-        print('Error fetching book details for sorting: $e');
         booksWithDetails.add({
           'book': book,
           'fullBook': null,

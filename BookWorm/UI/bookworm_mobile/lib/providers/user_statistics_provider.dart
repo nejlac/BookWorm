@@ -25,7 +25,6 @@ class UserStatisticsProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to load user most read genres');
     } catch (e) {
-      print('[DEBUG] Exception in getUserMostReadGenres: $e');
       rethrow;
     }
   }
@@ -42,7 +41,6 @@ class UserStatisticsProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to load user rating statistics');
     } catch (e) {
-      print('[DEBUG] Exception in getUserRatingStatistics: $e');
       rethrow;
     }
   }

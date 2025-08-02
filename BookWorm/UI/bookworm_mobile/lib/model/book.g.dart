@@ -21,15 +21,3 @@ Book _$BookFromJson(Map<String, dynamic> json) => Book(
   coverImagePath: json['coverImagePath'] as String?,
 );
 
-Map<String, dynamic> _$BookToJson(Book instance) => <String, dynamic>{
-  'id': instance.id,
-  'title': instance.title,
-  'authorId': instance.authorId,
-  'authorName': instance.authorName,
-  'description': instance.description,
-  'publicationYear': instance.publicationYear,
-  'pageCount': instance.pageCount,
-  'bookState': instance.bookState,
-  'genres': instance.genres,
-  'coverImagePath': instance.coverImagePath,
-};

@@ -8,11 +8,10 @@ import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/user_friend_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
 import 'package:bookworm_mobile/model/user_friend.dart';
-import 'package:flutter/rendering.dart';
 import 'package:bookworm_mobile/screens/change_password.dart';
 import 'package:bookworm_mobile/screens/add_book.dart';
-import 'package:flutter/services.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
+
 
 class MasterScreen extends StatefulWidget {
   final int initialIndex;
@@ -50,8 +49,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     }
   }
   final GlobalKey _profileSettingsKey = GlobalKey();
-  final GlobalKey _searchScreenKey = GlobalKey();
-  final GlobalKey _myListsScreenKey = GlobalKey();
+  
 
   List<Widget> _pages = <Widget>[
     HomePage(),
@@ -79,12 +77,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     });
   }
 
-  void _refreshListsScreen() {
-    setState(() {
-     
-      _pages[2] = MyListsScreen(key: GlobalKey());
-    });
-  }
+ 
 
   Future<void> _loadCurrentUserAndNotifications() async {
     final username = AuthProvider.username;
@@ -122,7 +115,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
         _isLoadingNotifications = false;
       });
     } catch (e) {
-      print('Error loading pending friend requests: $e');
+      
       setState(() {
         _isLoadingNotifications = false;
       });
@@ -184,49 +177,78 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
                           
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 4),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: _getUserImageUrl(request.userPhotoUrl) != null 
-                                    ? NetworkImage(_getUserImageUrl(request.userPhotoUrl)!) 
-                                    : null,
-                                child: _getUserImageUrl(request.userPhotoUrl) == null 
-                                    ? const Icon(Icons.person, color: Color(0xFF8D6748))
-                                    : null,
-                              ),
-                              title: Text(
-                                request.userName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF5D4037),
+                            child: InkWell(
+                              onTap: () async {
+                              
+                                try {
+                                 
+                                  final userProvider = UserProvider();
+                                  final userResult = await userProvider.getById(request.userId);
+                               
+                                  if (userResult != null) {
+                                  
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } else {
+                                  
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('User not found')),
+                                    );
+                                  }
+                                } catch (e) {
+                                
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error loading user profile: $e')),
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                leading: CircleAvatar(
+                                  backgroundImage: _getUserImageUrl(request.userPhotoUrl) != null 
+                                      ? NetworkImage(_getUserImageUrl(request.userPhotoUrl)!) 
+                                      : null,
+                                  child: _getUserImageUrl(request.userPhotoUrl) == null 
+                                      ? const Icon(Icons.person, color: Color(0xFF8D6748))
+                                      : null,
                                 ),
-                              ),
-                              subtitle: Text(
-                                'Wants to be your friend',
-                                style: const TextStyle(
-                                  color: Color(0xFF8D6748),
-                                  fontSize: 12,
+                                title: Text(
+                                  request.userName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF5D4037),
+                                  ),
                                 ),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    onPressed: () async {
-                                      await _handleFriendRequest(request, 1); // Accept
-                                      setDialogState(() {});
-                                    },
-                                    icon: const Icon(Icons.check, color: Color(0xFF4CAF50)),
-                                    tooltip: 'Accept',
+                                subtitle: Text(
+                                  'Wants to be your friend',
+                                  style: const TextStyle(
+                                    color: Color(0xFF8D6748),
+                                    fontSize: 12,
                                   ),
-                                  IconButton(
-                                    onPressed: () async {
-                                      await _handleFriendRequest(request, 2); // Decline
-                                      setDialogState(() {});
-                                    },
-                                    icon: const Icon(Icons.close, color: Color(0xFFF44336)),
-                                    tooltip: 'Decline',
-                                  ),
-                                ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () async {
+                                        await _handleFriendRequest(request, 1); // Accept
+                                        setDialogState(() {});
+                                      },
+                                      icon: const Icon(Icons.check, color: Color(0xFF4CAF50)),
+                                      tooltip: 'Accept',
+                                    ),
+                                    IconButton(
+                                      onPressed: () async {
+                                        await _handleFriendRequest(request, 2); // Decline
+                                        setDialogState(() {});
+                                      },
+                                      icon: const Icon(Icons.close, color: Color(0xFFF44336)),
+                                      tooltip: 'Decline',
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -278,9 +300,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     }
   }
 
-  Future<void> _refreshNotifications() async {
-    await _loadPendingFriendRequests();
-  }
+
 
   Future<void> refreshNotifications() async {
     await _loadPendingFriendRequests();

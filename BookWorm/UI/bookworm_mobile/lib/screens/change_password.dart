@@ -1,9 +1,7 @@
-import 'package:bookworm_mobile/model/user.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'profile.dart';
 import 'package:bookworm_mobile/layouts/master_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {

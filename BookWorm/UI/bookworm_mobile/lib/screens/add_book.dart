@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:bookworm_mobile/model/book.dart';
 import 'package:bookworm_mobile/model/author.dart';
 import 'package:bookworm_mobile/model/genre.dart';
 import 'package:bookworm_mobile/providers/book_provider.dart';
@@ -51,7 +50,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error fetching dropdown data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -68,7 +66,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
     if (result != null && result.files.single.path != null) {
       final pickedFile = File(result.files.single.path!);
       try {
-        final bytes = await pickedFile.readAsBytes();
+        
         setState(() {
           _selectedImageFile = pickedFile;
         });

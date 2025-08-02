@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../model/author.dart';
 import '../model/book.dart';
-import '../providers/author_provider.dart';
 import '../providers/book_provider.dart';
 import '../providers/base_provider.dart';
 import 'book_details.dart';
@@ -16,7 +15,7 @@ class AuthorDetailsScreen extends StatefulWidget {
 }
 
 class _AuthorDetailsScreenState extends State<AuthorDetailsScreen> {
-  final AuthorProvider _authorProvider = AuthorProvider();
+
   final BookProvider _bookProvider = BookProvider();
   Author? _authorWithBooks;
   List<Book> _booksWithCovers = [];

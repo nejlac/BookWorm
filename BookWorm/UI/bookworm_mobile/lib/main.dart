@@ -3,7 +3,6 @@ import 'package:bookworm_mobile/layouts/master_screen.dart';
 import 'package:bookworm_mobile/providers/book_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
 import 'package:bookworm_mobile/providers/genre_provider.dart';
-import 'package:bookworm_mobile/screens/homepage.dart';
 import 'package:bookworm_mobile/screens/registration.dart';
 import 'package:flutter/material.dart';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
@@ -93,72 +92,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _showLoginSuccessDialog() async {
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        Future.delayed(const Duration(seconds: 1), () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        });
-        return Dialog(
-          backgroundColor: const Color(0xFFFFF8E1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.7, end: 1.0),
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.elasticOut,
-                  builder: (context, value, child) => Transform.scale(
-                    scale: value,
-                    child: child,
-                  ),
-                  child: const Icon(Icons.menu_book_rounded, color: Color(0xFF8D6748), size: 60),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  "Login Successful!",
-                  style: TextStyle(
-                    fontFamily: 'Literata',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: Color(0xFF8D6748),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Welcome to BookWorm!",
-                  style: TextStyle(
-                    fontFamily: 'Literata',
-                    fontSize: 16,
-                    color: Color(0xFF8D6748),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.7, end: 1.0),
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.elasticOut,
-                  builder: (context, value, child) => Transform.scale(
-                    scale: value,
-                    child: child,
-                  ),
-                  child: const Icon(Icons.favorite, color: Color(0xFFe57373), size: 32),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
+ 
   void _login() async {
     AuthProvider.username = usernameController.text;
     AuthProvider.password = passwordController.text;

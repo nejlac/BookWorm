@@ -1,7 +1,6 @@
 import 'package:bookworm_mobile/model/author.dart';
 import 'package:bookworm_mobile/providers/author_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../model/book.dart';
 import '../model/genre.dart';
 import '../model/user.dart';
@@ -1250,7 +1249,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         return null;
       }
     } catch (e) {
-      print('Error fetching book rating: $e');
       return null;
     }
   }

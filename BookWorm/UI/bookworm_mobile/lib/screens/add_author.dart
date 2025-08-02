@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:bookworm_mobile/model/author.dart';
 import 'package:bookworm_mobile/model/country.dart';
 import 'package:bookworm_mobile/providers/author_provider.dart';
 import 'package:bookworm_mobile/providers/country_provider.dart';
@@ -48,7 +47,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading countries: $e');
       setState(() {
         _isLoading = false;
       });
@@ -178,7 +176,7 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
           await authorProvider.uploadPhoto(inserted.id, _selectedImageFile!);
         } catch (e) {
           print('Failed to upload author photo: $e');
-          // Don't fail the whole operation if image upload fails
+          
         }
       }
 

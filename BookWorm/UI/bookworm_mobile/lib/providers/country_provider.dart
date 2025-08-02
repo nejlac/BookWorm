@@ -30,12 +30,10 @@ class CountryProvider extends ChangeNotifier {
       } else if (data is List) {
         _countries = data.map((e) => Country.fromJson(e)).toList();
       } else {
-        print('===COUNTRY=== Unexpected country response format: ${data.runtimeType}');
         throw Exception('Unexpected country response format');
       }
       notifyListeners();
     } else {
-      print('===COUNTRY=== Failed to load countries: ${response.statusCode}');
       throw Exception('Failed to load countries: ${response.statusCode}');
     }
   }

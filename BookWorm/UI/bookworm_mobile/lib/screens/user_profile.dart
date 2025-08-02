@@ -80,7 +80,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _isLoadingChallenge = false;
       });
     } catch (e) {
-      print('Error loading user challenge: $e');
       setState(() {
         _isLoadingChallenge = false;
       });
@@ -109,7 +108,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _isLoadingFriendship = false;
       });
     } catch (e) {
-      print('Error loading friendship status: $e');
       setState(() {
         _isLoadingFriendship = false;
       });
@@ -137,7 +135,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _isLoadingSentRequests = false;
       });
     } catch (e) {
-      print('Error loading sent friend requests: $e');
       setState(() {
         _isLoadingSentRequests = false;
       });

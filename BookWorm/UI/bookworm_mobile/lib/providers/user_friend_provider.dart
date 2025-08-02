@@ -31,7 +31,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to send friend request');
     } catch (e) {
-      print('[DEBUG] Exception in sendFriendRequest: $e');
       rethrow;
     }
   }
@@ -58,7 +57,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to update friendship status');
     } catch (e) {
-      print('[DEBUG] Exception in updateFriendshipStatus: $e');
       rethrow;
     }
   }
@@ -75,7 +73,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to load user friends');
     } catch (e) {
-      print('[DEBUG] Exception in getUserFriends: $e');
       rethrow;
     }
   }
@@ -92,7 +89,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to load pending friend requests');
     } catch (e) {
-      print('[DEBUG] Exception in getPendingFriendRequests: $e');
       rethrow;
     }
   }
@@ -109,7 +105,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to load sent friend requests');
     } catch (e) {
-      print('[DEBUG] Exception in getSentFriendRequests: $e');
       rethrow;
     }
   }
@@ -131,7 +126,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       }
       throw Exception('Failed to get friendship status');
     } catch (e) {
-      print('[DEBUG] Exception in getFriendshipStatus: $e');
       rethrow;
     }
   }
@@ -147,7 +141,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       final response = await http.delete(uri, headers: createHeaders());
       return response.statusCode == 204;
     } catch (e) {
-      print('[DEBUG] Exception in removeFriend: $e');
       rethrow;
     }
   }
@@ -163,7 +156,6 @@ class UserFriendProvider extends BaseProvider<dynamic> {
       final response = await http.delete(uri, headers: createHeaders());
       return response.statusCode == 204;
     } catch (e) {
-      print('[DEBUG] Exception in cancelFriendRequest: $e');
       rethrow;
     }
   }

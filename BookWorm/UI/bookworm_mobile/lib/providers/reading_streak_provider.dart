@@ -23,11 +23,10 @@ class ReadingStreakProvider extends BaseProvider<ReadingStreak> {
         final data = json.decode(response.body);
         return ReadingStreak.fromJson(data);
       } else if (response.statusCode == 404) {
-        return null; // No streak exists
+        return null; 
       }
       throw Exception('Failed to load reading streak');
     } catch (e) {
-      print('[DEBUG] Exception in getUserStreak: $e');
       rethrow;
     }
   }
@@ -44,7 +43,6 @@ class ReadingStreakProvider extends BaseProvider<ReadingStreak> {
       }
       throw Exception('Failed to mark reading activity');
     } catch (e) {
-      print('[DEBUG] Exception in markReadingActivity: $e');
       rethrow;
     }
   }
@@ -61,7 +59,6 @@ class ReadingStreakProvider extends BaseProvider<ReadingStreak> {
       }
       throw Exception('Failed to create reading streak');
     } catch (e) {
-      print('[DEBUG] Exception in createStreak: $e');
       rethrow;
     }
   }

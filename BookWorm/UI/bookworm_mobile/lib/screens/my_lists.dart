@@ -68,9 +68,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     }
   }
 
-  Future<void> _refreshLists() async {
-    await _loadReadingLists();
-  }
+  
 
   Future<void> _loadReadingLists() async {
     setState(() {
@@ -146,26 +144,11 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
           filteredLists.add(filteredList);
         }
       }
-      
-     
-      print('=== DEBUG: Reading Lists Data ===');
-      for (var list in filteredLists) {
-        print('List: ${list.name}');
-        print('  - CoverImagePath: ${list.coverImagePath}');
-        print('  - Books count: ${list.books.length}');
-        for (var book in list.books) {
-          print('    Book: ${book.title}');
-          print('      - CoverImagePath: ${book.coverImagePath}');
-        }
-        print('---');
-      }
-      
       setState(() {
         _readingLists = filteredLists;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading reading lists: $e');
       setState(() {
         _isLoading = false;
       });
@@ -583,21 +566,18 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   }
 
   Widget _buildListCover(ReadingList list) {
-    print('Building cover for list: ${list.name}');
-    print('List coverImagePath: ${list.coverImagePath}');
-    print('List firstBookCoverUrl: ${list.firstBookCoverUrl}');
-    print('List books count: ${list.books.length}');
+   
     
     String? imageUrl;
   
     if (list.coverImagePath != null && list.coverImagePath!.isNotEmpty) {
       imageUrl = _buildImageUrl(list.coverImagePath!);
-      print('Using list cover URL: $imageUrl');
+      
     }
 
     else if (list.books.isNotEmpty && list.books.first.coverImagePath != null) {
       imageUrl = _buildImageUrl(list.books.first.coverImagePath!);
-      print('Using book cover URL: $imageUrl');
+     
     } else {
       print('No cover image available');
     }
@@ -609,7 +589,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
               imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                print('Error loading cover: $error');
+                
                 return _buildDefaultCover();
               },
             )
@@ -943,7 +923,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
           );
         }
       } catch (e) {
-        print('Error updating list: $e');
+      
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating list: $e'),

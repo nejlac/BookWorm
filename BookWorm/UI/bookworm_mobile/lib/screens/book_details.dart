@@ -2,7 +2,6 @@ import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/book_provider.dart';
 import '../providers/author_provider.dart';
 import '../providers/bookReview_provider.dart';
 import '../providers/user_provider.dart';
@@ -13,7 +12,6 @@ import '../model/author.dart';
 import '../model/bookReview.dart';
 import '../model/user.dart';
 import '../model/quote.dart';
-import '../model/reading_list.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -95,7 +93,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
 
   Future<void> _loadAuthor() async {
     try {
-      print('Loading author for book ID: ${widget.book.id}, author ID: ${widget.book.authorId}');
       setState(() {
         _isLoadingAuthor = true;
       });
@@ -103,13 +100,11 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       final authorProvider = Provider.of<AuthorProvider>(context, listen: false);
       final author = await authorProvider.getById(widget.book.authorId);
       
-      print('Author loaded successfully: ${author.name}');
       setState(() {
         _author = author;
         _isLoadingAuthor = false;
       });
     } catch (e) {
-      print('Error loading author: $e');
       setState(() {
         _isLoadingAuthor = false;
       });
@@ -118,7 +113,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
 
   Future<void> _loadReviews() async {
     try {
-      print('===REVIEWS=== Loading reviews for book ID: ${widget.book.id}');
       setState(() {
         _isLoadingReviews = true;
       });
@@ -129,10 +123,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'pageSize': 1000, 
         'page': 0,
       };
-      print('===REVIEWS=== Filter: $filter');
-      
       final result = await reviewProvider.get(filter: filter);
-      print('===REVIEWS=== Result: ${result.items?.length ?? 0} reviews found');
+     
       
       final reviews = result.items ?? [];
       
@@ -141,7 +133,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         _isLoadingReviews = false;
       });
       
-      print('===REVIEWS=== Reviews loaded: ${reviews.length}');
       
       await _loadUsersForReviews(reviews);
       
@@ -172,7 +163,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         });
       }
     } catch (e) {
-      print('===REVIEWS=== Error loading reviews: $e');
       setState(() {
         _isLoadingReviews = false;
       });
@@ -203,7 +193,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
 
   Future<void> _loadQuotes() async {
     try {
-      print('===QUOTES=== Loading quotes for book ID: ${widget.book.id}');
       setState(() {
         _isLoadingQuotes = true;
       });
@@ -214,10 +203,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'pageSize': 1000, 
         'page': 0,
       };
-      print('===QUOTES=== Filter: $filter');
       
       final result = await quoteProvider.get(filter: filter);
-      print('===QUOTES=== Result: ${result.items?.length ?? 0} quotes found');
       
       final quotes = result.items ?? [];
       
@@ -226,11 +213,9 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         _isLoadingQuotes = false;
       });
       
-      print('===QUOTES=== Quotes loaded: ${quotes.length}');
       
       await _loadUsersForQuotes(quotes);
     } catch (e) {
-      print('===QUOTES=== Error loading quotes: $e');
       setState(() {
         _isLoadingQuotes = false;
       });
@@ -1589,7 +1574,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'isChecked': review.isChecked,
       };
       
-      print('===REVIEWS=== Updating review: $request');
       
       await reviewProvider.update(review.id, request);
       
@@ -1628,7 +1612,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       }
       
     } catch (e) {
-      print('===REVIEWS=== Error updating review: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1706,7 +1689,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     try {
       final reviewProvider = Provider.of<BookReviewProvider>(context, listen: false);
       
-      print('===REVIEWS=== Deleting review: ${review.id}');
       
       await reviewProvider.delete(review.id);
       
@@ -1733,7 +1715,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       _userReview = null;
       
     } catch (e) {
-      print('===REVIEWS=== Error deleting review: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1805,7 +1786,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'isChecked': false,
       };
       
-      print('===REVIEWS=== Submitting review: $request');
       
       await reviewProvider.insert(request);
       
@@ -1844,7 +1824,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       }
       
     } catch (e) {
-      print('===REVIEWS=== Error submitting review: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -2442,7 +2421,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'quoteText': quoteText,
       };
       
-      print('===QUOTES=== Submitting quote: $request');
       
       await quoteProvider.insert(request);
       
@@ -2465,7 +2443,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       await _loadQuotes();
       
     } catch (e) {
-      print('===QUOTES=== Error submitting quote: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -2524,7 +2501,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         'quoteText': quoteText,
       };
       
-      print('===QUOTES=== Updating quote: $request');
       
       await quoteProvider.update(quote.id, request);
       
@@ -2547,7 +2523,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       await _loadQuotes();
       
     } catch (e) {
-      print('===QUOTES=== Error updating quote: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -2572,7 +2547,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     try {
       final quoteProvider = Provider.of<QuoteProvider>(context, listen: false);
       
-      print('===QUOTES=== Deleting quote: ${quote.id}');
       
       await quoteProvider.delete(quote.id);
       
@@ -2593,7 +2567,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       await _loadQuotes();
       
     } catch (e) {
-      print('===QUOTES=== Error deleting quote: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

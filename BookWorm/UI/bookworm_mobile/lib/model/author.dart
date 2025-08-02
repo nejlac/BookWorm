@@ -27,7 +27,6 @@ class Author {
   });
 
   factory Author.fromJson(Map<String, dynamic> json) {
-    print('[Author.fromJson] photoUrl: \\${json['photoUrl']}');
     return _$AuthorFromJson(json);
   }
   Map<String, dynamic> toJson() => _$AuthorToJson(this);

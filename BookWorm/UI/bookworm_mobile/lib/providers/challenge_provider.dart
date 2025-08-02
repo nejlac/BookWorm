@@ -151,7 +151,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
       await delete(challengeId);
       return true;
     } catch (e) {
-      print('Error deleting challenge: $e');
       return false;
     }
   }

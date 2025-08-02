@@ -6,7 +6,6 @@ import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/country_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
-import 'package:bookworm_mobile/screens/profile.dart';
 import 'package:bookworm_mobile/layouts/master_screen.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:file_picker/file_picker.dart';

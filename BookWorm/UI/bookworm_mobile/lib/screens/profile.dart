@@ -15,6 +15,7 @@ import '../model/user_statistics.dart';
 import '../model/user_friend.dart';
 import '../widgets/genre_pie_chart.dart';
 import '../utils/genre_colors.dart';
+import '../screens/user_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -74,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isLoadingChallenge = false;
       });
     } catch (e) {
-      print('Error loading challenge: $e');
       setState(() {
         isLoadingChallenge = false;
       });
@@ -103,7 +103,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isLoadingStatistics = false;
       });
     } catch (e) {
-      print('Error loading user statistics: $e');
       setState(() {
         isLoadingStatistics = false;
       });
@@ -126,7 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isLoadingFriends = false;
       });
     } catch (e) {
-      print('Error loading user friends: $e');
       setState(() {
         isLoadingFriends = false;
       });
@@ -192,33 +190,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: _getUserImageUrl(friendPhotoUrl) != null 
-                                ? NetworkImage(_getUserImageUrl(friendPhotoUrl)!) 
-                                : null,
-                            child: _getUserImageUrl(friendPhotoUrl) == null 
-                                ? const Icon(Icons.person, color: Color(0xFF8D6748))
-                                : null,
-                          ),
-                          title: Text(
-                            friendName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF5D4037),
+                        child: InkWell(
+                          onTap: () async {
+                            final targetUserId = friend.userId == user!.id 
+                                ? friend.friendId 
+                                : friend.userId;
+                          
+                            
+                            try {
+                              final userProvider = UserProvider();
+                              final userResult = await userProvider.getById(targetUserId);
+                            
+                              
+                              if (userResult != null) {
+                               
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfileScreen(user: userResult),
+                                  ),
+                                );
+                              
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('User not found')),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error loading user profile: $e')),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: CircleAvatar(
+                              backgroundImage: _getUserImageUrl(friendPhotoUrl) != null 
+                                  ? NetworkImage(_getUserImageUrl(friendPhotoUrl)!) 
+                                  : null,
+                              child: _getUserImageUrl(friendPhotoUrl) == null 
+                                  ? const Icon(Icons.person, color: Color(0xFF8D6748))
+                                  : null,
                             ),
-                          ),
-                          subtitle: Text(
-                            'Friends since ${_formatDate(friend.requestedAt)}',
-                            style: const TextStyle(
-                              color: Color(0xFF8D6748),
-                              fontSize: 12,
+                            title: Text(
+                              friendName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF5D4037),
+                              ),
                             ),
-                          ),
-                          trailing: IconButton(
-                            onPressed: () => _removeFriend(friend),
-                            icon: const Icon(Icons.person_remove, color: Color(0xFFF44336)),
-                            tooltip: 'Remove friend',
+                            subtitle: Text(
+                              'Friends since ${_formatDate(friend.requestedAt)}',
+                              style: const TextStyle(
+                                color: Color(0xFF8D6748),
+                                fontSize: 12,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              onPressed: () => _removeFriend(friend),
+                              icon: const Icon(Icons.person_remove, color: Color(0xFFF44336)),
+                              tooltip: 'Remove friend',
+                            ),
                           ),
                         ),
                       );
