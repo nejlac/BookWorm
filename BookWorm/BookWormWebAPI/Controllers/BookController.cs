@@ -154,5 +154,12 @@ namespace BookWormWebAPI.Controllers
                 return NotFound($"Book with ID {id} not found");
             return rating;
         }
+
+        [HttpGet("{id}/recommend")]
+        [Authorize(Roles = "User")]
+        public virtual Task<List<BookResponse>> Recommend(int id)
+        {
+            return _bookService.GetRecommendedBooksAsync(id);
+        }
     }
 } 

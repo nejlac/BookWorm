@@ -181,7 +181,8 @@ namespace BookWorm.Services
                     UserId = user.Id,
                     Name = list.Name,
                     Description = list.Description,
-                    IsPublic = true
+                    IsPublic = true,
+                    IsSystemCreated = true
                 };
                 await _readingListService.CreateAsync(readingListRequest);
             }

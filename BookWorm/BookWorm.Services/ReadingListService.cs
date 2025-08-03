@@ -43,9 +43,9 @@ namespace BookWorm.Services
 
         public async Task<ReadingListResponse> CreateAsync(ReadingListCreateUpdateRequest request)
         {
-            // Validate that the name is not a default list name
+            // Validate that the name is not a default list name (only for user-created lists)
             var defaultNames = new[] { "Want to read", "Currently reading", "Read" };
-            if (defaultNames.Any(defaultName => 
+            if (!request.IsSystemCreated && defaultNames.Any(defaultName => 
                 string.Equals(defaultName, request.Name, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ReadingListException("This name is reserved for default lists. Please choose a different name.");
@@ -94,9 +94,9 @@ namespace BookWorm.Services
             if (list == null)
                 return null;
                 
-            // Validate that the name is not a default list name
+            // Validate that the name is not a default list name (only for user-created lists)
             var defaultNames = new[] { "Want to read", "Currently reading", "Read" };
-            if (defaultNames.Any(defaultName => 
+            if (!request.IsSystemCreated && defaultNames.Any(defaultName => 
                 string.Equals(defaultName, request.Name, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ReadingListException("This name is reserved for default lists. Please choose a different name.");

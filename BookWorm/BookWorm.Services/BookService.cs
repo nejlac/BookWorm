@@ -2,12 +2,16 @@ using BookWorm.Model.Exceptions;
 using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
-using BookWorm.Services.DataBase;
 using BookWorm.Services.BookStateMachine;
+using BookWorm.Services.DataBase;
+using Mapster;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MapsterMapper;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Trainers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +25,10 @@ namespace BookWorm.Services
         private readonly ILogger<BookService> _logger;
         private readonly IUserRoleService _userRoleService;
         private readonly BaseBookState _baseBookState;
+        private readonly MLContext _mlContext;
+        private ITransformer? _model;
+        private PredictionEngine<BookEntry, BookPrediction>? _predictionEngine;
+        private readonly string _modelFilePath = "model.zip";
 
         public BookService(BookWormDbContext context, IMapper mapper, ILogger<BookService> logger, IUserRoleService userRoleService, BaseBookState baseBookState) : base(context, mapper)
         {
@@ -28,6 +36,7 @@ namespace BookWorm.Services
             _logger = logger;
             _userRoleService = userRoleService;
             _baseBookState = baseBookState;
+            _mlContext = new MLContext();
         }
 
         protected override IQueryable<Book> ApplyFilter(IQueryable<Book> query, BookSearchObject search)
@@ -53,7 +62,7 @@ namespace BookWorm.Services
             if (!string.IsNullOrEmpty(search.Status))
                 query = query.Where(b => b.BookState == search.Status);
 
-           
+
             if (!string.IsNullOrEmpty(search.SortBy))
             {
                 switch (search.SortBy.ToLower())
@@ -250,7 +259,7 @@ namespace BookWorm.Services
             return true;
         }
 
-        
+
         public async Task<BookResponse?> AcceptBookAsync(int id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -446,6 +455,149 @@ namespace BookWorm.Services
                 RatingCount = ratingStats.RatingCount
             };
         }
-    }
 
-    } 
+        public async Task<List<BookResponse>> GetRecommendedBooksAsync(int userId)
+        {
+            if (_model == null || _predictionEngine == null)
+                await LoadOrTrainModelAsync();
+
+            var readBooks = await _context.ReadingListBooks
+                .Where(rlb => rlb.ReadingList.UserId == userId && rlb.ReadingList.Name == "Read")
+                .Select(rlb => rlb.BookId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!readBooks.Any())
+            {
+                //if user doesnt have any books in "Read" list, he gets the most popular ones suggested
+                return await GetMostReadBooks(15).ContinueWith(t => t.Result.Select(x => new BookResponse
+                {
+                    Id = x.BookId,
+                    Title = x.Title,
+                    AuthorName = x.AuthorName,
+                    CoverImagePath = x.CoverImageUrl
+                }).ToList());
+            }
+
+            var allBooks = await _context.Books.ToListAsync();
+            var scores = new Dictionary<int, float>();
+
+            foreach (var readBookId in readBooks)
+            {
+                foreach (var book in allBooks)
+                {
+                    // Skip if this is the same book or if user has already read it
+                    if (readBookId == book.Id || readBooks.Contains(book.Id))
+                        continue;
+
+                    var prediction = _predictionEngine!.Predict(new BookEntry
+                    {
+                        BookId = (uint)readBookId,
+                        CoReadBookId = (uint)book.Id
+                    });
+
+                    if (scores.ContainsKey(book.Id))
+                        scores[book.Id] += prediction.Score;
+                    else
+                        scores[book.Id] = prediction.Score;
+                }
+            }
+
+            var recommendedBookIds = scores.OrderByDescending(x => x.Value).Take(15).Select(x => x.Key).ToList();
+
+            var recommendedBooks = await _context.Books
+                .Where(b => recommendedBookIds.Contains(b.Id))
+                .Include(b => b.Author)
+                .ToListAsync();
+
+            return recommendedBooks.Select(b => MapToResponse(b)).ToList();
+        }
+
+        private async Task LoadOrTrainModelAsync()
+        {
+            if (File.Exists(_modelFilePath))
+            {
+                using var stream = new FileStream(_modelFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                _model = _mlContext.Model.Load(stream, out var schema);
+                _predictionEngine = _mlContext.Model.CreatePredictionEngine<BookEntry, BookPrediction>(_model);
+            }
+            else
+            {
+                await TrainAndSaveModelAsync();
+            }
+        }
+
+        private async Task TrainAndSaveModelAsync()
+        {
+            var readLists = await _context.ReadingLists
+                .Where(rl => rl.Name == "Read")
+                .Include(rl => rl.ReadingListBooks)
+                .ToListAsync();
+
+            var data = new List<BookEntry>();
+
+            foreach (var rl in readLists)
+            {
+                var bookIds = rl.ReadingListBooks.Select(x => x.BookId).Distinct().ToList();
+
+                foreach (var b1 in bookIds)
+                {
+                    foreach (var b2 in bookIds)
+                    {
+                        if (b1 != b2)
+                        {
+                            data.Add(new BookEntry
+                            {
+                                BookId = (uint)b1,
+                                CoReadBookId = (uint)b2,
+                                Label = 1
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (!data.Any())
+                return;
+
+            var traindata = _mlContext.Data.LoadFromEnumerable(data);
+
+            var options = new MatrixFactorizationTrainer.Options
+            {
+                MatrixColumnIndexColumnName = nameof(BookEntry.BookId),
+                MatrixRowIndexColumnName = nameof(BookEntry.CoReadBookId),
+                LabelColumnName = nameof(BookEntry.Label),
+                NumberOfIterations = 100,
+                ApproximationRank = 32,
+                Alpha = 0.01,
+                Lambda = 0.025,
+                LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
+                C = 0.00001
+            };
+
+            var estimator = _mlContext.Recommendation().Trainers.MatrixFactorization(options);
+            _model = estimator.Fit(traindata);
+
+            using var fs = new FileStream(_modelFilePath, FileMode.Create, FileAccess.Write, FileShare.Write);
+            _mlContext.Model.Save(_model, traindata.Schema, fs);
+
+            _predictionEngine = _mlContext.Model.CreatePredictionEngine<BookEntry, BookPrediction>(_model);
+        }
+
+        private class BookEntry
+        {
+            [KeyType(count: 100)]
+            public uint BookId { get; set; }
+
+            [KeyType(count: 100)]
+            public uint CoReadBookId { get; set; }
+
+            public float Label { get; set; }
+        }
+
+        private class BookPrediction
+        {
+            public float Score { get; set; }
+        }
+    }
+} 

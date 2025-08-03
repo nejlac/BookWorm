@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/reading_streak_provider.dart';
+import '../providers/book_provider.dart';
+import '../providers/base_provider.dart';
 import '../model/user.dart';
 import '../model/reading_streak.dart';
+import '../model/book.dart';
+import '../screens/book_details.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -15,8 +19,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   User? currentUser;
   ReadingStreak? readingStreak;
+  List<Book>? recommendedBooks;
   bool isLoading = true;
   bool isMarkingActivity = false;
+  bool isLoadingRecommendedBooks = false;
+  bool showAllRecommended = false;
 
   @override
   void initState() {
@@ -44,7 +51,15 @@ class _HomePageState extends State<HomePage> {
         });
 
         final streakProvider = ReadingStreakProvider();
-        final streak = await streakProvider.getUserStreak(user.id);
+        final bookProvider = BookProvider();
+        
+        final results = await Future.wait([
+          streakProvider.getUserStreak(user.id),
+          bookProvider.getRecommendedBooks(user.id),
+        ]);
+        
+        final streak = results[0] as ReadingStreak?;
+        final books = results[1] as List<Book>;
         
         setState(() {
           readingStreak = streak ?? ReadingStreak(
@@ -59,6 +74,7 @@ class _HomePageState extends State<HomePage> {
             isActiveToday: false,
             daysSinceLastReading: 1,
           );
+          recommendedBooks = books;
           isLoading = false;
         });
       } else {
@@ -305,9 +321,197 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-         
+          
+          if (recommendedBooks != null && recommendedBooks!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'For you',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5D4037),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                 showAllRecommended = !showAllRecommended;
+                          });
+                       },
+                      child: Text(showAllRecommended ? 'Collapse' : 'Show all', style:TextStyle(color:Color(0xFF8D6748),fontWeight: FontWeight.w600 ) ,),
+                                              ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Color(0xFF8D6748),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (isLoadingRecommendedBooks)
+                    const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF8D6748),
+                        ),
+                      ),
+                    )
+                  else
+                      showAllRecommended
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: recommendedBooks!.length,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2, 
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 0.65,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final book = recommendedBooks![index];
+                                  return _buildBookCard(book);
+                                },
+                              ),
+                            )
+                          : SizedBox(
+                              height: 200,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: recommendedBooks!.length,
+                                itemBuilder: (context, index) {
+                                  final book = recommendedBooks![index];
+                                  return Container(
+                                    width: 140,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    child: _buildBookCard(book),
+                                  );
+                                },
+                              ),
+                            ),
+                                    ],
+                                  ),
+                                ),
+                              
+                              const SizedBox(height: 80),
+                            ],
+                          ),
+                        );
+                      }
+Widget _buildBookCard(book) {
+  return Card(
+    elevation: 3,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookDetailsScreen(book: book),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              color: const Color(0xFFF6E3B4),
+            ),
+            child: book.coverImagePath != null && book.coverImagePath!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    child: Image.network(
+                      _getBookImageUrl(book.coverImagePath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.book,
+                            size: 40,
+                            color: Color(0xFF8D6748),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : const Center(
+                    child: Icon(
+                      Icons.book,
+                      size: 40,
+                      color: Color(0xFF8D6748),
+                    ),
+                  ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Color(0xFF5D4037),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'By ${book.authorName}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF8D6748),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-    );
+    ),
+  );
+}
+
+  String _getBookImageUrl(String imagePath) {
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    } else {
+      String base = BaseProvider.baseUrl ?? '';
+      if (base.endsWith('/api/')) {
+        base = base.substring(0, base.length - 5);
+      }
+      return '$base/$imagePath';
+    }
   }
 }

@@ -99,42 +99,46 @@ class BookProvider extends BaseProvider<Book> {
       var url = "${baseUrl}book/$bookId/cover";
      
       var uri = Uri.parse(url);
-      
-    
       var request = http.MultipartRequest('POST', uri);
-      
-   
       var headers = createHeaders();
-      headers.remove('Content-Type'); 
+      headers.remove('Content-Type');
       request.headers.addAll(headers);
-      print("Headers: $headers");
-     
       var stream = http.ByteStream(coverImage.openRead());
       var length = await coverImage.length();
       var filename = coverImage.path.split('/').last;
-    
-      
       var multipartFile = http.MultipartFile(
         'coverImage',
         stream,
         length,
         filename: filename,
       );
-      
       request.files.add(multipartFile);
-      
-     
       var streamedResponse = await request.send();
-      
       var response = await http.Response.fromStream(streamedResponse);
-     
-      if (!isValidResponse(response)) {
-       
-        throw  Exception("Failed to upload cover image: ${response.statusCode} - ${response.body}");
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception("Failed to upload cover: ${response.statusCode} - ${response.body}");
       }
-      
     } catch (e) {
       print("Error in uploadCover: $e");
+      rethrow;
+    }
+  }
+
+  Future<List<Book>> getRecommendedBooks(int userId) async {
+    try {
+      final url = '${baseUrl}book/$userId/recommend';
+      final uri = Uri.parse(url);
+      
+      final response = await http.get(uri, headers: createHeaders());
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load recommended books: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting recommended books: $e');
       rethrow;
     }
   }

@@ -19,6 +19,7 @@ namespace BookWorm.Model.Requests
 
         public bool IsPublic { get; set; } = true;
 
+        public bool IsSystemCreated { get; set; } = false;
 
         public List<int> BookIds { get; set; } = new List<int>();
 
