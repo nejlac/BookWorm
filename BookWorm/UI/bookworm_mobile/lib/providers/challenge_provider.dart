@@ -13,7 +13,7 @@ class ChallengeProvider extends BaseProvider<Challenge> {
     return Challenge.fromJson(json);
   }
 
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
 
   Future<void> addBookToChallenge(int userId, int year, int bookId, DateTime completedAt) async {
@@ -35,7 +35,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
         throw Exception('Failed to add book to challenge: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error adding book to challenge: $e');
       rethrow;
     }
   }
@@ -59,14 +58,12 @@ class ChallengeProvider extends BaseProvider<Challenge> {
         throw Exception('Failed to remove book from challenge: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error removing book from challenge: $e');
       rethrow;
     }
   }
 
   Future<Challenge?> getUserChallenge(int userId, int year) async {
     try {
-      // Get username from AuthProvider since backend expects username, not userId
       final username = AuthProvider.username;
       if (username == null) return null;
       
@@ -86,7 +83,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
 
   Future<List<Challenge>> getUserChallenges(int userId) async {
     try {
-      // Get username from AuthProvider since backend expects username, not userId
       final username = AuthProvider.username;
       if (username == null) return [];
       
@@ -121,11 +117,9 @@ class ChallengeProvider extends BaseProvider<Challenge> {
 
   Future<Challenge?> updateChallenge(int challengeId, int goal, int year, {List<int> bookIds = const []}) async {
     try {
-      // Get the current user ID from AuthProvider
       final username = AuthProvider.username;
       if (username == null) throw Exception('User not authenticated');
       
-      // Get user ID by username
       final userProvider = UserProvider();
       final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
       final user = userResult.items?.isNotEmpty == true ? userResult.items!.first : null;

@@ -12,7 +12,7 @@ class BookProvider extends BaseProvider<Book> {
     return Book.fromJson(json);
   }
  
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   
 
@@ -138,7 +138,6 @@ class BookProvider extends BaseProvider<Book> {
         throw Exception('Failed to load recommended books: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error getting recommended books: $e');
       rethrow;
     }
   }

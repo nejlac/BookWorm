@@ -8,10 +8,10 @@ class UserStatisticsProvider extends BaseProvider<dynamic> {
 
   @override
   dynamic fromJson(dynamic json) {
-    return json; // We don't need to convert to a specific type for statistics
+    return json; 
   }
 
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   Future<List<UserGenreStatistic>> getUserMostReadGenres(int userId, {int? year}) async {
     final url = '${baseUrl}users/$userId/most-read-genres';

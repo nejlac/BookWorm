@@ -4,8 +4,12 @@ using BookWorm.Model.Responses;
 using BookWorm.Model.SearchObjects;
 using BookWorm.Services;
 using BookWorm.Services.DataBase;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Trainers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,11 +28,14 @@ namespace BookWorm.Services
         private const int Iterations = 10000;
         private readonly ILogger<UserService> _logger;
         private readonly IReadingListService _readingListService;
-        public UserService(BookWormDbContext context, ILogger<UserService> logger, IReadingListService readingListService)
+        private readonly IMapper _mapper;
+
+        public UserService(BookWormDbContext context, ILogger<UserService> logger, IReadingListService readingListService, IMapper mapper)
         {
             _context = context;
             _logger = logger;
             _readingListService = readingListService;
+            _mapper = mapper;
         }
 
         public async Task<PagedResult<UserResponse>> GetAsync(UserSearchObject search)
@@ -553,6 +560,188 @@ namespace BookWorm.Services
                 RatingDistribution = ratingDistribution
             };
         }
+        public async Task<List<UserResponse>> RecommendFriends(int userId)
+        {
+            var mlContext = new MLContext();
+
+            var userReadMap = await _context.ReadingLists
+                .Where(rl => rl.Name == "Read")
+                .Include(rl => rl.ReadingListBooks)
+                .ToListAsync();
+
+            var data = new List<UserBookEntry>();
+
+            foreach (var list in userReadMap)
+            {
+                var distinctBookIds = list.ReadingListBooks.Select(r => r.BookId).Distinct().ToList();
+
+                foreach (var bookId in distinctBookIds)
+                {
+                    foreach (var otherBookId in distinctBookIds.Where(id => id != bookId))
+                    {
+                        data.Add(new UserBookEntry
+                        {
+                            UserId = (uint)list.UserId,
+                            BookId = (uint)bookId,
+                            Label = 1f
+                        });
+                    }
+                }
+            }
+
+            if (data.Count == 0)
+            {
+                // if there are no books read by current user, fallback to most active users
+                return await GetMostActiveUsersFallback(userId);
+            }
+
+            ITransformer? model = null ;
+var modelPath = "ml_friend_model.zip";
+bool retrainModel = true;
+
+if (File.Exists(modelPath))
+{
+    var lastWriteTime = File.GetLastWriteTime(modelPath);
+    if ((DateTime.Now - lastWriteTime).TotalDays < 1)
+    {
+        using var fileStream = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        model = mlContext.Model.Load(fileStream, out var _);
+        retrainModel = false;
+    }
+}
+
+if (retrainModel)
+{
+    var trainData = mlContext.Data.LoadFromEnumerable(data);
+
+    var options = new MatrixFactorizationTrainer.Options
+    {
+        MatrixColumnIndexColumnName = nameof(UserBookEntry.BookId),
+        MatrixRowIndexColumnName = nameof(UserBookEntry.UserId),
+        LabelColumnName = nameof(UserBookEntry.Label),
+        LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
+        Alpha = 0.01,
+        Lambda = 0.1,
+        NumberOfIterations = 40,
+        C = 0.0001
+    };
+
+    var estimator = mlContext.Recommendation().Trainers.MatrixFactorization(options);
+    model = estimator.Fit(trainData);
+
+    using var fileStream = new FileStream(modelPath, FileMode.Create, FileAccess.Write, FileShare.Write);
+    mlContext.Model.Save(model, trainData.Schema, fileStream);
+}
+
+
+            // Get users who are already friends with the current user (either as sender or receiver)
+            var existingFriendships = await _context.UserFriends
+                .Where(uf => (uf.UserId == userId || uf.FriendId == userId) && uf.Status == FriendshipStatus.Accepted)
+                .Select(uf => uf.UserId == userId ? uf.FriendId : uf.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            var allUserIds = userReadMap
+                .Select(rl => rl.UserId)
+                .Distinct()
+                .Where(uid => uid != userId && !existingFriendships.Contains(uid))
+                .ToList();
+
+
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<UserBookEntry, FriendPrediction>(model!);
+
+            var scores = new List<(int otherUserId, float score)>();
+
+            foreach (var otherUserId in allUserIds)
+            {
+                var score = 0f;
+
+                var sharedBooks = userReadMap
+                    .Where(rl => rl.UserId == userId)
+                    .SelectMany(rl => rl.ReadingListBooks.Select(rb => rb.BookId))
+                    .Distinct()
+                    .ToList();
+
+                foreach (var bookId in sharedBooks)
+                {
+                    var prediction = predictionEngine.Predict(new UserBookEntry
+                    {
+                        UserId = (uint)userId,
+                        BookId = (uint)bookId
+                    });
+
+                    score += prediction.Score;
+                }
+
+                scores.Add((otherUserId, score));
+            }
+
+            var topUserIds = scores
+                .OrderByDescending(x => x.score)
+                .Select(x => x.otherUserId)
+                .Distinct()
+                .Take(10)
+                .ToList();
+
+            if (!topUserIds.Any())
+            {
+                return await GetMostActiveUsersFallback(userId);
+            }
+
+            var users = await _context.Users
+                .Where(u => topUserIds.Contains(u.Id))
+                .ToListAsync();
+
+            return _mapper.Map<List<UserResponse>>(users);
+        }
+
+        private async Task<List<UserResponse>> GetMostActiveUsersFallback(int excludeUserId)
+        {
+            // Get users who are already friends with the current user
+            var existingFriendships = await _context.UserFriends
+                .Where(uf => (uf.UserId == excludeUserId || uf.FriendId == excludeUserId) && uf.Status == FriendshipStatus.Accepted)
+                .Select(uf => uf.UserId == excludeUserId ? uf.FriendId : uf.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            var mostActive = await _context.ReadingLists
+                .Where(rl => rl.Name == "Read" && rl.UserId != excludeUserId && !existingFriendships.Contains(rl.UserId))
+                .GroupBy(rl => rl.UserId)
+                .Select(group => new
+                {
+                    UserId = group.Key,
+                    Total = group.SelectMany(g => g.ReadingListBooks).Count()
+                })
+                .OrderByDescending(g => g.Total)
+                .Take(10)
+                .ToListAsync();
+
+            var userIds = mostActive.Select(x => x.UserId).ToList();
+
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+
+            return _mapper.Map<List<UserResponse>>(users);
+        }
+        public class UserBookEntry
+        {
+            [KeyType(count: 1000)]
+            public uint UserId { get; set; }
+
+            [KeyType(count: 1000)]
+            public uint BookId { get; set; }
+
+            public float Label { get; set; }
+        }
+
+        public class FriendPrediction
+        {
+            public float Score { get; set; }
+        }
+
+
     }
 
 }

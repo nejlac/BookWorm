@@ -12,7 +12,7 @@ class ReadingListProvider extends BaseProvider<ReadingList> {
     return ReadingList.fromJson(json);
   }
 
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   Future<List<ReadingList>> getUserReadingLists(int userId) async {
     try {

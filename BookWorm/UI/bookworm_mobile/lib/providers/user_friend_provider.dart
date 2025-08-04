@@ -11,7 +11,7 @@ class UserFriendProvider extends BaseProvider<dynamic> {
     return json;
   }
 
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   Future<UserFriend> sendFriendRequest(int userId, int friendId) async {
     final url = '${baseUrl}userfriend/send-request';

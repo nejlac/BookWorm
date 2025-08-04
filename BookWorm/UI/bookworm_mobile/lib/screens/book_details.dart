@@ -271,7 +271,9 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF8D6748)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context, true); // Return true to indicate refresh needed
+          },
         ),
         title: const Text(
           'Details',

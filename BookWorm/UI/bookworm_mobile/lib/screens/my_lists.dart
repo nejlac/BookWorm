@@ -68,6 +68,17 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     }
   }
 
+  // Method to refresh reading lists when navigating back to this screen
+  void refreshReadingLists() {
+    print('refreshReadingLists called'); // Debug print
+    if (mounted && !_isLoading) {
+      print('Refreshing reading lists...'); // Debug print
+      _loadReadingLists();
+    } else {
+      print('Not refreshing - mounted: $mounted, loading: $_isLoading'); // Debug print
+    }
+  }
+
   
 
   Future<void> _loadReadingLists() async {
@@ -1021,7 +1032,8 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
       ),
     );
     
-    if (result == true) {
+    // Always refresh when returning from list details, regardless of result
+    if (mounted && !_isLoading) {
       _loadReadingLists();
     }
   }

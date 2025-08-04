@@ -9,6 +9,7 @@ import '../providers/user_friend_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/base_provider.dart';
 import '../providers/user_provider.dart'; 
+import '../utils/notification_manager.dart';
 import 'my_lists.dart';
 import 'challenge_details.dart';
 
@@ -103,6 +104,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       });
 
       final status = await _userFriendProvider.getFriendshipStatus(currentUser.id, widget.user.id);
+      
+      
       setState(() {
         _friendshipStatus = status;
         _isLoadingFriendship = false;
@@ -175,9 +178,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       await _userFriendProvider.sendFriendRequest(currentUser.id, widget.user.id);
       await _loadFriendshipStatus(); 
+      NotificationManager().refreshNotifications();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Friend request sent to ${widget.user.username}!')),
       );
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error sending friend request: $e')),
@@ -206,6 +212,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       await _userFriendProvider.updateFriendshipStatus(currentUser.id, widget.user.id, status);
       await _loadFriendshipStatus(); 
+      
+      NotificationManager().refreshNotifications();
       
       String message = '';
       switch (status) {
@@ -270,10 +278,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       });
 
       await _userFriendProvider.removeFriend(currentUser.id, widget.user.id);
+      
       await _loadFriendshipStatus(); 
+      
+      if (mounted) {
+        setState(() {});
+      }
+      
+      NotificationManager().refreshNotifications();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${widget.user.username} removed from friends.')),
       );
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error removing friend: $e')),
@@ -322,9 +339,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       await _userFriendProvider.cancelFriendRequest(currentUser.id, widget.user.id);
       await _loadFriendshipStatus(); 
+      
+      NotificationManager().refreshNotifications();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Friend request to ${widget.user.username} canceled.')),
       );
+      
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error canceling friend request: $e')),
@@ -760,7 +782,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
     }
     switch (_friendshipStatus!.status) {
-      case 0: // Pending
+      case 0:
       
         if (_currentUserId != null && _friendshipStatus!.userId == _currentUserId) {
    
@@ -870,7 +892,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           );
         }
-      case 1: // Accepted
+      case 1: 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -923,7 +945,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ],
           ),
         );
-      case 2: // Declined
+      case 2: 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           child: ElevatedButton.icon(
@@ -947,7 +969,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ),
         );
-      case 3: // Blocked
+      case 3: 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           child: ElevatedButton.icon(

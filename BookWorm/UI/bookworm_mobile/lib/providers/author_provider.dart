@@ -11,7 +11,7 @@ class AuthorProvider extends BaseProvider<Author> {
   Author fromJson(dynamic json) {
     return Author.fromJson(json);
   }
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
   Future<List<Author>> getAllAuthors() async {
     try {
       final result = await get(filter: {'RetrieveAll': true});

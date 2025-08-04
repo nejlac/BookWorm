@@ -11,7 +11,7 @@ class ReadingStreakProvider extends BaseProvider<ReadingStreak> {
     return ReadingStreak.fromJson(json);
   }
 
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   Future<ReadingStreak?> getUserStreak(int userId) async {
     final url = '${baseUrl}readingstreak/user/$userId';

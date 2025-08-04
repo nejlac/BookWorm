@@ -11,6 +11,7 @@ import 'package:bookworm_mobile/model/user_friend.dart';
 import 'package:bookworm_mobile/screens/change_password.dart';
 import 'package:bookworm_mobile/screens/add_book.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
+import 'package:bookworm_mobile/utils/notification_manager.dart';
 
 
 class MasterScreen extends StatefulWidget {
@@ -33,6 +34,17 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     _selectedIndex = widget.initialIndex;
     _loadCurrentUserAndNotifications();
     WidgetsBinding.instance.addObserver(this);
+    
+    NotificationManager().setRefreshCallback(() {
+      _loadPendingFriendRequests();
+    });
+    
+    _pages = <Widget>[
+              HomePage(key: _homePageKey),
+      SearchScreen(key: GlobalKey()),
+      MyListsScreen(key: _listsPageKey),
+      ProfileScreen(),
+    ];
   }
 
   @override
@@ -49,6 +61,8 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     }
   }
   final GlobalKey _profileSettingsKey = GlobalKey();
+  final GlobalKey _homePageKey = GlobalKey();
+  final GlobalKey _listsPageKey = GlobalKey();
   
 
   List<Widget> _pages = <Widget>[
@@ -69,6 +83,14 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     setState(() {
       _selectedIndex = index;
     });
+   
+    if (index == 0) {
+      final homePageState = _homePageKey.currentState as dynamic;
+      homePageState?.refreshFriendshipStatuses();
+    } else if (index == 2) {
+      final listsPageState = _listsPageKey.currentState as dynamic;
+      listsPageState?.refreshReadingLists();
+    }
   }
 
   void _refreshSearchScreen() {
@@ -233,7 +255,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
                                   children: [
                                     IconButton(
                                       onPressed: () async {
-                                        await _handleFriendRequest(request, 1); // Accept
+                                        await _handleFriendRequest(request, 1); 
                                         setDialogState(() {});
                                       },
                                       icon: const Icon(Icons.check, color: Color(0xFF4CAF50)),
@@ -241,7 +263,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
                                     ),
                                     IconButton(
                                       onPressed: () async {
-                                        await _handleFriendRequest(request, 2); // Decline
+                                        await _handleFriendRequest(request, 2); 
                                         setDialogState(() {});
                                       },
                                       icon: const Icon(Icons.close, color: Color(0xFFF44336)),
@@ -274,6 +296,11 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
       await userFriendProvider.updateFriendshipStatus(_currentUserId!, request.userId, status);
       
       await _loadPendingFriendRequests();
+      
+      NotificationManager().refreshNotifications();
+      
+      final homePageState = _homePageKey.currentState as dynamic;
+      homePageState?.refreshFriendRecommendations();
       
       String message = status == 1 ? 'Friend request accepted!' : 'Friend request declined.';
       ScaffoldMessenger.of(context).showSnackBar(

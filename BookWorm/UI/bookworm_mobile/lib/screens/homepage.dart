@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/user_friend_provider.dart';
 import '../providers/reading_streak_provider.dart';
 import '../providers/book_provider.dart';
 import '../providers/base_provider.dart';
 import '../model/user.dart';
 import '../model/reading_streak.dart';
 import '../model/book.dart';
+import '../model/user_friend.dart';
 import '../screens/book_details.dart';
+import '../screens/user_profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -20,9 +23,12 @@ class _HomePageState extends State<HomePage> {
   User? currentUser;
   ReadingStreak? readingStreak;
   List<Book>? recommendedBooks;
+  List<User>? recommendedFriends;
+  Map<int, FriendshipStatus?> friendshipStatuses = {};
   bool isLoading = true;
   bool isMarkingActivity = false;
   bool isLoadingRecommendedBooks = false;
+  bool isLoadingRecommendedFriends = false;
   bool showAllRecommended = false;
 
   @override
@@ -45,22 +51,22 @@ class _HomePageState extends State<HomePage> {
       final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
       final user = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
       
-      if (user != null) {
-        setState(() {
-          currentUser = user;
-        });
+              if (user != null) {
+          setState(() {
+            currentUser = user;
+          });
 
         final streakProvider = ReadingStreakProvider();
         final bookProvider = BookProvider();
         
-        final results = await Future.wait([
+        final essentialResults = await Future.wait([
           streakProvider.getUserStreak(user.id),
           bookProvider.getRecommendedBooks(user.id),
         ]);
         
-        final streak = results[0] as ReadingStreak?;
-        final books = results[1] as List<Book>;
-        
+        final streak = essentialResults[0] as ReadingStreak?;
+        final books = essentialResults[1] as List<Book>;
+       
         setState(() {
           readingStreak = streak ?? ReadingStreak(
             id: 0,
@@ -77,16 +83,102 @@ class _HomePageState extends State<HomePage> {
           recommendedBooks = books;
           isLoading = false;
         });
+        
+        final friends = await userProvider.getRecommendedFriends(user.id);
+        
+        setState(() {
+          recommendedFriends = friends;
+        });
+
+        
+        if (friends.isNotEmpty) {
+          _loadFriendshipStatuses();
+        }
       } else {
         setState(() {
           isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading user and streak: $e');
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadFriendshipStatuses() async {
+    if (currentUser == null || recommendedFriends == null) return;
+
+    try {
+      final userFriendProvider = UserFriendProvider();
+      final statuses = <int, FriendshipStatus?>{};
+      final friendsToCheck = recommendedFriends!.take(5).toList();
+      
+      for (final friend in friendsToCheck) {
+        try {
+          final status = await userFriendProvider.getFriendshipStatus(currentUser!.id, friend.id);
+          statuses[friend.id] = status;
+        } catch (e) {
+          statuses[friend.id] = null;
+        }
+      }
+
+      setState(() {
+        friendshipStatuses = statuses;
+      });
+    } catch (e) {
+      print('Error loading friendship statuses: $e');
+    }
+  }
+  void refreshFriendshipStatuses() {
+    if (mounted && !isLoading) {
+      _loadFriendshipStatuses();
+    }
+  }
+  Future<void> _loadBookRecommendations() async {
+    if (currentUser == null) return;
+    
+    try {
+      final bookProvider = BookProvider();
+      final books = await bookProvider.getRecommendedBooks(currentUser!.id);
+      
+      if (mounted) {
+        setState(() {
+          recommendedBooks = books;
+        });
+      }
+    } catch (e) {
+      print('Error loading book recommendations: $e');
+    }
+  }
+
+  void refreshBookRecommendations() {
+    if (mounted && !isLoading && currentUser != null) {
+      _loadBookRecommendations();
+    }
+  }
+  Future<void> _loadFriendRecommendations() async {
+    if (currentUser == null) return;
+    
+    try {
+      final userProvider = UserProvider();
+      final friends = await userProvider.getRecommendedFriends(currentUser!.id);
+      
+      if (mounted) {
+        setState(() {
+          recommendedFriends = friends;
+        });
+        
+        _loadFriendshipStatuses();
+      }
+    } catch (e) {
+      print('Error loading friend recommendations: $e');
+    }
+  }
+
+  void refreshFriendRecommendations() {
+    if (mounted && !isLoading && currentUser != null) {
+      _loadFriendRecommendations();
     }
   }
 
@@ -403,30 +495,80 @@ class _HomePageState extends State<HomePage> {
                                 },
                               ),
                             ),
-                                    ],
-                                  ),
-                                ),
-                              
-                              const SizedBox(height: 80),
-                            ],
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 6),
+              
+              if (recommendedFriends != null && recommendedFriends!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Friend Suggestions',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5D4037),
+                            ),
                           ),
-                        );
-                      }
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Color(0xFF8D6748),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 170,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: recommendedFriends!.length,
+                          itemBuilder: (context, index) {
+                            final friend = recommendedFriends![index];
+                            return Container(
+                              width: 140,
+                              margin: const EdgeInsets.only(right: 12),
+                              child: _buildFriendCard(friend),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      }
 Widget _buildBookCard(book) {
   return Card(
     elevation: 3,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
     ),
-    child: InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookDetailsScreen(book: book),
-          ),
-        );
-      },
+              child: InkWell(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BookDetailsScreen(book: book),
+                ),
+              );
+              
+              if (result == true) {
+                refreshBookRecommendations();
+              }
+            },
       borderRadius: BorderRadius.circular(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,6 +654,280 @@ Widget _buildBookCard(book) {
         base = base.substring(0, base.length - 5);
       }
       return '$base/$imagePath';
+    }
+  }
+
+    Widget _buildFriendCard(User friend) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+                child: InkWell(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfileScreen(user: friend),
+                ),
+              );
+              
+              if (result == true) {
+                refreshFriendshipStatuses();
+              }
+            },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFFF6E3B4),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 3,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: friend.photoUrl != null && friend.photoUrl!.isNotEmpty
+                        ? Image.network(
+                            _getUserImageUrl(friend.photoUrl!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: const Color(0xFF8D6748),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 35,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: const Color(0xFF8D6748),
+                            child: const Icon(
+                              Icons.person,
+                              size: 35,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+               
+                Text(
+                  '${friend.firstName} ${friend.lastName}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    color: Color(0xFF5D4037),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                _buildFriendButton(friend),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getUserImageUrl(String imagePath) {
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    } else {
+      String base = BaseProvider.baseUrl ?? '';
+      if (base.endsWith('/api/')) {
+        base = base.substring(0, base.length - 5);
+      }
+      return '$base/$imagePath';
+    }
+  }
+
+  Future<void> _addFriend(int friendId) async {
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User not authenticated'),
+          backgroundColor: Color(0xFFF44336),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final userFriendProvider = UserFriendProvider();
+      await userFriendProvider.sendFriendRequest(currentUser!.id, friendId);
+    
+      final status = await userFriendProvider.getFriendshipStatus(currentUser!.id, friendId);
+      setState(() {
+        friendshipStatuses[friendId] = status;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Friend request sent successfully!'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sending friend request: $e'),
+          backgroundColor: const Color(0xFFF44336),
+        ),
+      );
+    }
+  }
+
+  
+
+  Widget _buildFriendButton(User friend) {
+    final status = friendshipStatuses[friend.id];
+    
+    if (status == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => _addFriend(friend.id),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF8D6748),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          child: const Text(
+            'Add',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      );
+    }
+
+    switch (status.status) {
+      case 0: 
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF6E3B4),
+              foregroundColor: const Color(0xFF8D6748),
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Icon(
+              Icons.schedule,
+              size: 12,
+            ),
+          ),
+        );
+      case 1:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE8F5E8),
+              foregroundColor: const Color(0xFF4CAF50),
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Icon(
+              Icons.check_circle,
+              size: 12,
+            ),
+          ),
+        );
+      case 2: 
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF6E3B4),
+              foregroundColor: const Color(0xFF8D6748),
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Icon(
+              Icons.cancel,
+              size: 12,
+            ),
+          ),
+        );
+      case 3: 
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF6E3B4),
+              foregroundColor: const Color(0xFF8D6748),
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Icon(
+              Icons.block,
+              size: 12,
+            ),
+          ),
+        );
+      default:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => _addFriend(friend.id),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8D6748),
+              foregroundColor: Colors.white,
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Text(
+              'Add',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        );
     }
   }
 }

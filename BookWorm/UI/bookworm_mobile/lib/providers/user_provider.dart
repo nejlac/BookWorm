@@ -12,13 +12,13 @@ class UserProvider extends BaseProvider<User> {
   User fromJson(dynamic json) {
     return User.fromJson(json);
   }
-  String get baseUrl => BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
   
 
   
   Future<void> uploadPhoto(int userId, File photoFile) async {
     try {
-      var url = "${BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/"}users/$userId/cover";
+      var url = "${BaseProvider.baseUrl!}users/$userId/cover";
      
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
@@ -47,7 +47,7 @@ class UserProvider extends BaseProvider<User> {
   }
 
   Future<User> getById(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/"}users/$id";
+    var url = "${BaseProvider.baseUrl!}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
@@ -59,8 +59,26 @@ class UserProvider extends BaseProvider<User> {
     }
   }
 
+  Future<List<User>> getRecommendedFriends(int userId) async {
+    try {
+      final url = '${baseUrl}Users/recommend-friends/$userId';
+      final uri = Uri.parse(url);
+      
+      final response = await http.get(uri, headers: createHeaders());
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load recommended users: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<bool> delete(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "http://10.0.2.2:7031/api/"}users/$id";
+    var url = "${BaseProvider.baseUrl!}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.delete(uri, headers: headers);

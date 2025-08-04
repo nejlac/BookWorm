@@ -134,7 +134,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showFriendsDialog() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -251,7 +252,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             trailing: IconButton(
-                              onPressed: () => _removeFriend(friend),
+                              onPressed: () async {
+                                await _removeFriend(friend);
+                                setDialogState(() {});
+                              },
                               icon: const Icon(Icons.person_remove, color: Color(0xFFF44336)),
                               tooltip: 'Remove friend',
                             ),
@@ -265,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Future<void> _removeFriend(UserFriend friendship) async {

@@ -62,6 +62,7 @@ namespace BookWormWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult> Delete(int id)
         {
             var deleted = await _userService.DeleteAsync(id);
@@ -74,6 +75,7 @@ namespace BookWormWebAPI.Controllers
 
         [HttpPost("{id}/cover")]
         [RequestSizeLimit(10_000_000)]
+        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<UserResponse>> UploadCover(int id, [FromForm] CoverUploadRequest request)
         {
             try
@@ -112,6 +114,14 @@ namespace BookWormWebAPI.Controllers
             {
                 return BadRequest($"Error uploading cover: {ex.Message}");
             }
+        }
+
+        [HttpGet("recommend-friends/{userId}")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> RecommendFriends(int userId)
+        {
+            var result = await _userService.RecommendFriends(userId);
+            return Ok(result);
         }
 
         // --- STATISTICS ENDPOINTS ---
