@@ -156,7 +156,7 @@ namespace BookWorm.Services
             };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public override async Task<bool> DeleteAsync(int id)
         {
             var author = await _context.Authors.FindAsync(id);
             if (author == null)
@@ -168,21 +168,10 @@ namespace BookWorm.Services
             if (!isAdmin)
                 throw new AuthorException("Only admin can delete authors.");
 
-            // 1. Delete all books for this author (and all related book data)
-            var books = _context.Books.Where(b => b.AuthorId == id).ToList();
-            foreach (var book in books)
-            {
-                // Remove related book data manually, as in BookService.DeleteAsync
-                var reviews = _context.BookReviews.Where(r => r.BookId == book.Id);
-                _context.BookReviews.RemoveRange(reviews);
-                var bookGenres = _context.BookGenres.Where(bg => bg.BookId == book.Id);
-                _context.BookGenres.RemoveRange(bookGenres);
-                var readingListBooks = _context.ReadingListBooks.Where(rlb => rlb.BookId == book.Id);
-                _context.ReadingListBooks.RemoveRange(readingListBooks);
-                var challengeBooks = _context.ReadingChallengeBooks.Where(rcb => rcb.BookId == book.Id);
-                _context.ReadingChallengeBooks.RemoveRange(challengeBooks);
-                _context.Books.Remove(book);
-            }
+            // Check if author has any books
+            var hasBooks = await _context.Books.AnyAsync(b => b.AuthorId == id);
+            if (hasBooks)
+                throw new AuthorException("Cannot delete author who is linked to one or more books.");
 
             await BeforeDelete(author);
             _context.Authors.Remove(author);

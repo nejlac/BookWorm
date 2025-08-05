@@ -28,7 +28,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Country? selectedCountry;
   File? _selectedImageFile;
   String? _existingPhotoUrl;
-  String? duplicateError;
+  String? usernameError;
+  String? emailError;
+  String? errorMsg;
   Timer? _usernameDebounceTimer;
   Timer? _emailDebounceTimer;
 
@@ -136,7 +138,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { isSaving = true; duplicateError = null; });
+    setState(() { isSaving = true; usernameError = null; emailError = null; errorMsg = null; });
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final country = selectedCountry;
@@ -156,7 +158,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         "age": int.tryParse(ageController.text.trim()) ?? 0,
         "countryId": country.id,
         "photoUrl": _existingPhotoUrl,
-        "roleIds": [2], // Always set to 'User' role
+        "roleIds": [2], 
       };
       await userProvider.update(user!.id, request);
       if (_selectedImageFile != null) {
@@ -218,9 +220,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         );
       }
-    } catch (e) {
-      setState(() { duplicateError = e.toString(); });
-    } finally {
+          } catch (e) {
+        setState(() { errorMsg = e.toString(); });
+      } finally {
       setState(() { isSaving = false; });
     }
   }
@@ -306,11 +308,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  if (duplicateError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(duplicateError!, style: const TextStyle(color: Colors.red)),
-                    ),
+
                   TextFormField(
                     controller: firstNameController,
                     decoration: InputDecoration(
@@ -357,21 +355,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           final exists = await _checkUsernameExists(value.trim());
                           if (mounted) {
                             setState(() {
-                              duplicateError = exists ? 'A user with the username "${value.trim()}" already exists.' : null;
+                              usernameError = exists ? 'A user with the username "${value.trim()}" already exists.' : null;
                             });
                           }
                         });
-                      } else {
-                        setState(() {
-                          duplicateError = null;
-                        });
-                      }
+                                              } else {
+                          setState(() {
+                            usernameError = null;
+                          });
+                        }
                     },
-                    validator: (val) {
-                      if (val == null || val.isEmpty) return 'Username is required';
-                      if (duplicateError != null && duplicateError!.contains('username')) return duplicateError;
-                      return null;
-                    },
+                                          validator: (val) {
+                        if (val == null || val.isEmpty) return 'Username is required';
+                        if (usernameError != null) return usernameError;
+                        return null;
+                      },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -390,24 +388,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           final exists = await _checkEmailExists(value.trim());
                           if (mounted) {
                             setState(() {
-                              duplicateError = exists ? 'A user with the email "${value.trim()}" already exists.' : null;
+                              emailError = exists ? 'A user with the email "${value.trim()}" already exists.' : null;
                             });
                           }
                         });
-                      } else {
-                        setState(() {
-                          duplicateError = null;
-                        });
-                      }
+                                              } else {
+                          setState(() {
+                            emailError = null;
+                          });
+                        }
                     },
-                    validator: (val) {
-                      if (val == null || val.isEmpty) return 'Email is required';
-                      if (val.length > 100) return 'Email must be at most 100 characters';
-                      final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                      if (!emailRegex.hasMatch(val)) return 'Enter a valid email address';
-                      if (duplicateError != null && duplicateError!.contains('email')) return duplicateError;
-                      return null;
-                    },
+                                          validator: (val) {
+                        if (val == null || val.isEmpty) return 'Email is required';
+                        if (val.length > 100) return 'Email must be at most 100 characters';
+                        final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                        if (!emailRegex.hasMatch(val)) return 'Enter a valid email address';
+                        if (emailError != null) return emailError;
+                        return null;
+                      },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

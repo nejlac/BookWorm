@@ -91,16 +91,27 @@ class AuthorProvider extends BaseProvider<Author> {
     }
   }
 
-  Future<bool> delete(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
-    var uri = Uri.parse(url);
-    var headers = createHeaders();
-    var response = await http.delete(uri, headers: headers);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return true;
-    } else {
-      print("Failed to delete author: \\${response.statusCode} - \\${response.body}");
-      return false;
+  Future<String?> delete(int id) async {
+    try {
+      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
+      var uri = Uri.parse(url);
+      var headers = createHeaders();
+      var response = await http.delete(uri, headers: headers);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return null; // Success, no error message
+      } else {
+        print("Failed to delete author: ${response.statusCode} - ${response.body}");
+        // Parse the error message from the response
+        try {
+          var errorData = jsonDecode(response.body);
+          return errorData['message'] ?? 'Cannot delete author who is linked to one or more books.';
+        } catch (e) {
+          return 'Cannot delete author who is linked to one or more books.';
+        }
+      }
+    } catch (e) {
+      print("Exception during author deletion: $e");
+      return e.toString();
     }
   }
 

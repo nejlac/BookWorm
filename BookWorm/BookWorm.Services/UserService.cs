@@ -612,21 +612,21 @@ if (File.Exists(modelPath))
 
 if (retrainModel)
 {
-    var trainData = mlContext.Data.LoadFromEnumerable(data);
+            var trainData = mlContext.Data.LoadFromEnumerable(data);
 
-    var options = new MatrixFactorizationTrainer.Options
-    {
-        MatrixColumnIndexColumnName = nameof(UserBookEntry.BookId),
-        MatrixRowIndexColumnName = nameof(UserBookEntry.UserId),
-        LabelColumnName = nameof(UserBookEntry.Label),
-        LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
-        Alpha = 0.01,
-        Lambda = 0.1,
-        NumberOfIterations = 40,
-        C = 0.0001
-    };
+            var options = new MatrixFactorizationTrainer.Options
+            {
+                MatrixColumnIndexColumnName = nameof(UserBookEntry.BookId),
+                MatrixRowIndexColumnName = nameof(UserBookEntry.UserId),
+                LabelColumnName = nameof(UserBookEntry.Label),
+                LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
+                Alpha = 0.01,
+                Lambda = 0.1,
+                NumberOfIterations = 40,
+                C = 0.0001
+            };
 
-    var estimator = mlContext.Recommendation().Trainers.MatrixFactorization(options);
+            var estimator = mlContext.Recommendation().Trainers.MatrixFactorization(options);
     model = estimator.Fit(trainData);
 
     using var fileStream = new FileStream(modelPath, FileMode.Create, FileAccess.Write, FileShare.Write);

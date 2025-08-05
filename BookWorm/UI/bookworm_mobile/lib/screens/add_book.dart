@@ -140,7 +140,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
         _showSnackBar('Book added successfully! Admin needs to accept your book so others can see it too.', isError: false);
         Navigator.of(context).pop(true);
       } catch (e) {
-        // Intercept backend duplicate error
         final errorMsg = e.toString().toLowerCase();
         if (errorMsg.contains('already exists') || errorMsg.contains('duplicate')) {
           _showSnackBar('A book with this title and author already exists! Please choose a different title or author.', isError: true);
@@ -193,7 +192,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
                     _buildSectionTitle('Book Information', Icons.book),
                     const SizedBox(height: 16),
                     
-                    // Image picker moved to top
                     if (_selectedImageFile != null) _buildImagePreview(),
                     _buildImagePickerButton(),
                     const SizedBox(height: 16),
@@ -210,7 +208,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
                     const SizedBox(height: 16),
                     
                    
-                    // Searchable author dropdown with Add Author button
                     Row(
                       children: [
                         Expanded(
@@ -264,13 +261,11 @@ class _AddBookScreenState extends State<AddBookScreen> {
                               ),
                             );
                             if (result == true) {
-                              // Refresh authors and select the new one
                               final authorProvider = Provider.of<AuthorProvider>(context, listen: false);
                               final loadedAuthors = await authorProvider.getAllAuthors();
                               setState(() {
                                 _allAuthors = loadedAuthors;
                               });
-                              // Find the most recently added author (by max id)
                               final newAuthor = _allAuthors.reduce((a, b) => a.id > b.id ? a : b);
                               setState(() {
                                 _selectedAuthor = newAuthor;
@@ -365,7 +360,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40), // Extra padding at the bottom
+                    const SizedBox(height: 40), 
                   ],
                 ),
               ),

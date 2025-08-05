@@ -86,13 +86,11 @@ class _UserListState extends State<UserList> {
         countries = [{'id': null, 'name': 'All'}];
         selectedCountry = countries.first;
       });
-      debugPrint('Failed to load countries: ' + e.toString());
     }
   }
 
   Future<void> _initCountries() async {
     try {
-      print('Fetching countries...');
       await countryProvider.fetchCountries();
       countries =countryProvider.countries
           .map((c) => {'id': c.id, 'name': c.name})
@@ -100,7 +98,6 @@ class _UserListState extends State<UserList> {
    
       setState(() {});
     } catch (e) {
-      print('Failed to load countries: $e');
       countries = [];
       setState(() {});
     }
@@ -127,7 +124,6 @@ class _UserListState extends State<UserList> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 18),
-            // Add User button at the top
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: Row(
@@ -397,7 +393,7 @@ class _UserListState extends State<UserList> {
                           context: context,
                           builder: (context) => AlertDialog(
                             title: const Text('Delete User'),
-                            content: const Text('Are you sure you want to delete this user?'),
+                            content: const Text('Are you sure you want to delete this user? Deleting a user will remove all their data permanently.'),
                             actions: [
                               TextButton(
                                 onPressed: () async {

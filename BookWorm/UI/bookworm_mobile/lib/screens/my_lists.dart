@@ -55,7 +55,6 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && _hasInitialized) {
-      // Refresh when returning to the app
       _loadReadingLists();
     }
   }
@@ -68,14 +67,10 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     }
   }
 
-  // Method to refresh reading lists when navigating back to this screen
   void refreshReadingLists() {
-    print('refreshReadingLists called'); // Debug print
     if (mounted && !_isLoading) {
-      print('Refreshing reading lists...'); // Debug print
       _loadReadingLists();
     } else {
-      print('Not refreshing - mounted: $mounted, loading: $_isLoading'); // Debug print
     }
   }
 
@@ -170,6 +165,8 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     File? selectedImage;
+    String? nameError;
+    String? descriptionError;
     
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -228,16 +225,20 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                     hintText: 'Enter list name',
                   ),
                   maxLength: 100,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Name is required.';
-                    }
-                    if (value.length > 100) {
-                      return 'Name must not exceed 100 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setDialogState(() {
+                      nameError = null;
+                    });
                   },
                 ),
+                if (nameError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      nameError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
                 SizedBox(height: 16),
                 
                 TextFormField(
@@ -249,16 +250,20 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                   ),
                   maxLength: 300,
                   maxLines: 3,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Description is required.';
-                    }
-                    if (value.length > 300) {
-                      return 'Description must not exceed 300 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setDialogState(() {
+                      descriptionError = null;
+                    });
                   },
                 ),
+                if (descriptionError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      descriptionError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -269,43 +274,28 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
             ),
             ElevatedButton(
               onPressed: () {
-          
-                String? nameError;
-                String? descriptionError;
-          
-                if (nameController.text.trim().isEmpty) {
-                  nameError = 'Name is required.';
-                } else if (nameController.text.length > 100) {
-                  nameError = 'Name must not exceed 100 characters.';
-                } else {
-                  // Check for default list names
-                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
-                  final inputName = nameController.text.trim();
-                  if (defaultNames.any((defaultName) => 
-                      defaultName.toLowerCase() == inputName.toLowerCase())) {
-                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                setDialogState(() {
+                  if (nameController.text.trim().isEmpty) {
+                    nameError = 'Name is required.';
+                  } else if (nameController.text.length > 100) {
+                    nameError = 'Name must not exceed 100 characters.';
+                  } else {
+                    final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                    final inputName = nameController.text.trim();
+                    if (defaultNames.any((defaultName) => 
+                        defaultName.toLowerCase() == inputName.toLowerCase())) {
+                      nameError = 'This name is reserved for default lists. Please choose a different name.';
+                    }
                   }
-                }
-                
-
-                if (descriptionController.text.trim().isEmpty) {
-                  descriptionError = 'Description is required.';
-                } else if (descriptionController.text.length > 300) {
-                  descriptionError = 'Description must not exceed 300 characters.';
-                }
-                
-              
-                if (nameError != null || descriptionError != null) {
-                  String errorMessage = '';
-                  if (nameError != null) errorMessage += nameError + '\n';
-                  if (descriptionError != null) errorMessage += descriptionError;
                   
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(errorMessage.trim()),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (descriptionController.text.trim().isEmpty) {
+                    descriptionError = 'Description is required.';
+                  } else if (descriptionController.text.length > 300) {
+                    descriptionError = 'Description must not exceed 300 characters.';
+                  }
+                });
+                
+                if (nameError != null || descriptionError != null) {
                   return;
                 }
                 
@@ -695,6 +685,8 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     final descriptionController = TextEditingController(text: list.description ?? '');
     File? selectedImage;
     String? currentImagePath = list.coverImagePath;
+    String? nameError;
+    String? descriptionError;
     
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -779,16 +771,20 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                     hintText: 'Enter list name',
                   ),
                   maxLength: 100,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Name is required.';
-                    }
-                    if (value.length > 100) {
-                      return 'Name must not exceed 100 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setDialogState(() {
+                      nameError = null;
+                    });
                   },
                 ),
+                if (nameError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      nameError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
                 SizedBox(height: 16),
                 
               
@@ -801,16 +797,20 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                   ),
                   maxLength: 300,
                   maxLines: 3,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Description is required.';
-                    }
-                    if (value.length > 300) {
-                      return 'Description must not exceed 300 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setDialogState(() {
+                      descriptionError = null;
+                    });
                   },
                 ),
+                if (descriptionError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      descriptionError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -821,42 +821,28 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
             ),
             ElevatedButton(
               onPressed: () async {
-             
-                String? nameError;
-                String? descriptionError;
-                
-                if (nameController.text.trim().isEmpty) {
-                  nameError = 'Name is required.';
-                } else if (nameController.text.length > 100) {
-                  nameError = 'Name must not exceed 100 characters.';
-                } else {
-                  // Check for default list names
-                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
-                  final inputName = nameController.text.trim();
-                  if (defaultNames.any((defaultName) => 
-                      defaultName.toLowerCase() == inputName.toLowerCase())) {
-                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                setDialogState(() {
+                  if (nameController.text.trim().isEmpty) {
+                    nameError = 'Name is required.';
+                  } else if (nameController.text.length > 100) {
+                    nameError = 'Name must not exceed 100 characters.';
+                  } else {
+                    final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                    final inputName = nameController.text.trim();
+                    if (defaultNames.any((defaultName) => 
+                        defaultName.toLowerCase() == inputName.toLowerCase())) {
+                      nameError = 'This name is reserved for default lists. Please choose a different name.';
+                    }
                   }
-                }
-                
-
-                if (descriptionController.text.trim().isEmpty) {
-                  descriptionError = 'Description is required.';
-                } else if (descriptionController.text.length > 300) {
-                  descriptionError = 'Description must not exceed 300 characters.';
-                }
+                  
+                  if (descriptionController.text.trim().isEmpty) {
+                    descriptionError = 'Description is required.';
+                  } else if (descriptionController.text.length > 300) {
+                    descriptionError = 'Description must not exceed 300 characters.';
+                  }
+                });
                 
                 if (nameError != null || descriptionError != null) {
-                  String errorMessage = '';
-                  if (nameError != null) errorMessage += nameError + '\n';
-                  if (descriptionError != null) errorMessage += descriptionError;
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(errorMessage.trim()),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
                   return;
                 }
                
@@ -1032,7 +1018,6 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
       ),
     );
     
-    // Always refresh when returning from list details, regardless of result
     if (mounted && !_isLoading) {
       _loadReadingLists();
     }

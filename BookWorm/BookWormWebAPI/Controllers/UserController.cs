@@ -18,7 +18,7 @@ namespace BookWormWebAPI.Controllers
         private readonly IUserService _userService;
         private readonly IWebHostEnvironment _env;
         private readonly BookWormDbContext _context;
-        public UsersController(IUserService userService, IWebHostEnvironment env, BookWormDbContext context) 
+        public UsersController(IUserService userService, IWebHostEnvironment env, BookWormDbContext context)
         {
             _env = env;
             _context = context;
@@ -104,7 +104,7 @@ namespace BookWormWebAPI.Controllers
                 {
                     userEntity.PhotoUrl = $"covers/{fileName}";
                     await _context.SaveChangesAsync();
-                  
+
                     var updatedUser = await _userService.GetByIdAsync(id);
                     return Ok(updatedUser);
                 }
@@ -143,7 +143,7 @@ namespace BookWormWebAPI.Controllers
         [HttpGet("{userId}/most-read-genres")]
         [AllowAnonymous]
         public async Task<ActionResult<List<GenreStatisticResponse>>> GetUserMostReadGenres(
-            int userId, 
+            int userId,
             [FromQuery] int? year = null)
         {
             return await _userService.GetUserMostReadGenres(userId, year);
@@ -152,18 +152,76 @@ namespace BookWormWebAPI.Controllers
         [HttpGet("{userId}/rating-statistics")]
         [AllowAnonymous]
         public async Task<ActionResult<UserRatingStatisticsResponse>> GetUserRatingStatistics(
-            int userId, 
+            int userId,
             [FromQuery] int? year = null)
         {
             return await _userService.GetUserRatingStatistics(userId, year);
         }
-    }
-
-    /*[HttpPost("login")]
+    
+        [HttpPost("login")]
     public async Task<ActionResult<UserResponse>> Login(UserLoginRequest request)
     {
-        var user = await _userService.AuthenticateAsync(request);
-        return Ok(user);
-    }*/
+        try
+        {
+            var user = await _userService.AuthenticateAsync(request);
+
+            if (user == null)
+            {
+                return Unauthorized(new { message = "Invalid username or password" });
+            }
+
+            
+            if (user.Roles == null || !user.Roles.Any())
+            {
+                return StatusCode(403, new { message = "Access denied. User has no roles assigned." });
+            }
+            
+            if (!user.Roles.Any(r => r.Name == "User"))
+            {
+                
+                return StatusCode(403, new { message = "Access denied. Only users with 'User' role can access the mobile app." });
+            }
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Internal server error during login." });
+        }
+    }
+
+    [HttpPost("admin-login")]
+    public async Task<ActionResult<UserResponse>> AdminLogin(UserLoginRequest request)
+    {
+        try
+        {
+            var user = await _userService.AuthenticateAsync(request);
+
+            if (user == null)
+            {
+                return Unauthorized(new { message = "Invalid username or password" });
+            }
+           
+
+            // Only allow users with "Admin" role to access desktop app
+            if (user.Roles == null || !user.Roles.Any())
+            {
+                return StatusCode(403, new { message = "Access denied. User has no roles assigned." });
+            }
+            
+            if (!user.Roles.Any(r => r.Name == "Admin"))
+            {
+               
+                return StatusCode(403, new { message = "Access denied. Only users with 'Admin' role can access the desktop app." });
+            }
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Internal server error during login." });
+        }
+    }
+    }
 }
 

@@ -40,13 +40,13 @@ class _UserDetailsState extends State<UserDetails> {
   List<Role> allRoles = [];
   List<Role> selectedRoles = [];
   bool rolesLoading = true;
-  String? duplicateError;
+  String? usernameError;
+  String? emailError;
   
   
   Timer? _usernameDebounceTimer;
   Timer? _emailDebounceTimer;
 
-  // Helper method to check if username exists
   Future<bool> _checkUsernameExists(String username, int? excludeId) async {
     if (username.trim().isEmpty) return false;
     try {
@@ -81,7 +81,6 @@ class _UserDetailsState extends State<UserDetails> {
       }
       return true;
     } catch (e) {
-      // If there's an error checking, assume it doesn't exist to avoid blocking the user
       return false;
     }
   }
@@ -105,20 +104,32 @@ class _UserDetailsState extends State<UserDetails> {
   }
 
   Future<void> _loadData() async {
-    await countryProvider.fetchCountries();
-    setState(() {
-      countries = countryProvider.countries;
-      if (widget.user != null && widget.user!.countryId != null) {
-        selectedCountry = countries.firstWhere(
-          (c) => c.id == widget.user!.countryId,
-          orElse: () => countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown'),
-        );
-      } else {
-        selectedCountry = countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown');
-      }
-      _existingPhotoUrl = widget.user?.photoUrl;
-      isLoading = false;
-    });
+    try {
+      final allCountries = await countryProvider.getAllCountriesForDropdown();
+      setState(() {
+        countries = allCountries;
+        if (widget.user != null && widget.user!.countryId != null) {
+          selectedCountry = countries.firstWhere(
+            (c) => c.id == widget.user!.countryId,
+            orElse: () => countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown'),
+          );
+        } else {
+          selectedCountry = countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown');
+        }
+        _existingPhotoUrl = widget.user?.photoUrl;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        countries = [];
+        selectedCountry = Country(id: -1, name: 'Unknown');
+        _existingPhotoUrl = widget.user?.photoUrl;
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load countries: '+e.toString())),
+      );
+    }
   }
 
   Future<void> _loadRoles() async {
@@ -159,34 +170,6 @@ class _UserDetailsState extends State<UserDetails> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (duplicateError != null)
-                Container(
-                  width: double.infinity,
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    border: Border.all(color: Colors.red.shade300, width: 1.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          duplicateError!,
-                          style: TextStyle(
-                            color: Colors.red.shade700, 
-                            fontWeight: FontWeight.w600, 
-                            fontSize: 14
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
               ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 600),
                 child: Column(
@@ -268,27 +251,26 @@ class _UserDetailsState extends State<UserDetails> {
                     ),
                     readOnly: !(widget.isEditMode || widget.isAddMode),
                     onChanged: (value) {
-                      // Cancel previous timer
                       _usernameDebounceTimer?.cancel();
                       
                       if (value != null && value.trim().isNotEmpty && (widget.isEditMode || widget.isAddMode)) {
-                        // Set a new timer for 500ms delay
+                       
                         _usernameDebounceTimer = Timer(Duration(milliseconds: 500), () async {
                           final excludeId = widget.isEditMode && widget.user != null ? widget.user!.id : null;
                           final exists = await _checkUsernameExists(value.trim(), excludeId);
                           if (mounted) {
                             setState(() {
                               if (exists) {
-                                duplicateError = 'A user with the username "${value.trim()}" already exists.';
+                                usernameError = 'A user with the username "${value.trim()}" already exists.';
                               } else {
-                                duplicateError = null;
+                                usernameError = null;
                               }
                             });
                           }
                         });
                       } else {
                         setState(() {
-                          duplicateError = null;
+                          usernameError = null;
                         });
                       }
                     },
@@ -297,6 +279,14 @@ class _UserDetailsState extends State<UserDetails> {
                       return null;
                     },
                   ),
+                  if (usernameError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        usernameError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                   SizedBox(height: 16),
                   FormBuilderTextField(
                     name: 'email',
@@ -309,27 +299,26 @@ class _UserDetailsState extends State<UserDetails> {
                     ),
                     readOnly: !(widget.isEditMode || widget.isAddMode),
                     onChanged: (value) {
-                      // Cancel previous timer
                       _emailDebounceTimer?.cancel();
                       
                       if (value != null && value.trim().isNotEmpty && (widget.isEditMode || widget.isAddMode)) {
-                        // Set a new timer for 500ms delay
+                     
                         _emailDebounceTimer = Timer(Duration(milliseconds: 500), () async {
                           final excludeId = widget.isEditMode && widget.user != null ? widget.user!.id : null;
                           final exists = await _checkEmailExists(value.trim(), excludeId);
                           if (mounted) {
                             setState(() {
                               if (exists) {
-                                duplicateError = 'A user with the email "${value.trim()}" already exists.';
+                                emailError = 'A user with the email "${value.trim()}" already exists.';
                               } else {
-                                duplicateError = null;
+                                emailError = null;
                               }
                             });
                           }
                         });
                       } else {
                         setState(() {
-                          duplicateError = null;
+                          emailError = null;
                         });
                       }
                     },
@@ -341,6 +330,14 @@ class _UserDetailsState extends State<UserDetails> {
                       return null;
                     },
                   ),
+                  if (emailError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        emailError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                   SizedBox(height: 16),
                   FormBuilderTextField(
                     name: 'phoneNumber',
@@ -353,29 +350,24 @@ class _UserDetailsState extends State<UserDetails> {
                     ),
                     readOnly: !(widget.isEditMode || widget.isAddMode),
                     onChanged: (value) {
-                      // If the field becomes empty, clear any validation errors and force revalidation
                       if (value == null || value.trim().isEmpty) {
                         if (formKey.currentState != null) {
                           formKey.currentState!.fields['phoneNumber']?.reset();
-                          // Force the form to revalidate
+                          
                           formKey.currentState!.validate();
                         }
                       }
                     },
                     validator: (val) {
-                      // If value is null, empty, or only whitespace, it's valid (optional field)
                       if (val == null || val.toString().trim().isEmpty) {
                         return null;
                       }
                       
-                      // If value has content, validate it
                       final trimmedVal = val.toString().trim();
                       
                       if (trimmedVal.length > 20) {
                         return 'Phone number must not exceed 20 characters';
                       }
-                      
-                      // More flexible phone number regex that allows various formats
                       final phoneRegex = RegExp(r'^[\+]?[0-9\s\-\(\)]{7,20}$');
                       if (!phoneRegex.hasMatch(trimmedVal)) {
                         return 'Invalid phone number format';
@@ -581,7 +573,7 @@ class _UserDetailsState extends State<UserDetails> {
     if (!formKey.currentState!.saveAndValidate()) {
       return;
     }
-    setState(() { isSaving = true; duplicateError = null; });
+    setState(() { isSaving = true; usernameError = null; emailError = null; });
     final formData = formKey.currentState!.value;
     final firstName = formData['firstName']?.toString().trim() ?? '';
     final lastName = formData['lastName']?.toString().trim() ?? '';
@@ -602,27 +594,21 @@ class _UserDetailsState extends State<UserDetails> {
         setState(() { isSaving = false; });
         return;
       }
-      // Clear any previous duplicate errors
-      setState(() { duplicateError = null; });
       
-      // Frontend validation for duplicate username/email
       final excludeId = widget.isEditMode && widget.user != null ? widget.user!.id : null;
       
-      // Check for duplicate username
       final usernameExists = await _checkUsernameExists(username, excludeId);
       if (usernameExists) {
         setState(() {
-          duplicateError = 'A user with the username "$username" already exists.';
+          usernameError = 'A user with the username "$username" already exists.';
           isSaving = false;
         });
         return;
       }
-      
-      // Check for duplicate email
       final emailExists = await _checkEmailExists(email, excludeId);
       if (emailExists) {
         setState(() {
-          duplicateError = 'A user with the email "$email" already exists.';
+          emailError = 'A user with the email "$email" already exists.';
           isSaving = false;
         });
         return;
@@ -637,7 +623,7 @@ class _UserDetailsState extends State<UserDetails> {
         "age": age,
         "countryId": country.id,
         "roleIds": roles.map((r) => r.id).toList(),
-        "photoUrl": _existingPhotoUrl, // Preserve existing photo URL
+        "photoUrl": _existingPhotoUrl,
       };
 
       if (widget.isAddMode) {
@@ -653,7 +639,6 @@ class _UserDetailsState extends State<UserDetails> {
         if (_selectedImageFile != null && inserted.id != null) {
           try {
             await userProvider.uploadPhoto(inserted.id, _selectedImageFile!);
-            // Fetch updated user to get new photoUrl
             final updated = await userProvider.getById(inserted.id);
             setState(() {
               _existingPhotoUrl = updated.photoUrl;
@@ -678,7 +663,6 @@ class _UserDetailsState extends State<UserDetails> {
             );
           }
         }
-        // Show success snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -701,7 +685,7 @@ class _UserDetailsState extends State<UserDetails> {
         if (_selectedImageFile != null) {
           try {
             await userProvider.uploadPhoto(widget.user!.id, _selectedImageFile!);
-            // Fetch updated user to get new photoUrl
+            
             final updated = await userProvider.getById(widget.user!.id);
             setState(() {
               _existingPhotoUrl = updated.photoUrl;
@@ -727,7 +711,6 @@ class _UserDetailsState extends State<UserDetails> {
           }
         }
         
-        // Show success snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -749,10 +732,8 @@ class _UserDetailsState extends State<UserDetails> {
     } catch (e) {
       String errorMsg = e.toString();
       
-      // Try to parse JSON error response from backend
       if (errorMsg.contains('400') || errorMsg.contains('Bad Request')) {
         try {
-          // Extract JSON error message if present
           final jsonMatch = RegExp(r'\{.*\}').firstMatch(errorMsg);
           if (jsonMatch != null) {
             final jsonStr = jsonMatch.group(0)!;
@@ -764,7 +745,13 @@ class _UserDetailsState extends State<UserDetails> {
                 if (userErrors.isNotEmpty) {
                   final specificError = userErrors.first.toString();
                   setState(() {
-                    duplicateError = specificError;
+                    if (specificError.toLowerCase().contains('username')) {
+                      usernameError = specificError;
+                    } else if (specificError.toLowerCase().contains('email')) {
+                      emailError = specificError;
+                    } else {
+                      usernameError = specificError;
+                    }
                     isSaving = false;
                   });
                   return;
@@ -773,47 +760,84 @@ class _UserDetailsState extends State<UserDetails> {
             }
           }
         } catch (parseError) {
-          // If JSON parsing fails, fall back to string matching
         }
       }
       
-      // Handle specific backend errors with more precise messages
       if (errorMsg.contains('username or email is already in use')) {
         setState(() {
-          duplicateError = 'A user with this username or email already exists.';
+          usernameError = 'A user with this username already exists.';
+          emailError = 'A user with this email already exists.';
           isSaving = false;
         });
         return;
       }
       
       if (errorMsg.contains('already exists')) {
-        setState(() {
-          duplicateError = 'A user with this username or email already exists.';
-          isSaving = false;
-        });
-        return;
-      }
-      
-      if (errorMsg.contains('UserException')) {
-        // Try to extract the specific message from UserException
-        final exceptionMatch = RegExp(r'UserException:\s*(.+)').firstMatch(errorMsg);
-        if (exceptionMatch != null && exceptionMatch.groupCount > 0) {
-          final specificMessage = exceptionMatch.group(1)!.trim();
+        final existsMatch = RegExp(r'([^"]*already exists[^"]*)').firstMatch(errorMsg);
+        if (existsMatch != null && existsMatch.groupCount > 0) {
+          final specificMessage = existsMatch.group(1)!.trim();
           setState(() {
-            duplicateError = specificMessage;
+            if (specificMessage.toLowerCase().contains('username')) {
+              usernameError = specificMessage;
+            } else if (specificMessage.toLowerCase().contains('email')) {
+              emailError = specificMessage;
+            } else {
+              usernameError = specificMessage;
+            }
             isSaving = false;
           });
           return;
         } else {
           setState(() {
-            duplicateError = 'A user with this username or email already exists.';
+            usernameError = 'A user with this username already exists.';
+            emailError = 'A user with this email already exists.';
             isSaving = false;
           });
           return;
         }
       }
       
-      // Show other errors in snackbar
+      if (errorMsg.contains('UserException')) {
+        final exceptionMatch = RegExp(r'UserException:\s*(.+)').firstMatch(errorMsg);
+        if (exceptionMatch != null && exceptionMatch.groupCount > 0) {
+          final specificMessage = exceptionMatch.group(1)!.trim();
+          setState(() {
+            if (specificMessage.toLowerCase().contains('username')) {
+              usernameError = specificMessage;
+            } else if (specificMessage.toLowerCase().contains('email')) {
+              emailError = specificMessage;
+            } else {
+              usernameError = specificMessage;
+            }
+            isSaving = false;
+          });
+          return;
+        } else {
+          final altMatch = RegExp(r'UserException\s*:\s*(.+)').firstMatch(errorMsg);
+          if (altMatch != null && altMatch.groupCount > 0) {
+            final specificMessage = altMatch.group(1)!.trim();
+            setState(() {
+              if (specificMessage.toLowerCase().contains('username')) {
+                usernameError = specificMessage;
+              } else if (specificMessage.toLowerCase().contains('email')) {
+                emailError = specificMessage;
+              } else {
+                usernameError = specificMessage;
+              }
+              isSaving = false;
+            });
+            return;
+          } else {
+            setState(() {
+              usernameError = 'A user with this username already exists.';
+              emailError = 'A user with this email already exists.';
+              isSaving = false;
+            });
+            return;
+          }
+        }
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -848,8 +872,6 @@ class _UserDetailsState extends State<UserDetails> {
         }
         imageUrl = '$base/${_existingPhotoUrl}';
       }
-      print('[UserDetails] _existingPhotoUrl: ${_existingPhotoUrl}');
-      print('[UserDetails] imageUrl: ${imageUrl}');
     }
     return Center(
       child: Column(

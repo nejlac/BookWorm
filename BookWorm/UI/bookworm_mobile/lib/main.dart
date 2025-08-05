@@ -79,6 +79,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _isLoading = false;
 
   void clearFields() {
     usernameController.clear();
@@ -94,23 +95,28 @@ class _LoginPageState extends State<LoginPage> {
 
  
   void _login() async {
-    AuthProvider.username = usernameController.text;
-    AuthProvider.password = passwordController.text;
     try {
-      print("Username: ${AuthProvider.username}, Password: ${AuthProvider.password}");
-     var bookProvider = BookProvider();
-      var books = await bookProvider.get();
-     
-      Navigator.pushReplacement(
-       context,
-         MaterialPageRoute(builder: (context) => MasterScreen()),
-);
-  
+      setState(() {
+        _isLoading = true;
+      });
+
+      var userProvider = UserProvider();
+      var user = await userProvider.login(usernameController.text, passwordController.text);
+      
+      if (user != null) {
+        AuthProvider.username = usernameController.text;
+        AuthProvider.password = passwordController.text;
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MasterScreen()),
+        );
+      }
     } catch (e) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Error"),
+          title: const Text("Login Error"),
           content: Text(e.toString()),
           actions: [
             TextButton(
@@ -119,6 +125,10 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -210,15 +220,24 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: _login,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.login, size: 20),
-                            SizedBox(width: 12),
-                            Text('Login'),
-                          ],
-                        ),
+                        onPressed: _isLoading ? null : _login,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.login, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Login'),
+                                ],
+                              ),
                       ),
                     ),
                     const SizedBox(height: 18),

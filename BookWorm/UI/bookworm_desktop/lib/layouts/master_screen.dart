@@ -1,6 +1,8 @@
 import 'package:bookworm_desktop/screens/author_list.dart';
 import 'package:bookworm_desktop/screens/bookReview_list.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
+import 'package:bookworm_desktop/screens/country_list.dart';
+import 'package:bookworm_desktop/screens/genre_list.dart';
 import 'package:bookworm_desktop/screens/reading_challenge_list.dart';
 import 'package:bookworm_desktop/screens/statistics.dart';
 import 'package:bookworm_desktop/screens/user_list.dart';
@@ -26,8 +28,10 @@ class _MasterScreenState extends State<MasterScreen> {
     _NavItem(icon: Icons.menu_book_rounded, label: 'Books', screen: BookList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Users', screen: UserList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Authors', screen: AuthorList()),
+    _NavItem(icon: Icons.category, label: 'Genres', screen: GenreList()),
+    _NavItem(icon: Icons.flag, label: 'Countries', screen: CountryList()),
     _NavItem(icon: Icons.reviews, label: 'Reviews', screen: BookReviewList()),
-    _NavItem(icon: Icons.my_library_books_outlined, label: 'Challanges', screen: ReadingChallengeList()),
+    _NavItem(icon: Icons.my_library_books_outlined, label: 'Challenges', screen: ReadingChallengeList()),
     _NavItem(icon: Icons.auto_graph, label: 'Statistics', screen: StatisticsScreen()),
   ];
 
@@ -155,7 +159,6 @@ class _MasterScreenState extends State<MasterScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // Navigation
                   Expanded(
                     child: ListView.builder(
                       itemCount: _navItems.length,
@@ -189,7 +192,10 @@ class _MasterScreenState extends State<MasterScreen> {
                           AuthProvider.logout();
                           clearLoginFields();
                           if (mounted) {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => LoginPage()),
+                            );
                           }
                         },
                         icon: const Icon(Icons.logout, color: Color(0xFF8D6748)),

@@ -108,7 +108,7 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
       initialDate: isDateOfBirth ? DateTime.now().subtract(Duration(days: 365 * 25)) : DateTime.now(),
       firstDate: DateTime(1),
       lastDate: isDateOfBirth ? DateTime.now() : DateTime.now().add(Duration(days: 365 * 10)),
-      cancelText: isDateOfBirth ? null : 'Clear', // Allow clearing for optional date of death
+      cancelText: isDateOfBirth ? null : 'Clear',
     );
     if (picked != null) {
       setState(() {
@@ -121,7 +121,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
         }
       });
     } else if (!isDateOfBirth) {
-      // Clear the date of death if user cancels
       setState(() {
         _selectedDateOfDeath = null;
         _dateOfDeathController.clear();
@@ -140,7 +139,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
       return;
     }
 
-    // Frontend validation matching backend rules
     final validationErrors = _validateAuthorData();
     if (validationErrors.isNotEmpty) {
       _showSnackBar(validationErrors.first, isError: true);
@@ -153,7 +151,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
       final authorProvider = Provider.of<AuthorProvider>(context, listen: false);
       final name = _nameController.text.trim();
       
-      // Duplicate check
       final exists = await authorProvider.existsWithNameAndDateOfBirth(name, _selectedDateOfBirth!);
       if (exists) {
         _showSnackBar('An author with this name and date of birth already exists!', isError: true);
@@ -194,7 +191,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Name validation
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       errors.add('Name is required.');
@@ -202,7 +198,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
       errors.add('Name must not exceed 255 characters.');
     }
 
-    // Biography validation
     final biography = _biographyController.text.trim();
     if (biography.isEmpty) {
       errors.add('Biography is required.');
@@ -210,14 +205,17 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
       errors.add('Biography must not exceed 1000 characters.');
     }
 
-    // Date of birth validation
     if (_selectedDateOfBirth == null) {
       errors.add('Date of birth is required.');
     } else if (_selectedDateOfBirth!.isAfter(today)) {
       errors.add('Date of birth cannot be in the future.');
+    } else {
+      final minimumAge = DateTime.now().subtract(Duration(days: 13 * 365));
+      if (_selectedDateOfBirth!.isAfter(minimumAge)) {
+        errors.add('Author must be at least 13 years old.');
+      }
     }
 
-    // Date of death validation
     if (_selectedDateOfDeath != null) {
       if (_selectedDateOfDeath!.isAfter(today)) {
         errors.add('Date of death cannot be in the future.');
@@ -227,8 +225,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
         errors.add('Date of death cannot be before date of birth.');
       }
     }
-
-    // Country validation
     if (_selectedCountry == null) {
       errors.add('Country is required.');
     }
@@ -274,7 +270,6 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
                     _buildSectionTitle('Author Information', Icons.person),
                     const SizedBox(height: 16),
                     
-                    // Image picker at the top
                     if (_selectedImageFile != null) _buildImagePreview(),
                     _buildImagePickerButton(),
                     const SizedBox(height: 16),
@@ -302,63 +297,59 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _dateOfBirthController,
-                            decoration: _inputDecoration(' Date of Birth', Icons.cake),
-                            readOnly: true,
-                            onTap: () => _selectDate(context, true),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) return 'Date of birth is required';
-                              if (_selectedDateOfBirth != null) {
-                                final now = DateTime.now();
-                                final today = DateTime(now.year, now.month, now.day);
-                                if (_selectedDateOfBirth!.isAfter(today)) {
-                                  return 'Date of birth cannot be in the future';
-                                }
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _dateOfDeathController,
-                            decoration: _inputDecoration(' Date of Death (Optional)', Icons.event).copyWith(
-                              suffixIcon: _dateOfDeathController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: Icon(Icons.clear, color: Colors.red),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedDateOfDeath = null;
-                                          _dateOfDeathController.clear();
-                                        });
-                                      },
-                                    )
-                                  : null,
-                            ),
-                            readOnly: true,
-                            onTap: () => _selectDate(context, false),
-                            validator: (val) {
-                              if (_selectedDateOfDeath != null) {
-                                final now = DateTime.now();
-                                final today = DateTime(now.year, now.month, now.day);
-                                if (_selectedDateOfDeath!.isAfter(today)) {
-                                  return 'Date of death cannot be in the future';
-                                }
-                                if (_selectedDateOfBirth != null && _selectedDateOfDeath!.isBefore(_selectedDateOfBirth!)) {
-                                  return 'Date of death cannot be before date of birth';
-                                }
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                                         TextFormField(
+                       controller: _dateOfBirthController,
+                       decoration: _inputDecoration(' Date of Birth', Icons.cake),
+                       readOnly: true,
+                       onTap: () => _selectDate(context, true),
+                       validator: (val) {
+                         if (val == null || val.trim().isEmpty) return 'Date of birth is required';
+                         if (_selectedDateOfBirth != null) {
+                           final now = DateTime.now();
+                           final today = DateTime(now.year, now.month, now.day);
+                           if (_selectedDateOfBirth!.isAfter(today)) {
+                             return 'Date of birth cannot be in the future';
+                           }
+                           final minimumAge = DateTime.now().subtract(Duration(days: 13 * 365));
+                           if (_selectedDateOfBirth!.isAfter(minimumAge)) {
+                             return 'Author must be at least 13 years old';
+                           }
+                         }
+                         return null;
+                       },
+                     ),
+                     const SizedBox(height: 16),
+                     TextFormField(
+                       controller: _dateOfDeathController,
+                       decoration: _inputDecoration(' Date of Death (Optional)', Icons.event).copyWith(
+                         suffixIcon: _dateOfDeathController.text.isNotEmpty
+                             ? IconButton(
+                                 icon: Icon(Icons.clear, color: Colors.red),
+                                 onPressed: () {
+                                   setState(() {
+                                     _selectedDateOfDeath = null;
+                                     _dateOfDeathController.clear();
+                                   });
+                                 },
+                               )
+                             : null,
+                       ),
+                       readOnly: true,
+                       onTap: () => _selectDate(context, false),
+                       validator: (val) {
+                         if (_selectedDateOfDeath != null) {
+                           final now = DateTime.now();
+                           final today = DateTime(now.year, now.month, now.day);
+                           if (_selectedDateOfDeath!.isAfter(today)) {
+                             return 'Date of death cannot be in the future';
+                           }
+                           if (_selectedDateOfBirth != null && _selectedDateOfDeath!.isBefore(_selectedDateOfBirth!)) {
+                             return 'Date of death cannot be before date of birth';
+                           }
+                         }
+                         return null;
+                       },
+                     ),
                     const SizedBox(height: 16),
                     
                     DropdownSearch<Country>(
@@ -427,7 +418,7 @@ class _AddAuthorScreenState extends State<AddAuthorScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40), // Extra padding at the bottom
+                    const SizedBox(height: 40), 
                   ],
                 ),
               ),

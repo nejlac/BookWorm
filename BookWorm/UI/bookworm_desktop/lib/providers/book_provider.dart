@@ -12,7 +12,7 @@ class BookProvider extends BaseProvider<Book> {
     return Book.fromJson(json);
   }
  
-  String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
 
   Future<void> acceptBook(int id) async {
     var url = "${baseUrl}book/$id/accept";
@@ -36,7 +36,6 @@ class BookProvider extends BaseProvider<Book> {
   Future<Book> insertWithCover(Map<String, dynamic> request, File? coverImage) async {
     try {
      
-      print("Request: $request");
       var book = await insert(request);
      
       if (coverImage != null && await coverImage.exists()) {
@@ -47,19 +46,17 @@ class BookProvider extends BaseProvider<Book> {
           
           await uploadCover(book.id!, coverImage);
           book = await getById(book.id!);
-          print("✅ Book retrieved with cover path: ${book.coverImagePath}");
         } catch (uploadError) {
-          print("❌ Cover image upload failed: $uploadError");
-          print("⚠️ Book was created but without cover image");
+          print("Cover image upload failed: $uploadError");
+        
           
         }
       } else {
-        print("ℹ️ No cover image provided or file doesn't exist");
+        print("No cover image provided or file doesn't exist");
       }
       
       return book;
     } catch (e) {
-      print("❌ Error in insertWithCover: $e");
       rethrow;
     }
   }
@@ -67,12 +64,7 @@ class BookProvider extends BaseProvider<Book> {
  
   Future<Book> updateWithCover(int id, Map<String, dynamic> request, File? coverImage) async {
     try {
-    
-    
-      print("Book ID: $id");
-      print("Request: $request");
       var book = await update(id, request);
-      print("✅ Book updated successfully");
       
      
       if (coverImage != null && await coverImage.exists()) {
@@ -82,23 +74,19 @@ class BookProvider extends BaseProvider<Book> {
         try {
           
           await uploadCover(id, coverImage);
-          print("✅ Cover image uploaded successfully");
           
          
           book = await getById(id);
-          print("✅ Book retrieved with cover path: ${book.coverImagePath}");
         } catch (uploadError) {
-          print("❌ Cover image upload failed: $uploadError");
-          print("⚠️ Book was updated but without cover image");
+          print("Cover image upload failed: $uploadError");
         
         }
       } else {
-        print("ℹ️ No cover image provided or file doesn't exist");
+        print("No cover image provided or file doesn't exist");
       }
       
       return book;
     } catch (e) {
-      print("❌ Error in updateWithCover: $e");
       rethrow;
     }
   }
@@ -106,10 +94,6 @@ class BookProvider extends BaseProvider<Book> {
 
   Future<void> uploadCover(int bookId, File coverImage) async {
     try {
-     
-      print("File path: ${coverImage.path}");
-    
-      
       var url = "${baseUrl}book/$bookId/cover";
       print("Upload URL: $url");
       var uri = Uri.parse(url);
@@ -125,7 +109,6 @@ class BookProvider extends BaseProvider<Book> {
       var stream = http.ByteStream(coverImage.openRead());
       var length = await coverImage.length();
       var filename = coverImage.path.split('/').last;
-      print("Creating multipart file: $filename, size: $length");
       
       var multipartFile = http.MultipartFile(
         'coverImage',
@@ -136,22 +119,15 @@ class BookProvider extends BaseProvider<Book> {
       
       request.files.add(multipartFile);
       
-      print("Sending request...");
       var streamedResponse = await request.send();
-      print("Response status: ${streamedResponse.statusCode}");
       
       var response = await http.Response.fromStream(streamedResponse);
-      print("Response body: ${response.body}");
       
       if (!isValidResponse(response)) {
-        print("Upload failed with status: ${response.statusCode}");
-        print("Response body: ${response.body}");
         throw new Exception("Failed to upload cover image: ${response.statusCode} - ${response.body}");
       }
       
-      print("Upload successful!");
     } catch (e) {
-      print("Error in uploadCover: $e");
       rethrow;
     }
   }
@@ -166,9 +142,7 @@ class BookProvider extends BaseProvider<Book> {
     
     if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      print("Response data: $data");
       var book = fromJson(data);
-      print("Book cover path: ${book.coverImagePath}");
       return book;
     } else {
       throw new Exception("Failed to get book: ${response.statusCode} - ${response.body}");

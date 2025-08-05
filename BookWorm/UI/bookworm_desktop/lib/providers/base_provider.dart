@@ -23,25 +23,21 @@ abstract class BaseProvider<T> with ChangeNotifier {
       url = "$url?$queryString";
     }
 
-    print("DEBUG: BaseProvider GET URL: $url");
     var uri = Uri.parse(url);
     var headers = createHeaders();
 
     var response = await http.get(uri, headers: headers);
-    print("DEBUG: Response status: ${response.statusCode}");
-    print("DEBUG: Response body: ${response.body}");
+   
 
     if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      print("DEBUG: Parsed data: $data");
-      print("DEBUG: data type: ${data.runtimeType}");
+     
       
       var result = SearchResult<T>();
       
      
       if (data is Map<String, dynamic>) {
        
-        print("DEBUG: Paginated response detected");
         result.totalCount = data['totalCount'];
         result.page = data['page'];
         result.pageSize = data['pageSize'];
@@ -52,14 +48,11 @@ abstract class BaseProvider<T> with ChangeNotifier {
           result.items = [];
         }
       } else if (data is List) {
-        // Direct array response
-        print("DEBUG: Direct array response detected");
         result.totalCount = data.length;
         result.page = 0;
         result.pageSize = data.length;
         result.items = List<T>.from(data.map((e) => fromJson(e)));
       } else {
-        print("DEBUG: Unexpected response format: ${data.runtimeType}");
         result.items = [];
       }
 
@@ -81,7 +74,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
       var data = jsonDecode(response.body);
       return fromJson(data);
     } else {
-      // This should not be reached since isValidResponse throws an exception
       throw new Exception("Insert failed: ${response.statusCode} - ${response.body}");
     }
   }
@@ -98,7 +90,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
       var data = jsonDecode(response.body);
       return fromJson(data);
     } else {
-      // This should not be reached since isValidResponse throws an exception
       throw new Exception("Update failed: ${response.statusCode} - ${response.body}");
     }
   }
@@ -114,7 +105,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
       throw new Exception("Unauthorized");
     } else {
       print("Response body: ${response.body}");
-      // Preserve the actual error response from the backend
       throw new Exception("${response.statusCode} - ${response.body}");
     }
   }
@@ -123,7 +113,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     String username = AuthProvider.username ?? "";
     String password = AuthProvider.password ?? "";
 
-    print("passed creds: $username, $password");
 
     String basicAuth =
         "Basic ${base64Encode(utf8.encode('$username:$password'))}";

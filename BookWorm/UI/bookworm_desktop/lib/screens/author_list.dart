@@ -56,7 +56,6 @@ class _AuthorListState extends State<AuthorList> {
         "pageSize": pageSize,
         "authorState": selectedStatus,
       };
-      print("Author filter: $filter");
       Authors = await authorProvider.get(filter: filter);
       setState(() {
         this.Authors = Authors;
@@ -74,8 +73,7 @@ class _AuthorListState extends State<AuthorList> {
 
  Future<void> _fetchCountries() async {
     try {
-      await countryProvider.fetchCountries();
-      var loadedCountries = countryProvider.countries;
+      var loadedCountries = await countryProvider.getAllCountriesForDropdown();
       setState(() {
         countries = [{'id': null, 'name': 'All'}];
         countries.addAll(loadedCountries.map((c) => {'id': c.id, 'name': c.name}));
@@ -86,21 +84,17 @@ class _AuthorListState extends State<AuthorList> {
         countries = [{'id': null, 'name': 'All'}];
         selectedCountry = countries.first;
       });
-      debugPrint('Failed to load countries: ' + e.toString());
     }
   }
 
   Future<void> _initCountries() async {
     try {
-      print('Fetching countries...');
-      await countryProvider.fetchCountries();
-      countries =countryProvider.countries
+      var loadedCountries = await countryProvider.getAllCountriesForDropdown();
+      countries = loadedCountries
           .map((c) => {'id': c.id, 'name': c.name})
           .toList();  
-      print('Loaded countries:  {countries.length}');
       setState(() {});
     } catch (e) {
-      print('Failed to load countries: $e');
       countries = [];
       setState(() {});
     }
@@ -145,130 +139,156 @@ class _AuthorListState extends State<AuthorList> {
         ),
       );
     }
+    
     return Padding(
       padding: const EdgeInsets.only(top: 0, bottom: 0),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                flex: 2,
-                child: TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Author Name',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.book),
-                      onPressed: () {},
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 800;
+          
+          return Center(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              constraints: BoxConstraints(maxWidth: isSmallScreen ? double.infinity : 900),
+              child: isSmallScreen 
+                ? Column(
+                    children: [
+                      _buildSearchField(),
+                      SizedBox(height: 12),
+                      _buildCountryDropdown(),
+                      SizedBox(height: 12),
+                      _buildStatusDropdown(),
+                      SizedBox(height: 12),
+                      _buildSearchButton(),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(flex: 2, child: _buildSearchField()),
+                      SizedBox(width: 12),
+                      Flexible(flex: 2, child: _buildCountryDropdown()),
+                      SizedBox(width: 12),
+                      Flexible(flex: 2, child: _buildStatusDropdown()),
+                      SizedBox(width: 12),
+                      _buildSearchButton(),
+                    ],
                   ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                flex: 2,
-                child: DropdownSearch<Map<String, dynamic>>(
-                  items: countries,
-                  itemAsString: (c) => c['name'] ?? '',
-                  selectedItem: selectedCountry,
-                  dropdownDecoratorProps: DropDownDecoratorProps(
-                    dropdownSearchDecoration: InputDecoration(
-                      labelText: 'Country',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    ),
-                  ),
-                  popupProps: PopupProps.menu(
-                    showSearchBox: true,
-                    searchFieldProps: TextFieldProps(
-                      decoration: InputDecoration(
-                        labelText: 'Search country',
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCountry = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) return 'Country is required';
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                flex: 2,
-                child: DropdownButtonFormField<String?>(
-                  value: selectedStatus,
-                  items: statusOptions.map((s) => DropdownMenuItem<String?>(
-                    value: s['value'],
-                    child: Text(s['label'],
-                      style: TextStyle(
-                        color: s['value'] == 'Accepted'
-                            ? Color(0xFF388E3C)
-                            : s['value'] == 'Submitted'
-                                ? Color(0xFFC62828)
-                                : s['value'] == 'Declined'
-                                    ? Colors.grey
-                                    : Color(0xFF4E342E),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  )).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedStatus = value;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  ),
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF4E342E)),
-                  dropdownColor: Color(0xFFFFF8E1),
-                  menuMaxHeight: 300,
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 36,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8D6748),
-                    foregroundColor: Colors.white,
-                    textStyle: const TextStyle(
-                      fontFamily: 'Literata',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: () async {
-                    _fetchAllAuthors(page: 1);
-                  },
-                  child: const Text('Search'),
-                ),
-              ),
-            ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: nameController,
+      decoration: InputDecoration(
+        labelText: 'Author Name',
+        border: OutlineInputBorder(),
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.book),
+          onPressed: () {},
+        ),
+      ),
+      style: const TextStyle(fontSize: 14),
+    );
+  }
+
+  Widget _buildCountryDropdown() {
+    return DropdownSearch<Map<String, dynamic>>(
+      items: countries,
+      itemAsString: (c) => c['name'] ?? '',
+      selectedItem: selectedCountry,
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          labelText: 'Country',
+          border: OutlineInputBorder(),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            labelText: 'Search country',
+            prefixIcon: Icon(Icons.search),
           ),
         ),
+      ),
+      onChanged: (value) {
+        setState(() {
+          selectedCountry = value;
+        });
+      },
+      validator: (value) {
+        if (value == null) return 'Country is required';
+        return null;
+      },
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return DropdownButtonFormField<String?>(
+      value: selectedStatus,
+      items: statusOptions.map((s) => DropdownMenuItem<String?>(
+        value: s['value'],
+        child: Text(s['label'],
+          style: TextStyle(
+            color: s['value'] == 'Accepted'
+                ? Color(0xFF388E3C)
+                : s['value'] == 'Submitted'
+                    ? Color(0xFFC62828)
+                    : s['value'] == 'Declined'
+                        ? Colors.grey
+                        : Color(0xFF4E342E),
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      )).toList(),
+      onChanged: (value) {
+        setState(() {
+          selectedStatus = value;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Status',
+        border: OutlineInputBorder(),
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      ),
+      style: const TextStyle(fontSize: 14, color: Color(0xFF4E342E)),
+      dropdownColor: Color(0xFFFFF8E1),
+      menuMaxHeight: 300,
+    );
+  }
+
+  Widget _buildSearchButton() {
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF8D6748),
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(
+            fontFamily: 'Literata',
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        onPressed: () async {
+          _fetchAllAuthors(page: 1);
+        },
+        child: const Text('Search'),
       ),
     );
   }
@@ -284,22 +304,38 @@ class _AuthorListState extends State<AuthorList> {
       );
     }
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: Authors!.items!.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7, // Adjust for your layout
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.62, // slightly tighter
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount;
+        if (constraints.maxWidth < 600) {
+          crossAxisCount = 2; 
+        } else if (constraints.maxWidth < 900) {
+          crossAxisCount = 4; 
+        } else if (constraints.maxWidth < 1200) {
+          crossAxisCount = 6; 
+        } else {
+          crossAxisCount = 7; 
+        }
+
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: constraints.maxWidth < 600 ? 16.0 : 24.0,
+                  vertical: 8.0,
+                ),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: Authors!.items!.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: constraints.maxWidth < 600 ? 8 : 12,
+                    mainAxisSpacing: constraints.maxWidth < 600 ? 8 : 12,
+                    childAspectRatio: constraints.maxWidth < 600 ? 0.7 : 0.62,
+                  ),
               itemBuilder: (context, index) {
                 final author = Authors!.items![index];
                 final hasImage = author.photoUrl != null && author.photoUrl!.isNotEmpty;
@@ -314,8 +350,6 @@ class _AuthorListState extends State<AuthorList> {
                     }
                     imageUrl = '$base/${author.photoUrl}';
                   }
-                  print('[AuthorList] author.photoUrl: \\${author.photoUrl}');
-                  print('[AuthorList] imageUrl: \\${imageUrl}');
                 }
                 return GestureDetector(
                   onTap: () async {
@@ -440,24 +474,65 @@ class _AuthorListState extends State<AuthorList> {
                                         ),
                                       );
                                       if (confirm == true) {
-                                        final success = await authorProvider.delete(author.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Row(
-                                              children: [
-                                                Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
-                                                SizedBox(width: 12),
-                                                Text(success ? 'Author deleted.' : 'Failed to delete author.'),
-                                              ],
+                                        final errorMessage = await authorProvider.delete(author.id);
+                                        if (errorMessage == null) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  Icon(Icons.check_circle, color: Colors.white),
+                                                  SizedBox(width: 12),
+                                                  Text('Author deleted successfully.'),
+                                                ],
+                                              ),
+                                              backgroundColor: Color(0xFF4CAF50),
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
                                             ),
-                                            backgroundColor: success ? Color(0xFF4CAF50) : Color(0xFFF44336),
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(8),
+                                          );
+                                          _fetchAllAuthors(page: currentPage);
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  Icon(Icons.error, color: Colors.white),
+                                                  SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          'Cannot Delete Author',
+                                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                                        ),
+                                                        SizedBox(height: 4),
+                                                        Text(
+                                                          errorMessage,
+                                                          style: TextStyle(fontSize: 12),
+                                                        ),
+                                                        SizedBox(height: 4),
+                                                        Text(
+                                                          'Please remove or change the author from all books first.',
+                                                          style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              backgroundColor: Color(0xFFFF9800),
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              duration: Duration(seconds: 8),
                                             ),
-                                          ),
-                                        );
-                                        if (success) _fetchAllAuthors(page: currentPage);
+                                          );
+                                        }
                                       }
                                     },
                                   ),
@@ -481,6 +556,8 @@ class _AuthorListState extends State<AuthorList> {
             ),
         ],
       ),
+        );
+      },
     );
   }
 
@@ -494,7 +571,7 @@ class _AuthorListState extends State<AuthorList> {
       ),
       child: Center(
         child: Text(
-          "📚", // Book emoji placeholder
+          "📚", 
           style: TextStyle(fontSize: 40),
         ),
       ),
@@ -502,16 +579,24 @@ class _AuthorListState extends State<AuthorList> {
   }
    Widget _buildPaginationControls() {
     if (totalPages <= 1) return SizedBox.shrink();
-    int maxPageButtons = 5;
-    int startPage = (currentPage - (maxPageButtons ~/ 2)).clamp(1, (totalPages - maxPageButtons + 1).clamp(1, totalPages));
-    int endPage = (startPage + maxPageButtons - 1).clamp(1, totalPages);
-    List<int> pageNumbers = [for (int i = startPage; i <= endPage; i++) i];
-
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 600;
+          int maxPageButtons = isSmallScreen ? 3 : 5;
+          
+          int startPage = (currentPage - (maxPageButtons ~/ 2)).clamp(1, (totalPages - maxPageButtons + 1).clamp(1, totalPages));
+          int endPage = (startPage + maxPageButtons - 1).clamp(1, totalPages);
+          List<int> pageNumbers = [for (int i = startPage; i <= endPage; i++) i];
+
+          return Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 12 : 14,
+                vertical: 4,
+              ),
           decoration: BoxDecoration(
             color: Color(0xFFFFF8E1),
             borderRadius: BorderRadius.circular(24),
@@ -524,8 +609,10 @@ class _AuthorListState extends State<AuthorList> {
             ],
             border: Border.all(color: Color(0xFF8D6748), width: 1),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
             children: [
               IconButton(
                 icon: Icon(Icons.first_page, size: 20, color: currentPage == 1 ? Colors.grey : Color(0xFF8D6748)),
@@ -596,6 +683,8 @@ class _AuthorListState extends State<AuthorList> {
             ],
           ),
         ),
+      );
+        },
       ),
     );
   }

@@ -511,10 +511,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final goalController = TextEditingController(text: challenge.goal.toString());
     final currentYear = DateTime.now().year;
     
+    String? goalError;
     final result = await showDialog<int>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TweenAnimationBuilder<double>(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 300),
         curve: Curves.elasticOut,
@@ -561,25 +563,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     curve: Curves.easeOutBack,
                     builder: (context, fieldValue, child) => Transform.scale(
                       scale: fieldValue,
-                      child: TextField(
-                        controller: goalController,
-                        keyboardType: TextInputType.number,
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          labelText: 'Number of books',
-                          hintText: 'e.g., 30',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.book, color: Color(0xFF8D6748)),
+                                              child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: goalController,
+                              keyboardType: TextInputType.number,
+                              autofocus: true,
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  goalError = null;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Number of books',
+                                hintText: 'e.g., 30',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF8D6748), width: 2),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                prefixIcon: const Icon(Icons.book, color: Color(0xFF8D6748)),
+                              ),
+                            ),
+                            if (goalError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  goalError!,
+                                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
                     ),
                   ),
                 ],
@@ -607,12 +627,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final goal = int.tryParse(goalController.text);
                           
                           if (goal == null || goal < 1 || goal > 1000) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Goal must be between 1 and 1000'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            setDialogState(() {
+                              goalError = 'Goal must be between 1 and 1000';
+                            });
                             return;
                           }
                           
@@ -640,7 +657,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-    );
+    ));
 
     if (result != null) {
       try {

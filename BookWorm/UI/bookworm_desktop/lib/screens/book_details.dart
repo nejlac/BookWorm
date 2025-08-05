@@ -44,7 +44,6 @@ class _BookDetails extends State<BookDetails> {
       genreProvider = Provider.of<GenreProvider>(context, listen: false);
     authorProvider = Provider.of<AuthorProvider>(context, listen: false);
     
-    // Set existing cover path if editing
     if (widget.book?.coverImagePath != null) {
       _existingCoverPath = widget.book!.coverImagePath;
     }
@@ -63,17 +62,28 @@ class _BookDetails extends State<BookDetails> {
     }
   
    initFormData() async {
-    final loadedGenres = await genreProvider.getAllGenres();
-    final loadedAuthors = await authorProvider.getAllAuthors();
-    setState(() {
-      genres = SearchResult<Genre>(
-        items: loadedGenres.whereType<Genre>().toList(),
+    try {
+      final loadedGenres = await genreProvider.getAllGenresForDropdown();
+      final loadedAuthors = await authorProvider.getAllAuthors();
+      setState(() {
+        genres = SearchResult<Genre>(
+          items: loadedGenres,
+        );
+        authors = SearchResult<Author>(
+          items: loadedAuthors.whereType<Author>().toList(),
+        );
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        genres = SearchResult<Genre>(items: []);
+        authors = SearchResult<Author>(items: []);
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load data: '+e.toString())),
       );
-      authors = SearchResult<Author>(
-        items: loadedAuthors.whereType<Author>().toList(),
-      );
-      isLoading = false;
-    });
+    }
    }
 
     @override
@@ -376,7 +386,6 @@ class _BookDetails extends State<BookDetails> {
              
               widget.isEditMode ? Column(
                 children: [
-                  // Hidden field to always store authorId as int
                   FormBuilderField<int>(
                     name: 'authorId',
                     builder: (field) => SizedBox.shrink(),
@@ -680,14 +689,12 @@ class _BookDetails extends State<BookDetails> {
                ),
              );
              if (result == true) {
-               // Refresh authors and select the new one
                final loadedAuthors = await authorProvider.getAllAuthors();
                setState(() {
                  authors = SearchResult<Author>(
                    items: loadedAuthors.whereType<Author>().toList(),
                  );
                });
-               // Find the most recently added author (by max id)
                final newAuthor = authors?.items?.reduce((a, b) => a.id > b.id ? a : b);
                if (newAuthor != null) {
                  formKey.currentState?.fields['authorId']?.didChange(newAuthor.id);
@@ -810,7 +817,7 @@ class _BookDetails extends State<BookDetails> {
        child: ElevatedButton(
          onPressed: isSaving ? null : _saveChanges,
          style: ElevatedButton.styleFrom(
-           backgroundColor: Color(0xFF8D6E63), // Brown
+           backgroundColor: Color(0xFF8D6E63), 
            foregroundColor: Colors.white,
            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
            shape: RoundedRectangleBorder(
@@ -861,7 +868,6 @@ class _BookDetails extends State<BookDetails> {
      try {
        final formData = formKey.currentState!.value;
        
-       // Convert string values back to appropriate types
        final selectedGenreNames = formData["genres"] ?? [];
        final selectedGenreIds = genres?.items
            ?.where((genre) => selectedGenreNames.contains(genre.name))
@@ -875,10 +881,9 @@ class _BookDetails extends State<BookDetails> {
          "publicationYear": int.tryParse(formData["publicationYear"] ?? "") ?? 0,
          "pageCount": int.tryParse(formData["pageCount"] ?? "") ?? 0,
          "genreIds": selectedGenreIds,
-         "coverImagePath": _existingCoverPath, // Preserve existing cover path
+         "coverImagePath": _existingCoverPath, 
        };
 
-       // Duplicate check
        final title = formData["title"]?.toString().trim() ?? "";
        final authorId = formData["authorId"] ?? 0;
        final excludeId = widget.book?.id;
@@ -925,7 +930,6 @@ class _BookDetails extends State<BookDetails> {
            ),
          );
        } else {
-         // Updating existing book
          await bookProvider.updateWithCover(widget.book!.id, request, _selectedImageFile);
          
          ScaffoldMessenger.of(context).showSnackBar(

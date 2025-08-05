@@ -12,8 +12,11 @@ namespace BookWormWebAPI.Controllers
     [AllowAnonymous]
     public class CountryController : BaseCRUDController<CountryResponse, CountrySearchObject, CountryCreateUpdateRequest, CountryCreateUpdateRequest>
     {
+        private readonly ICountryService _countryService;
+
         public CountryController(ICountryService countryService) : base(countryService)
         {
+            _countryService = countryService;
         }
 
         [HttpGet]
@@ -22,9 +25,20 @@ namespace BookWormWebAPI.Controllers
         {
             if (search == null)
                 search = new CountrySearchObject();
-            if (!search.PageSize.HasValue || search.PageSize.Value == 0)
-                search.PageSize = 500; 
             return await base.Get(search);
+        }
+
+        [HttpDelete("{id}")]
+        public override async Task<bool> Delete(int id)
+        {
+            try
+            {
+                return await _countryService.DeleteAsync(id);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
         }
     }
 }

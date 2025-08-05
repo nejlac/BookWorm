@@ -75,8 +75,124 @@ class LoginPageApp extends StatelessWidget {
   }
 }
 
-class LoginPage extends StatelessWidget {
-   LoginPage({super.key});
+class LoginPage extends StatefulWidget {
+  LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  bool _isLoading = false;
+
+  void _login() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      var userProvider = UserProvider();
+      var user = await userProvider.login(usernameController.text, passwordController.text);
+      
+      if (user != null) {
+        AuthProvider.username = usernameController.text;
+        AuthProvider.password = passwordController.text;
+        
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            Future.delayed(const Duration(seconds: 1), () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            });
+            return Dialog(
+              backgroundColor: const Color(0xFFFFF8E1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.7, end: 1.0),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: value,
+                        child: child,
+                      ),
+                      child: Icon(Icons.menu_book_rounded, color: Color(0xFF8D6748), size: 60),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      "Login Successful!",
+                      style: TextStyle(
+                        fontFamily: 'Literata',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color: Color(0xFF8D6748),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Welcome to BookWorm!",
+                      style: TextStyle(
+                        fontFamily: 'Literata',
+                        fontSize: 16,
+                        color: Color(0xFF8D6748),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.7, end: 1.0),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: value,
+                        child: child,
+                      ),
+                      child: Icon(Icons.favorite, color: Color(0xFFe57373), size: 32),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MasterScreen(
+              child: BookList(),
+              title: "Book List",
+              selectedIndex: 0,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Login Error"),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK")
+            )
+          ],
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,114 +281,24 @@ class LoginPage extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      onPressed: () async {
-                          AuthProvider.username = usernameController.text;
-                        AuthProvider.password = passwordController.text;
-                    try {
-                      print("Username: ${AuthProvider.username}, Password: ${AuthProvider.password}");
-                      var bookProvider = BookProvider();
-                      var books = await bookProvider.get();
-
-
-await showDialog(
-  context: context,
-  barrierDismissible: false,
-  builder: (context) {
-    Future.delayed(const Duration(seconds:1 ), () {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-    });
-    return Dialog(
-      backgroundColor: const Color(0xFFFFF8E1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.7, end: 1.0),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.elasticOut,
-              builder: (context, value, child) => Transform.scale(
-                scale: value,
-                child: child,
-              ),
-              child: Icon(Icons.menu_book_rounded, color: Color(0xFF8D6748), size: 60),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              "Login Successful!",
-              style: TextStyle(
-                fontFamily: 'Literata',
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                color: Color(0xFF8D6748),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Welcome to BookWorm!",
-              style: TextStyle(
-                fontFamily: 'Literata',
-                fontSize: 16,
-                color: Color(0xFF8D6748),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.7, end: 1.0),
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.elasticOut,
-              builder: (context, value, child) => Transform.scale(
-                scale: value,
-                child: child,
-              ),
-              child: Icon(Icons.favorite, color: Color(0xFFe57373), size: 32),
-            ),
-          ],
-        ),
-      ),
-    );
-  },
-);
-
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => MasterScreen(
-      child: BookList(),
-      title: "Book List",
-      selectedIndex: 0,
-    ),
-  ),
-);
-                    } on Exception catch (e) {
-                      showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                                title: Text("Error"),
-                                content: Text(e.toString()),
-                                actions: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text("OK"))
-                                ],
-                              ));
-                    } catch (e) {
-                      print(e);
-                    }
-
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.login, size: 20),
-                          SizedBox(width: 12),
-                          Text('Login'),
-                        ],
-                      ),
+                      onPressed: _isLoading ? null : _login,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.login, size: 20),
+                                SizedBox(width: 12),
+                                Text('Login'),
+                              ],
+                            ),
                     ),
                   ),
                 ],

@@ -41,15 +41,16 @@ GenreStatistic? _touchedGenre;
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 1200; 
+    
     return Scaffold(
-   
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-        
               Row(
                 children: [
                   const Spacer(),
@@ -67,12 +68,58 @@ GenreStatistic? _touchedGenre;
                 ],
               ),
               const SizedBox(height: 24),
+              
+              if (isSmallScreen) ...[
+                _buildMostReadBooksSection(),
+                const SizedBox(height: 24),
+                _buildStatsCardsSection(),
+                const SizedBox(height: 24),
+                _buildAgeDistributionSection(),
+                const SizedBox(height: 24),
+                _buildGenreChartSection(),
+              ] else ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     flex: 3,
-                    child: Column(
+                      child: _buildMostReadBooksSection(),
+                    ),
+                    const SizedBox(width: 36),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: _buildStatsCardsSection(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: _buildAgeDistributionSection(),
+                    ),
+                    const SizedBox(width: 32),
+                    Expanded(
+                      flex: 2,
+                      child: _buildGenreChartSection(),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMostReadBooksSection() {
+    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Most read books', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
@@ -153,19 +200,14 @@ GenreStatistic? _touchedGenre;
                           },
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 36),
-                 Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
+    );
+  }
+
+  Widget _buildStatsCardsSection() {
+    return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 32),
-                        
-                          const SizedBox(height: 24),
                           _BeautifulStatCard(
                             label: 'Number of books',
                             future: _booksCount,
@@ -181,19 +223,11 @@ GenreStatistic? _touchedGenre;
                           ),
                           const SizedBox(height: 16),
                         ],
-                      ),
-                    ),
-                  )
+    );
+  }
 
-                ],
-              ),
-              
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                Expanded(
-  flex: 2,
-  child: Padding(
+  Widget _buildAgeDistributionSection() {
+    return Padding(
     padding: const EdgeInsets.all(16.0),
     child: Container(
       decoration: BoxDecoration(
@@ -327,15 +361,11 @@ GenreStatistic? _touchedGenre;
         ],
       ),
     ),
-  ),
-),
+    );
+  }
 
-                  const SizedBox(width: 32),
-                            Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 170.0),
-              child: Column(
+  Widget _buildGenreChartSection() {
+    return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   FutureBuilder<List<GenreStatistic>>(
@@ -465,20 +495,9 @@ GenreStatistic? _touchedGenre;
     ],
   ),
 );
-
                     },
                   ),
                 ],
-              ),
-            ),
-          ),
-
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -487,7 +506,6 @@ GenreStatistic? _touchedGenre;
     final now = DateTime.now();
     final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
-    // Fetch all data for the report
     final books = await _mostReadBooks;
     final booksCount = await _booksCount;
     final usersCount = await _usersCount;
@@ -730,23 +748,22 @@ class _BeautifulStatCard extends StatelessWidget {
 }
 
 Color _genreColor(String genreName) {
-  // Assign specific colors for common genres to avoid collisions
   switch (genreName.toLowerCase()) {
     case 'mistery':
     case 'mystery':
-      return const Color(0xFFCE93D8); // purple
+      return const Color(0xFFCE93D8); 
     case 'adventure':
-      return const Color(0xFFFFAB91); // orange
+      return const Color(0xFFFFAB91); 
     case 'romance':
     case 'romace':
-      return const Color(0xFFFFF176); // yellow
+      return const Color(0xFFFFF176); 
     case 'classics':
-      return const Color(0xFFD7CCC8); // beige
+      return const Color(0xFFD7CCC8); 
     case 'fantasy':
-      return const Color(0xFF80CBC4); // teal
+      return const Color(0xFF80CBC4); 
     case 'science fiction':
     case 'sci-fi':
-      return const Color(0xFFAED581); // green
+      return const Color(0xFFAED581); 
     default:
       final colors = [
         const Color(0xFFD7CCC8),

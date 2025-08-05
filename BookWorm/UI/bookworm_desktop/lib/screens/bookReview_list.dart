@@ -34,7 +34,7 @@ class _BookReviewListState extends State<BookReviewList> {
     {'value': 'True', 'label': 'Checked'},
     {'value': 'False', 'label': 'Not checked'},
   ];
-  bool ratingSortAsc = false; // false = descending, true = ascending
+  bool ratingSortAsc = false;
   
 
     @override
@@ -55,7 +55,6 @@ class _BookReviewListState extends State<BookReviewList> {
         "pageSize": pageSize,
         "isChecked": selectedStatus,
       };
-      print("Review filter: $filter");
       bookReviews = await bookReviewProvider.get(filter: filter);
       setState(() {
         this.bookReviews = bookReviews;
@@ -70,8 +69,6 @@ class _BookReviewListState extends State<BookReviewList> {
       debugPrint("Error fetching authors: $e");
     }
   }
-
-  // Helper to truncate review to 5 words
   String truncateReview(String? review) {
     if (review == null) return 'No review';
     final words = review.split(' ');
@@ -213,7 +210,6 @@ class _BookReviewListState extends State<BookReviewList> {
                 ),
               ),
               const SizedBox(width: 18),
-              // Rating sort button
               SizedBox(
                 height: 36,
                 child: OutlinedButton.icon(
@@ -248,7 +244,6 @@ class _BookReviewListState extends State<BookReviewList> {
   }
   Widget _buildResultView() {
     final totalCount = bookReviews?.totalCount ?? 0;
-    // Sort reviews by rating if needed
     List<BookReview>? sortedItems = bookReviews?.items;
     if (sortedItems != null) {
       sortedItems = List<BookReview>.from(sortedItems);
@@ -369,7 +364,6 @@ class _BookReviewListState extends State<BookReviewList> {
         try {
           await bookReviewProvider.checkReview(e.id);
         } catch (err) {
-          // Optionally show error
         }
       }
       await showDialog(
@@ -437,7 +431,6 @@ class _BookReviewListState extends State<BookReviewList> {
           ),
         ),
       );
-      // Refresh the table after dialog closes
       await _fetchAllBookReviews(page: currentPage);
     },
     splashRadius: 20,

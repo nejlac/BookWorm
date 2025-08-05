@@ -41,25 +41,36 @@ class _AuthorDetailsState extends State<AuthorDetails> {
   }
 
   Future<void> _loadData() async {
-    await countryProvider.fetchCountries();
-    setState(() {
-      countries = countryProvider.countries;
-      if (widget.author != null && widget.author!.countryId != null) {
-        selectedCountry = countries.firstWhere(
-          (c) => c.id == widget.author!.countryId,
-          orElse: () => countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown'),
-        );
-      } else {
-        selectedCountry = countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown');
-      }
-      _existingPhotoUrl = widget.author?.photoUrl;
-      isLoading = false;
-    });
+    try {
+      final allCountries = await countryProvider.getAllCountriesForDropdown();
+      setState(() {
+        countries = allCountries;
+        if (widget.author != null && widget.author!.countryId != null) {
+          selectedCountry = countries.firstWhere(
+            (c) => c.id == widget.author!.countryId,
+            orElse: () => countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown'),
+          );
+        } else {
+          selectedCountry = countries.isNotEmpty ? countries.first : Country(id: -1, name: 'Unknown');
+        }
+        _existingPhotoUrl = widget.author?.photoUrl;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        countries = [];
+        selectedCountry = Country(id: -1, name: 'Unknown');
+        _existingPhotoUrl = widget.author?.photoUrl;
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load countries: '+e.toString())),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('[AuthorDetails] build() called');
     if (isLoading) {
       return Center(child: CircularProgressIndicator());
     }
@@ -158,73 +169,81 @@ class _AuthorDetailsState extends State<AuthorDetails> {
                     },
                   ),
                   SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FormBuilderDateTimePicker(
-                          name: 'dateOfBirth',
-                          inputType: InputType.date,
-                          decoration: InputDecoration(
-                            labelText: 'Date of Birth',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            prefixIcon: Icon(Icons.cake, color: Color(0xFF8D6748)),
-                            filled: true,
-                            fillColor: Color(0xFFFFF8E1),
-                          ),
-                          enabled: widget.isEditMode || widget.isAddMode,
-                          validator: (val) {
-                            if (val == null) return 'Date of birth is required';
-                            final now = DateTime.now();
-                            final today = DateTime(now.year, now.month, now.day);
-                            if (val.isAfter(today)) return 'Date of birth cannot be in the future';
-                            return null;
-                          },
-                          firstDate: DateTime(1),
-                        ),
+                  FormBuilderDateTimePicker(
+                    name: 'dateOfBirth',
+                    inputType: InputType.date,
+                    decoration: InputDecoration(
+                      labelText: 'Date of Birth',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: FormBuilderDateTimePicker(
-                          name: 'dateOfDeath',
-                          inputType: InputType.date,
-                          decoration: InputDecoration(
-                            labelText: 'Date of Death',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            prefixIcon: Icon(Icons.event, color: Color(0xFF8D6748)),
-                            suffixIcon: widget.isEditMode || widget.isAddMode
-                                ? IconButton(
-                                    icon: Icon(Icons.clear, color: Colors.red),
-                                    onPressed: () {
-                                      formKey.currentState?.fields['dateOfDeath']?.didChange(null);
-                                    },
-                                  )
-                                : null,
-                            filled: true,
-                            fillColor: Color(0xFFFFF8E1),
-                          ),
-                          enabled: widget.isEditMode || widget.isAddMode,
-                          validator: (val) {
-                            if (val != null) {
-                              final now = DateTime.now();
-                              final today = DateTime(now.year, now.month, now.day);
-                              if (val.isAfter(today)) return 'Date of death cannot be in the future';
-                              
-                              // Check if date of death is before date of birth
-                              final dateOfBirth = formKey.currentState?.value['dateOfBirth'] as DateTime?;
-                              if (dateOfBirth != null && val.isBefore(dateOfBirth)) {
-                                return 'Date of death cannot be before date of birth';
-                              }
-                            }
-                            return null;
-                          },
-                          firstDate: DateTime(1),
-                        ),
+                      prefixIcon: Icon(Icons.cake, color: Color(0xFF8D6748)),
+                      filled: true,
+                      fillColor: Color(0xFFFFF8E1),
+                    ),
+                    enabled: widget.isEditMode || widget.isAddMode,
+                    validator: (val) {
+                      if (val == null) return 'Date of birth is required';
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
+                      if (val.isAfter(today)) return 'Date of birth cannot be in the future';
+                      
+                      final minimumAge = DateTime.now().subtract(Duration(days: 13 * 365));
+                      if (val.isAfter(minimumAge)) return 'Author must be at least 13 years old';
+                      return null;
+                    },
+                    firstDate: DateTime(1),
+                  ),
+                  SizedBox(height: 14),
+                  FormBuilderDateTimePicker(
+                    name: 'dateOfDeath',
+                    inputType: InputType.date,
+                    decoration: InputDecoration(
+                      labelText: 'Date of Death (Optional)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      prefixIcon: Icon(Icons.event, color: Color(0xFF8D6748)),
+                      suffixIcon: widget.isEditMode || widget.isAddMode
+                          ? Container(
+                              margin: EdgeInsets.only(right: 8),
+                              child: InkWell(
+                                onTap: () {
+                                  final formState = formKey.currentState;
+                                  if (formState != null) {
+                                    formState.fields['dateOfDeath']?.reset();
+                                    final currentValues = Map<String, dynamic>.from(formState.value);
+                                    currentValues['dateOfDeath'] = null;
+                                    formState.patchValue(currentValues);
+                                    setState(() {});
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Icon(Icons.clear, color: Colors.red, size: 20),
+                                ),
+                              ),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Color(0xFFFFF8E1),
+                    ),
+                    enabled: widget.isEditMode || widget.isAddMode,
+                    validator: (val) {
+                      if (val != null) {
+                        final now = DateTime.now();
+                        final today = DateTime(now.year, now.month, now.day);
+                        if (val.isAfter(today)) return 'Date of death cannot be in the future';
+                        
+                        final dateOfBirth = formKey.currentState?.value['dateOfBirth'] as DateTime?;
+                        if (dateOfBirth != null && val.isBefore(dateOfBirth)) {
+                          return 'Date of death cannot be before date of birth';
+                        }
+                      }
+                      return null;
+                    },
+                    firstDate: DateTime(1),
                   ),
                   SizedBox(height: 14),
                   DropdownSearch<Country>(
@@ -441,8 +460,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
         }
         imageUrl = '$base/${_existingPhotoUrl}';
       }
-      print('[AuthorDetails] _existingPhotoUrl: \\${_existingPhotoUrl}');
-      print('[AuthorDetails] imageUrl: \\${imageUrl}');
     }
     return Center(
       child: Column(
@@ -588,7 +605,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     final dateOfDeath = formData['dateOfDeath'] as DateTime?;
     final excludeId = widget.author?.id;
     
-    // Frontend validation matching backend rules
     final validationErrors = _validateAuthorData(name, dateOfBirth, dateOfDeath);
     if (validationErrors.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -653,14 +669,13 @@ class _AuthorDetailsState extends State<AuthorDetails> {
             ? (formData['dateOfDeath'] as DateTime).toIso8601String()
             : null,
         "countryId": country.id,
-        "photoUrl": _existingPhotoUrl, // Preserve existing photo URL
+        "photoUrl": _existingPhotoUrl, 
       };
       if (widget.isAddMode) {
         final inserted = await authorProvider.insert(request);
         if (_selectedImageFile != null && inserted.id != null) {
           try {
             await authorProvider.uploadPhoto(inserted.id, _selectedImageFile!);
-            // Fetch updated author to get new photoUrl
             final updated = await authorProvider.getById(inserted.id);
             setState(() {
               _existingPhotoUrl = updated.photoUrl;
@@ -684,7 +699,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
               ),
             );
           }
-          // Show success snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -707,7 +721,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
         if (_selectedImageFile != null) {
           try {
             await authorProvider.uploadPhoto(widget.author!.id, _selectedImageFile!);
-            // Fetch updated author to get new photoUrl
             final updated = await authorProvider.getById(widget.author!.id);
             setState(() {
               _existingPhotoUrl = updated.photoUrl;
@@ -731,7 +744,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
               ),
             );
           }
-          // Show success snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -753,7 +765,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       Navigator.of(context).pop(true);
     } catch (e) {
       String errorMsg = e.toString();
-      // Try to parse common backend error formats for duplicate author
       if (errorMsg.contains('already exists') ||
           errorMsg.contains('An author with the name') ||
           errorMsg.contains('AuthorException')) {
@@ -763,7 +774,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       } else if (errorMsg.contains('Exception:') && errorMsg.contains('already exists')) {
         errorMsg = 'An author with this name and date of birth already exists.';
       } else if (errorMsg.contains('Exception:')) {
-        // Try to extract the backend message
         final parts = errorMsg.split('Exception:');
         if (parts.length > 1) {
           errorMsg = parts.last.trim();
@@ -771,7 +781,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       } else if (errorMsg.contains('SocketException')) {
         errorMsg = 'Could not connect to the server. Please check your internet connection.';
       } else if (errorMsg.contains('HttpException') && errorMsg.contains('message')) {
-        // Try to extract message from a JSON error body
         final match = RegExp(r'message[":\s]+([^\"]+)').firstMatch(errorMsg);
         if (match != null && match.groupCount > 0) {
           errorMsg = match.group(1)!;
@@ -805,14 +814,11 @@ class _AuthorDetailsState extends State<AuthorDetails> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Name validation
     if (name.isEmpty) {
       errors.add('Name is required.');
     } else if (name.length > 255) {
       errors.add('Name must not exceed 255 characters.');
     }
-
-    // Biography validation
     final biography = formKey.currentState?.value['biography']?.toString().trim() ?? '';
     if (biography.isEmpty) {
       errors.add('Biography is required.');
@@ -820,14 +826,17 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       errors.add('Biography must not exceed 1000 characters.');
     }
 
-    // Date of birth validation
     if (dateOfBirth == null) {
       errors.add('Date of birth is required.');
     } else if (dateOfBirth.isAfter(today)) {
       errors.add('Date of birth cannot be in the future.');
+    } else {
+      final minimumAge = DateTime.now().subtract(Duration(days: 13 * 365));
+      if (dateOfBirth.isAfter(minimumAge)) {
+        errors.add('Author must be at least 13 years old.');
+      }
     }
 
-    // Date of death validation
     if (dateOfDeath != null) {
       if (dateOfDeath.isAfter(today)) {
         errors.add('Date of death cannot be in the future.');
@@ -838,7 +847,6 @@ class _AuthorDetailsState extends State<AuthorDetails> {
       }
     }
 
-    // Country validation
     final country = selectedCountry;
     if (country == null) {
       errors.add('Country is required.');

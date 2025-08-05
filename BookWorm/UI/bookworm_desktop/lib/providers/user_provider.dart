@@ -11,15 +11,76 @@ class UserProvider extends BaseProvider<User> {
   User fromJson(dynamic json) {
     return User.fromJson(json);
   }
-  String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
+
+  Future<User?> login(String username, String password) async {
+    try {
+      var url = "${BaseProvider.baseUrl!}users/admin-login";
+      var uri = Uri.parse(url);
+      
+      var requestBody = jsonEncode({
+        'username': username,
+        'password': password,
+      });
+      
+      var headers = createHeaders();
+      headers['Content-Type'] = 'application/json';
+      
+      var response = await http.post(uri, headers: headers, body: requestBody);
+      
+      
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        return fromJson(data);
+      } else if (response.statusCode == 401) {
+        throw Exception("Invalid username or password");
+      } else if (response.statusCode == 403) {
+        throw Exception("Access denied. Only users with 'User' role can access the mobile app.");
+      } else if (response.statusCode == 500) {
+        try {
+          var errorData = jsonDecode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          } else {
+            throw Exception("Server error. Please try again later.");
+          }
+        } catch (parseError) {
+          throw Exception("Server error. Please try again later.");
+        }
+      } else {
+        try {
+          var errorData = jsonDecode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          } else {
+            throw Exception("Login failed. Please try again.");
+          }
+        } catch (parseError) {
+          throw Exception("Login failed. Please try again.");
+        }
+      }
+    } catch (e) {
+    
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection')) {
+        throw Exception("Network error. Please check your connection and try again.");
+      } else if (e.toString().contains('TimeoutException')) {
+        throw Exception("Request timeout. Please try again.");
+      } else {
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring('Exception: '.length);
+        }
+        throw Exception(errorMessage);
+      }
+    }
+  }
   
 
   
   Future<void> uploadPhoto(int userId, File photoFile) async {
     try {
-      print("Uploading user photo. File path: "+photoFile.path);
-      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$userId/cover";
-      print("Upload URL: $url");
+      var url = "${BaseProvider.baseUrl}users/$userId/cover";
+      
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
       var headers = createHeaders();
@@ -28,7 +89,6 @@ class UserProvider extends BaseProvider<User> {
       var stream = http.ByteStream(photoFile.openRead());
       var length = await photoFile.length();
       var filename = photoFile.path.split('/').last;
-      print("Creating multipart file: $filename, size: $length");
       var multipartFile = http.MultipartFile(
         'coverImage',
         stream,
@@ -36,31 +96,25 @@ class UserProvider extends BaseProvider<User> {
         filename: filename,
       );
       request.files.add(multipartFile);
-      print("Sending request...");
       var streamedResponse = await request.send();
-      print("Response status: streamedResponse.statusCode");
       var response = await http.Response.fromStream(streamedResponse);
-      print("Response body: response.body");
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        print("Upload failed with status: response.statusCode");
-        print("Response body: response.body");
+        
         throw Exception("Failed to upload user photo: response.statusCode - response.body");
       }
-      print("Upload successful!");
+     
     } catch (e) {
-      print("Error in uploadPhoto: $e");
       rethrow;
     }
   }
 
   Future<User> getById(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$id";
+    var url = "${BaseProvider.baseUrl}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       var data = jsonDecode(response.body);
-      print("User getById response: $data");
       return fromJson(data);
     } else {
       throw Exception("Failed to get user: \\${response.statusCode} - \\${response.body}");
@@ -68,14 +122,13 @@ class UserProvider extends BaseProvider<User> {
   }
 
   Future<bool> delete(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}users/$id";
+    var url = "${BaseProvider.baseUrl}users/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.delete(uri, headers: headers);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
     } else {
-      print("Failed to delete user: \\${response.statusCode} - \\${response.body}");
       return false;
     }
   }

@@ -25,7 +25,7 @@ namespace BookWorm.Services
         protected override IQueryable<Genre> ApplyFilter(IQueryable<Genre> query, GenreSearchObject search)
         {
             if (!string.IsNullOrEmpty(search.Name))
-                query = query.Where(g => g.Name.Contains(search.Name));
+                query = query.Where(g => g.Name.ToLower().Contains(search.Name.ToLower()));
             return query;
         }
 
@@ -44,6 +44,22 @@ namespace BookWorm.Services
             {
                 throw new Exception($"A genre with the name '{request.Name}' already exists.");
             }
+        }
+
+        public override async Task<bool> DeleteAsync(int id)
+        {
+            var genre = await _context.Genres.FindAsync(id);
+            if (genre == null)
+                return false;
+
+            var hasBooks = await _context.BookGenres.AnyAsync(bg => bg.GenreId == id);
+            if (hasBooks)
+                throw new Exception("Cannot delete genre who is linked to one or more books.");
+
+            await BeforeDelete(genre);
+            _context.Genres.Remove(genre);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 } 

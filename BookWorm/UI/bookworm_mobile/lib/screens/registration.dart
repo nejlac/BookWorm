@@ -24,7 +24,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   List<Country> countries = [];
   Country? selectedCountry;
   String? errorMsg;
-  String? duplicateError;
+  String? usernameError;
+  String? emailError;
   Timer? _usernameDebounceTimer;
   Timer? _emailDebounceTimer;
 
@@ -100,7 +101,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _register() async {
     if (!formKey.currentState!.saveAndValidate()) return;
-    setState(() { isLoading = true; errorMsg = null; });
+    setState(() { isLoading = true; errorMsg = null; usernameError = null; emailError = null; });
     final formData = formKey.currentState!.value;
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -254,19 +255,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 final exists = await _checkUsernameExists(value.trim());
                                 if (mounted) {
                                   setState(() {
-                                    duplicateError = exists ? 'A user with the username "${value.trim()}" already exists.' : null;
+                                    usernameError = exists ? 'A user with the username "${value.trim()}" already exists.' : null;
                                   });
                                 }
                               });
                             } else {
                               setState(() {
-                                duplicateError = null;
+                                usernameError = null;
                               });
                             }
                           },
                           validator: (val) {
                             if (val == null || val.isEmpty) return 'Username is required';
-                            if (duplicateError != null && duplicateError!.contains('username')) return duplicateError;
+                            if (usernameError != null) return usernameError;
                             return null;
                           },
                         ),
@@ -281,13 +282,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 final exists = await _checkEmailExists(value.trim());
                                 if (mounted) {
                                   setState(() {
-                                    duplicateError = exists ? 'A user with the email "${value.trim()}" already exists.' : null;
+                                    emailError = exists ? 'A user with the email "${value.trim()}" already exists.' : null;
                                   });
                                 }
                               });
                             } else {
                               setState(() {
-                                duplicateError = null;
+                                emailError = null;
                               });
                             }
                           },
@@ -296,7 +297,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             if (val.length > 100) return 'Email must be at most 100 characters';
                             final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
                             if (!emailRegex.hasMatch(val)) return 'Enter a valid email address';
-                            if (duplicateError != null && duplicateError!.contains('email')) return duplicateError;
+                            if (emailError != null) return emailError;
                             return null;
                           },
                         ),

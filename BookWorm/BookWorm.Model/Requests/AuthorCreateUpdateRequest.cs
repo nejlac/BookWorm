@@ -34,6 +34,12 @@ namespace BookWorm.Model.Requests
                 yield return new ValidationResult("Date of birth cannot be in the future.", new[] { nameof(DateOfBirth) });
             }
 
+            var minimumAge = DateTime.Today.AddYears(-13);
+            if (DateOfBirth > minimumAge)
+            {
+                yield return new ValidationResult("Author must be at least 13 years old.", new[] { nameof(DateOfBirth) });
+            }
+
             if (DateOfDeath.HasValue)
             {
                 if (DateOfDeath.Value > DateTime.Today)

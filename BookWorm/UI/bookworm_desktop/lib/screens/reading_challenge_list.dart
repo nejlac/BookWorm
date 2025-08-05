@@ -10,7 +10,7 @@ import '../model/book.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'dart:convert' as convert; // for base64Encode
+import 'dart:convert' as convert; 
 import '../providers/auth_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -30,7 +30,7 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
   List<BookChallenge> _challenges = [];
   List<BookChallenge> _allChallenges = [];
   Map<int, String> _usernames = {};
-  Map<int, User> _userCache = {}; // userId -> User
+  Map<int, User> _userCache = {}; 
   int _page = 1;
   int _pageSize = 10;
   int _totalCount = 0;
@@ -148,7 +148,7 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
           DataColumn(label: Text('Year', style: TextStyle(fontSize: 13))),
           DataColumn(label: Text('Progress', style: TextStyle(fontSize: 13))),
           DataColumn(label: Text('Status', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('View', style: TextStyle(fontSize: 13))), // New column
+          DataColumn(label: Text('View', style: TextStyle(fontSize: 13))), 
         ],
         rows: _challenges.map((challenge) {
           final progress = challenge.goal > 0
@@ -192,7 +192,6 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
     int pageCount = (_totalCount / _pageSize).ceil();
     if (pageCount == 0) pageCount = 1;
 
-    // Show a window of 10 pages around the current page
     int startPage = (_page - 5).clamp(1, (pageCount - 9).clamp(1, pageCount));
     int endPage = (startPage + 9).clamp(1, pageCount);
 
@@ -231,9 +230,83 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
  Widget _buildFilters() {
   TextEditingController _searchController = TextEditingController(text: _search);
   TextEditingController _yearController = TextEditingController(text: _year?.toString() ?? '');
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isSmallScreen = screenWidth < 1200;
+  
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
+    child: isSmallScreen
+        ? Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _status,
+                      isDense: true,
+                      decoration: InputDecoration(
+                        labelText: 'Is Completed',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text('All')),
+                        DropdownMenuItem(value: 'True', child: Text('Completed')),
+                        DropdownMenuItem(value: 'False', child: Text('In progress')),
+                      ],
+                      onChanged: (v) {
+                        setState(() {
+                          _status = v;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _yearController,
+                      decoration: InputDecoration(
+                        labelText: 'Year',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _search = _searchController.text;
+                        _year = int.tryParse(_yearController.text);
+                        _page = 1; // Reset to first page when searching
+                      });
+                      _fetchData();
+                    },
+                    child: Text('Search'),
+                  ),
+                ],
+              ),
+            ],
+          )
+        : Row(
       children: [
         SizedBox(
           width: 140,
@@ -290,6 +363,7 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
             setState(() {
               _search = _searchController.text;
               _year = int.tryParse(_yearController.text);
+                    _page = 1; // Reset to first page when searching
             });
             _fetchData();
           },
@@ -536,10 +610,72 @@ void _generateReport() async {
   }
 }
 
-
+  Widget _buildSummaryCards(String completedChallenges, List<Widget> topReaderWidgets) {
+    return Column(
+      children: [
+        Card(
+          elevation: 5,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          color: Colors.yellow[50],
+          child: Padding(
+            padding: const EdgeInsets.all(28.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.emoji_events, color: Colors.amber[800], size: 32),
+                    SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Completed challenges', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                        Text('(${DateTime.now().year})', style: TextStyle(fontSize: 13, color: Colors.brown)),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Text(completedChallenges, style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.brown[700], letterSpacing: 2)),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 32),
+        Card(
+          elevation: 5,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          color: Colors.yellow[50],
+          child: Padding(
+            padding: const EdgeInsets.all(28.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.amber[800], size: 28),
+                    SizedBox(width: 10),
+                    Text('Top readers of the year', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+                SizedBox(height: 16),
+                ...topReaderWidgets,
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 1200; // Threshold for responsive layout
     
     if (_summaryLoading) {
       return Scaffold(
@@ -585,7 +721,6 @@ void _generateReport() async {
                     ],
                   ),
                 ),
-                // Total count above the table
                 if (_totalCount > 0)
                   Center(
                     child: Container(
@@ -619,22 +754,48 @@ void _generateReport() async {
                   child: Center(
                     child: Container(
                       constraints: BoxConstraints(maxWidth: 1200),
-                      child: Row(
+                      child: isSmallScreen
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Small screen: Give table more height
+                                Expanded(
+                                  flex: 3, // Give table more space
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.vertical,
+                                    child: _buildTable(),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    child: _buildPagination(),
+                                  ),
+                                ),
+                                SizedBox(height: 24),
+                                // Summary cards for small screen - take less space
+                                Expanded(
+                                  flex: 1, // Take less space
+                                  child: SingleChildScrollView(
+                                    child: _buildSummaryCards(completedChallenges, topReaderWidgets),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Main Table
                           Expanded(
                             child: Column(
                               children: [
-                                // Table
                                 Expanded(
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.vertical,
                                     child: _buildTable(),
                                   ),
                                 ),
-                               
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Container(
@@ -646,71 +807,12 @@ void _generateReport() async {
                             ),
                           ),
                           SizedBox(width: 16),
+                                // Summary cards for large screen
                           SizedBox(
                             width: 340,
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                children: [
-                                
-                                  Card(
-                                    elevation: 5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    color: Colors.yellow[50],
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(28.0),
-                                      child: Column(
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.emoji_events, color: Colors.amber[800], size: 32),
-                                              SizedBox(width: 10),
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text('Completed challenges', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                                                  Text('(${DateTime.now().year})', style: TextStyle(fontSize: 13, color: Colors.brown)),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 12),
-                                          Text(completedChallenges, style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.brown[700], letterSpacing: 2)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 32),
-                                  // Top readers card
-                                  Card(
-                                    elevation: 5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    color: Colors.yellow[50],
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(28.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(Icons.star, color: Colors.amber[800], size: 28),
-                                              SizedBox(width: 10),
-                                              Text('Top readers of the year', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                            ],
-                                          ),
-                                          SizedBox(height: 16),
-                                          ...topReaderWidgets,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                    child: _buildSummaryCards(completedChallenges, topReaderWidgets),
                             ),
                           ),
                         ],

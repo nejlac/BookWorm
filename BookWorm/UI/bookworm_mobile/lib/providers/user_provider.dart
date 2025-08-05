@@ -13,6 +13,78 @@ class UserProvider extends BaseProvider<User> {
     return User.fromJson(json);
   }
   String get baseUrl => BaseProvider.baseUrl!;
+
+  Future<User?> login(String username, String password) async {
+    try {
+      var url = "${BaseProvider.baseUrl!}users/login";
+      var uri = Uri.parse(url);
+      
+      var requestBody = jsonEncode({
+        'username': username,
+        'password': password,
+      });
+      
+      var headers = createHeaders();
+      headers['Content-Type'] = 'application/json';
+      
+      var response = await http.post(uri, headers: headers, body: requestBody);
+      
+      // Debug logging
+      print("Response status code: ${response.statusCode}");
+      print("Response body: ${response.body}");
+      
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        return fromJson(data);
+      } else if (response.statusCode == 401) {
+        throw Exception("Invalid username or password");
+      } else if (response.statusCode == 403) {
+        throw Exception("Access denied. Only users with 'User' role can access the mobile app.");
+      } else if (response.statusCode == 500) {
+        // Try to parse error message from response body for server errors
+        try {
+          var errorData = jsonDecode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          } else {
+            throw Exception("Server error. Please try again later.");
+          }
+        } catch (parseError) {
+          throw Exception("Server error. Please try again later.");
+        }
+      } else {
+        // Try to parse error message from response body for other status codes
+        try {
+          var errorData = jsonDecode(response.body);
+          if (errorData is Map && errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          } else {
+            throw Exception("Login failed. Please try again.");
+          }
+        } catch (parseError) {
+          throw Exception("Login failed. Please try again.");
+        }
+      }
+    } catch (e) {
+      // Debug logging for the exception
+      print("Exception caught: ${e.toString()}");
+      print("Exception type: ${e.runtimeType}");
+      
+      // Handle network errors and other exceptions
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection')) {
+        throw Exception("Network error. Please check your connection and try again.");
+      } else if (e.toString().contains('TimeoutException')) {
+        throw Exception("Request timeout. Please try again.");
+      } else {
+        // For other exceptions, preserve the original error message without "Exception:" prefix
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring('Exception: '.length);
+        }
+        throw Exception(errorMessage);
+      }
+    }
+  }
   
 
   

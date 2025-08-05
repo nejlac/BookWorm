@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+
 namespace BookWorm.Services
 {
     public class BookService : BaseCRUDService<BookResponse, BookSearchObject, Book, BookCreateUpdateRequest, BookCreateUpdateRequest>, IBookService
@@ -25,17 +26,19 @@ namespace BookWorm.Services
         private readonly ILogger<BookService> _logger;
         private readonly IUserRoleService _userRoleService;
         private readonly BaseBookState _baseBookState;
+        private readonly IAuthorService _authorService;
         private readonly MLContext _mlContext;
         private ITransformer? _model;
         private PredictionEngine<BookEntry, BookPrediction>? _predictionEngine;
         private readonly string _modelFilePath = "model.zip";
 
-        public BookService(BookWormDbContext context, IMapper mapper, ILogger<BookService> logger, IUserRoleService userRoleService, BaseBookState baseBookState) : base(context, mapper)
+        public BookService(BookWormDbContext context, IMapper mapper, ILogger<BookService> logger, IUserRoleService userRoleService, BaseBookState baseBookState, IAuthorService authorService) : base(context, mapper)
         {
             _context = context;
             _logger = logger;
             _userRoleService = userRoleService;
             _baseBookState = baseBookState;
+            _authorService = authorService;
             _mlContext = new MLContext();
         }
 
@@ -278,8 +281,30 @@ namespace BookWorm.Services
                 throw new BookException("Only admin can accept books.", true);
             }
 
+            // Accept the book
             var baseState = _baseBookState.GetBookState(book.BookState);
-            return await baseState.AcceptAsync(id);
+            var acceptedBook = await baseState.AcceptAsync(id);
+
+            // Also accept the author if they're not already accepted
+            if (book.AuthorId!=null)
+            {
+                var author = await _context.Authors.FindAsync(book.AuthorId);
+                if (author != null && author.AuthorState != "Accepted")
+                {
+                    try
+                    {
+                        await _authorService.AcceptAuthorAsync(book.AuthorId);
+                        _logger.LogInformation($"Author {author.Name} (ID: {author.Id}) automatically accepted when book '{book.Title}' was accepted.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Failed to automatically accept author {author.Name} (ID: {author.Id}): {ex.Message}");
+                       
+                    }
+                }
+            }
+
+            return acceptedBook;
         }
 
         public async Task<BookResponse?> DeclineBookAsync(int id)
