@@ -10,8 +10,19 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using DotNetEnv;
+
+DotNetEnv.Env.Load();
+
+var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (!string.IsNullOrEmpty(urls))
+{
+    builder.WebHost.UseUrls(urls);
+}
 
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IBookService, BookService>();

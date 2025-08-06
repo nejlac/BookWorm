@@ -21,9 +21,7 @@ class CountryProvider extends BaseProvider<Country> {
     return Country.fromJson(data);
   }
 
-  // Method for dropdowns - gets all countries without pagination
   Future<List<Country>> getAllCountriesForDropdown() async {
-    // Check if cache is still valid
     if (_allCountriesCache != null && _cacheTimestamp != null) {
       final now = DateTime.now();
       if (now.difference(_cacheTimestamp!) < _cacheValidDuration) {
@@ -122,7 +120,7 @@ class CountryProvider extends BaseProvider<Country> {
   @override
   Future<String?> delete(int id) async {
     try {
-      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}Country/$id";
+      var url = "${BaseProvider.baseUrl ?? "http://localhost:7031/api/"}Country/$id";
       var uri = Uri.parse(url);
       var headers = createHeaders();
       var response = await http.delete(uri, headers: headers);

@@ -108,17 +108,33 @@ class AuthorProvider extends BaseProvider<Author> {
 
 
   Future<bool> existsWithNameAndDateOfBirth(String name, DateTime dateOfBirth, {int? excludeId}) async {
-    final filter = {
-      'name': name,
-      'dateOfBirth': dateOfBirth.toIso8601String(),
-      'pageSize': 1,
-      'page': 0,
-    };
-    final authors = await get(filter: filter);
-    if (authors.items == null || authors.items!.isEmpty) return false;
-    if (excludeId != null) {
-      return authors.items!.any((a) => a.id != excludeId);
+    try {
+      final filter = {
+        'name': name,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'pageSize': 100, // Get more results to check for exact matches
+        'page': 0,
+      };
+      final authors = await get(filter: filter);
+      if (authors.items == null || authors.items!.isEmpty) return false;
+      
+      // Check for exact name and date of birth match
+      final matchingAuthors = authors.items!.where((author) => 
+        author.name.toLowerCase().trim() == name.toLowerCase().trim() &&
+        author.dateOfBirth.year == dateOfBirth.year &&
+        author.dateOfBirth.month == dateOfBirth.month &&
+        author.dateOfBirth.day == dateOfBirth.day
+      ).toList();
+      
+      if (matchingAuthors.isEmpty) return false;
+      
+      if (excludeId != null) {
+        return matchingAuthors.any((a) => a.id != excludeId);
+      }
+      return true;
+    } catch (e) {
+      print("Error checking author existence: $e");
+      return false;
     }
-    return true;
   }
 } 

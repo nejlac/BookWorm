@@ -101,6 +101,22 @@ namespace BookWorm.Services.BookStateMachine
                 BookState = book.BookState,
                 CreatedByUserId = book.CreatedByUserId,
                 CreatedByUserName = book.CreatedByUser?.Username ?? string.Empty,
+                CreatedByUser = book.CreatedByUser != null ? new UserResponse
+                {
+                    Id = book.CreatedByUser.Id,
+                    FirstName = book.CreatedByUser.FirstName,
+                    LastName = book.CreatedByUser.LastName,
+                    Email = book.CreatedByUser.Email,
+                    Username = book.CreatedByUser.Username,
+                    IsActive = book.CreatedByUser.IsActive,
+                    CreatedAt = book.CreatedByUser.CreatedAt,
+                    LastLoginAt = book.CreatedByUser.LastLoginAt,
+                    CountryId = book.CreatedByUser.CountryId,
+                    Age = book.CreatedByUser.Age,
+                    PhotoUrl = book.CreatedByUser.PhotoUrl,
+                    PhoneNumber = book.CreatedByUser.PhoneNumber,
+                    Roles = new List<RoleResponse>() // You might want to include roles if needed
+                } : null,
                 Genres = book.BookGenres?.Select(bg => bg.Genre.Name).ToList() ?? new List<string>()
             };
         }

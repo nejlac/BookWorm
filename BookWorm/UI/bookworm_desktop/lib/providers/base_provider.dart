@@ -12,7 +12,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
   BaseProvider(String endpoint) {
     _endpoint = endpoint;
     baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:7031/api/");
+        defaultValue: "http://localhost:7031/api/");
   }
 
   Future<SearchResult<T>> get({dynamic filter}) async {

@@ -41,6 +41,8 @@ namespace BookWorm.Services
                 query = query.Where(a => a.Name.Contains(search.FTS) || a.Biography.Contains(search.FTS));
             if (!string.IsNullOrEmpty(search.AuthorState))
                 query = query.Where(a => a.AuthorState == search.AuthorState);
+            if (search.DateOfBirth.HasValue)
+                query = query.Where(a => a.DateOfBirth.Date == search.DateOfBirth.Value.Date);
             query = query.Include(a => a.Country).Include(a => a.Books);
             return query;
         }

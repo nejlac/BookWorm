@@ -11,7 +11,7 @@ class AuthorProvider extends BaseProvider<Author> {
   Author fromJson(dynamic json) {
     return Author.fromJson(json);
   }
-  String get baseUrl => BaseProvider.baseUrl ?? "https://localhost:7031/api/";
+  String get baseUrl => BaseProvider.baseUrl!;
   Future<List<Author>> getAllAuthors() async {
     try {
       final result = await get(filter: {'RetrieveAll': true});
@@ -42,7 +42,7 @@ class AuthorProvider extends BaseProvider<Author> {
   Future<void> uploadPhoto(int authorId, File photoFile) async {
     try {
       print("Uploading author photo. File path: "+photoFile.path);
-      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$authorId/cover";
+      var url = "${BaseProvider.baseUrl}author/$authorId/cover";
       print("Upload URL: $url");
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
@@ -78,7 +78,7 @@ class AuthorProvider extends BaseProvider<Author> {
   }
 
   Future<Author> getById(int id) async {
-    var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
+    var url = "${BaseProvider.baseUrl}author/$id";
     var uri = Uri.parse(url);
     var headers = createHeaders();
     var response = await http.get(uri, headers: headers);
@@ -93,7 +93,7 @@ class AuthorProvider extends BaseProvider<Author> {
 
   Future<String?> delete(int id) async {
     try {
-      var url = "${BaseProvider.baseUrl ?? "https://localhost:7031/api/"}author/$id";
+      var url = "${BaseProvider.baseUrl}author/$id";
       var uri = Uri.parse(url);
       var headers = createHeaders();
       var response = await http.delete(uri, headers: headers);
@@ -116,17 +116,32 @@ class AuthorProvider extends BaseProvider<Author> {
   }
 
   Future<bool> existsWithNameAndDateOfBirth(String name, DateTime dateOfBirth, {int? excludeId}) async {
-    final filter = {
-      'name': name,
-      'dateOfBirth': dateOfBirth.toIso8601String(),
-      'pageSize': 1,
-      'page': 0,
-    };
-    final authors = await get(filter: filter);
-    if (authors.items == null || authors.items!.isEmpty) return false;
-    if (excludeId != null) {
-      return authors.items!.any((a) => a.id != excludeId);
+    try {
+      final filter = {
+        'name': name,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'pageSize': 100, 
+        'page': 0,
+      };
+      final authors = await get(filter: filter);
+      if (authors.items == null || authors.items!.isEmpty) return false;
+      
+      final matchingAuthors = authors.items!.where((author) => 
+        author.name.toLowerCase().trim() == name.toLowerCase().trim() &&
+        author.dateOfBirth.year == dateOfBirth.year &&
+        author.dateOfBirth.month == dateOfBirth.month &&
+        author.dateOfBirth.day == dateOfBirth.day
+      ).toList();
+      
+      if (matchingAuthors.isEmpty) return false;
+      
+      if (excludeId != null) {
+        return matchingAuthors.any((a) => a.id != excludeId);
+      }
+      return true;
+    } catch (e) {
+      print("Error checking author existence: $e");
+      return false;
     }
-    return true;
   }
 } 

@@ -1,9 +1,11 @@
-﻿using BookWorm.Model.Requests;
+﻿using BookWorm.Model.Exceptions;
+using BookWorm.Model.Messages;
+using BookWorm.Model.Requests;
 using BookWorm.Model.Responses;
-using BookWorm.Model.Exceptions;
 using BookWorm.Services.DataBase;
-using Microsoft.EntityFrameworkCore;
+using EasyNetQ;
 using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
 
@@ -101,12 +103,23 @@ namespace BookWorm.Services.BookStateMachine
 
             await _context.SaveChangesAsync();
 
+
             var bookWithRelations = await _context.Books
                 .Include(b => b.Author)
                 .Include(b => b.BookGenres)
                 .ThenInclude(bg => bg.Genre)
                 .Include(b => b.CreatedByUser)
                 .FirstOrDefaultAsync(b => b.Id == id);
+
+            var bus = RabbitHutch.CreateBus("host=localhost");
+
+            var accepted = new BookAccepted
+            {
+                Book = MapToResponse(bookWithRelations!)
+            };
+
+            await bus.PubSub.PublishAsync(accepted);
+
 
             return MapToResponse(bookWithRelations!);
         }

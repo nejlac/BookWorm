@@ -8,7 +8,7 @@ import 'package:bookworm_desktop/providers/auth_provider.dart';
 class RoleProvider extends ChangeNotifier {
   static String? _baseUrl;
   RoleProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "https://localhost:7031/api");
+    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "http://localhost:7031/api");
   }
 
   Map<String, String> createHeaders() {
