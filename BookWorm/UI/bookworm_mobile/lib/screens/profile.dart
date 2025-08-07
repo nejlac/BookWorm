@@ -16,6 +16,7 @@ import '../model/user_friend.dart';
 import '../widgets/genre_pie_chart.dart';
 import '../utils/genre_colors.dart';
 import '../screens/user_profile.dart';
+import '../main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -308,6 +309,302 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error removing friend: $e')),
       );
+    }
+  }
+
+  void _showDeleteProfileDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFFFFF8E1),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.warning, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Delete Profile',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '⚠️ This action is PERMANENT and cannot be undone!',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Deleting your profile will permanently remove:',
+              style: TextStyle(
+                color: Color(0xFF5D4037),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildDeleteItem('• All your book reviews and ratings'),
+            _buildDeleteItem('• All your reading lists and book collections'),
+            _buildDeleteItem('• All your reading challenges and progress'),
+            _buildDeleteItem('• All your book clubs (if you\'re the creator)'),
+            _buildDeleteItem('• All your friendships and connections'),
+            _buildDeleteItem('• Your profile information and settings'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: const Text(
+                'This action will completely erase your account and all associated data from our system. Please make sure you have backed up any important information before proceeding.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF8D6748),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmDeleteProfile();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text(
+              'Delete Profile',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF5D4037),
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteProfile() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFFFFF8E1),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.delete_forever, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Final Confirmation',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Are you absolutely sure you want to delete your profile?',
+              style: TextStyle(
+                color: Color(0xFF5D4037),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This action cannot be undone. All your data will be permanently lost.',
+              style: TextStyle(
+                color: Color(0xFF8D6748),
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF8D6748),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text(
+              'Yes, Delete My Profile',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: Color(0xFF8D6748)),
+              SizedBox(width: 16),
+              Text('Deleting your profile...'),
+            ],
+          ),
+        ),
+      );
+
+      final userProvider = UserProvider();
+      await userProvider.delete(user!.id);
+
+      AuthProvider.clearAuth();
+
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: const Color(0xFFFFF8E1),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Profile Deleted',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Your profile has been successfully deleted. You will be redirected to the login screen.',
+              style: TextStyle(
+                color: Color(0xFF5D4037),
+                fontSize: 16,
+              ),
+            ),
+            actions: [
+                              ElevatedButton(
+                  onPressed: () {
+                    LoginPage.clearFields(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                    );
+                  },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8D6748),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -789,6 +1086,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF6E3B4),
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _showDeleteProfileDialog();
+                    },
+                    icon: const Icon(Icons.delete_forever, color: Colors.red),
+                    label: const Text(
+                      'Delete Profile', 
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFEBEE),
                       elevation: 0,
                       minimumSize: const Size.fromHeight(56),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),

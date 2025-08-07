@@ -54,6 +54,30 @@ namespace BookWormWebAPI.Filters
                 context.ModelState.AddModelError("ListError", context.Exception.Message);
                 context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
+            else if (context.Exception is BookClubException bookClubException)
+            {
+                context.ModelState.AddModelError("BookClubError", bookClubException.Message);
+                if (bookClubException.IsPermissionError)
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                }
+                else
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                }
+            }
+            else if (context.Exception is BookClubEventException bookClubEventException)
+            {
+                context.ModelState.AddModelError("BookClubEventError", bookClubEventException.Message);
+                if (bookClubEventException.IsPermissionError)
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                }
+                else
+                {
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                }
+            }
             else
             {
                 context.ModelState.AddModelError("ERROR", "Server side error, please check logs");

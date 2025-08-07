@@ -26,6 +26,11 @@ namespace BookWorm.Services.DataBase
         public DbSet<UserFriend> UserFriends { get; set; }
         public DbSet<Country>Countries { get; set; }
         public DbSet<ReadingStreak> ReadingStreaks { get; set; }
+        
+        public DbSet<BookClub> BookClubs { get; set; }
+        public DbSet<BookClubMember> BookClubMembers { get; set; }
+        public DbSet<BookClubEvent> BookClubEvents { get; set; }
+        public DbSet<BookClubEventParticipant> BookClubEventParticipants { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -128,6 +133,62 @@ namespace BookWorm.Services.DataBase
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(e => new { e.UserId, e.FriendId }).IsUnique();
+            });
+
+            modelBuilder.Entity<BookClub>(entity =>
+            {
+                entity.HasOne(bc => bc.ClubCreator)
+                    .WithMany()
+                    .HasForeignKey(bc => bc.CreatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<BookClubMember>(entity =>
+            {
+                entity.HasOne(bcm => bcm.User)
+                    .WithMany(u => u.BookClubMembers)
+                    .HasForeignKey(bcm => bcm.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(bcm => bcm.BookClub)
+                    .WithMany(bc => bc.Members)
+                    .HasForeignKey(bcm => bcm.BookClubId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.UserId, e.BookClubId }).IsUnique();
+            });
+
+            modelBuilder.Entity<BookClubEvent>(entity =>
+            {
+                entity.HasOne(bce => bce.Book)
+                    .WithMany()
+                    .HasForeignKey(bce => bce.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(bce => bce.BookClub)
+                    .WithMany(bc => bc.Events)
+                    .HasForeignKey(bce => bce.BookClubId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(bce => bce.Creator)
+                    .WithMany()
+                    .HasForeignKey(bce => bce.CreatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<BookClubEventParticipant>(entity =>
+            {
+                entity.HasOne(bcep => bcep.User)
+                    .WithMany(u => u.BookClubEventParticipants)
+                    .HasForeignKey(bcep => bcep.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(bcep => bcep.BookClubEvent)
+                    .WithMany(bce => bce.Participants)
+                    .HasForeignKey(bcep => bcep.BookClubEventId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.UserId, e.BookClubEventId }).IsUnique();
             });
 
         }

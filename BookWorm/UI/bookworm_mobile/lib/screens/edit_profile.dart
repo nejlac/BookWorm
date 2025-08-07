@@ -154,13 +154,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         "lastName": lastNameController.text.trim(),
         "username": usernameController.text.trim(),
         "email": emailController.text.trim(),
-        "phoneNumber": phoneController.text.trim(),
+        "phoneNumber": phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
         "age": int.tryParse(ageController.text.trim()) ?? 0,
         "countryId": country.id,
         "photoUrl": _existingPhotoUrl,
         "roleIds": [2], 
       };
       await userProvider.update(user!.id, request);
+      
+      final newUsername = usernameController.text.trim();
+      if (AuthProvider.username != newUsername) {
+        AuthProvider.updateUsername(newUsername);
+      }
+      
       if (_selectedImageFile != null) {
         await userProvider.uploadPhoto(user!.id, _selectedImageFile!);
       }
@@ -209,7 +215,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       onPressed: () => Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const MasterScreen(initialIndex: 3)),
+                        MaterialPageRoute(builder: (context) => const MasterScreen(initialIndex: 4)),
                       ),
                       child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),

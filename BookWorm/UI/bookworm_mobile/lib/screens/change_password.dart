@@ -2,7 +2,7 @@ import 'package:bookworm_mobile/providers/auth_provider.dart';
 import 'package:bookworm_mobile/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:bookworm_mobile/layouts/master_screen.dart';
+import 'package:bookworm_mobile/main.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({Key? key}) : super(key: key);
@@ -37,7 +37,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       final result = await userProvider.get(filter: {'username': username, 'pageSize': 1});
       final user = result.items != null && result.items!.isNotEmpty ? result.items!.first : null;
       if (user == null) throw Exception('User not found');
-      // Check current password
       if (currentPasswordController.text.trim() != (AuthProvider.password ?? '')) {
         setState(() {
           errorMsg = 'Current password is incorrect.';
@@ -50,7 +49,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         'lastName': user.lastName,
         'username': user.username,
         'email': user.email,
-        'phoneNumber': user.phoneNumber,
+        'phoneNumber': user.phoneNumber.isEmpty ? null : user.phoneNumber,
         'age': user.age,
         'countryId': user.countryId,
         'photoUrl': user.photoUrl,
@@ -82,7 +81,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Your password has been updated.',
+                    'Your password has been updated.\nYou will be redirected to login.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Literata',
@@ -101,11 +100,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () => Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MasterScreen(initialIndex: 3)),
-                        (route) => false,
-                      ),
+                      onPressed: () {
+                        AuthProvider.clearAuth();
+                        LoginPage.clearFields(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LoginPage()),
+                        );
+                      },
                       child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),

@@ -12,17 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using DotNetEnv;
 
-DotNetEnv.Env.Load();
-
-var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-
 
 var builder = WebApplication.CreateBuilder(args);
-
-if (!string.IsNullOrEmpty(urls))
-{
-    builder.WebHost.UseUrls(urls);
-}
 
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IBookService, BookService>();
@@ -34,6 +25,8 @@ builder.Services.AddTransient<IReadingChallengeService, ReadingChallengeService>
 builder.Services.AddTransient<IUserRoleService, UserRoleService>();
 builder.Services.AddTransient<IUserFriendService, UserFriendService>();
 builder.Services.AddTransient<IReadingStreakService, ReadingStreakService>();
+builder.Services.AddTransient<IBookClubService, BookClubService>();
+builder.Services.AddTransient<IBookClubEventService, BookClubEventService>();
 builder.Services.AddScoped<IGenreService, GenreService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IRoleService, RoleService>();

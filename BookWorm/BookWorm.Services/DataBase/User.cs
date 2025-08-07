@@ -53,6 +53,9 @@ namespace BookWorm.Services.DataBase
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public ICollection<UserFriend> SentFriendRequests { get; set; } = new List<UserFriend>();
         public ICollection<UserFriend> ReceivedFriendRequests { get; set; } = new List<UserFriend>();
+        public virtual ICollection<BookClubMember> BookClubMembers { get; set; } = new List<BookClubMember>();
+        public virtual ICollection<BookClubEventParticipant> BookClubEventParticipants { get; set; } = new List<BookClubEventParticipant>();
+
 
     }
 }

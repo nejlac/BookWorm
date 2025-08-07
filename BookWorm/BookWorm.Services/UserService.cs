@@ -329,6 +329,10 @@ namespace BookWorm.Services
             var userRoles = _context.UserRoles.Where(ur => ur.UserId == id);
             _context.UserRoles.RemoveRange(userRoles);
 
+            // 8. Delete all BookClubs where user is the creator
+            var bookClubs = _context.BookClubs.Where(bc => bc.CreatorId == id).ToList();
+            _context.BookClubs.RemoveRange(bookClubs);
+
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return true;

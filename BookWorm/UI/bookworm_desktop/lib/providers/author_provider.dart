@@ -17,7 +17,6 @@ class AuthorProvider extends BaseProvider<Author> {
       final result = await get(filter: {'RetrieveAll': true});
       return result.items ?? [];
     } catch (e) {
-      print('Error fetching authors: $e');
       return [];
     }
   }
@@ -41,9 +40,7 @@ class AuthorProvider extends BaseProvider<Author> {
   }
   Future<void> uploadPhoto(int authorId, File photoFile) async {
     try {
-      print("Uploading author photo. File path: "+photoFile.path);
       var url = "${BaseProvider.baseUrl}author/$authorId/cover";
-      print("Upload URL: $url");
       var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
       var headers = createHeaders();
@@ -52,7 +49,6 @@ class AuthorProvider extends BaseProvider<Author> {
       var stream = http.ByteStream(photoFile.openRead());
       var length = await photoFile.length();
       var filename = photoFile.path.split('/').last;
-      print("Creating multipart file: $filename, size: $length");
       var multipartFile = http.MultipartFile(
         'coverImage',
         stream,
@@ -60,19 +56,13 @@ class AuthorProvider extends BaseProvider<Author> {
         filename: filename,
       );
       request.files.add(multipartFile);
-      print("Sending request...");
       var streamedResponse = await request.send();
-      print("Response status: streamedResponse.statusCode");
       var response = await http.Response.fromStream(streamedResponse);
-      print("Response body: response.body");
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        print("Upload failed with status: response.statusCode");
-        print("Response body: response.body");
+       
         throw Exception("Failed to upload author photo: response.statusCode - response.body");
       }
-      print("Upload successful!");
     } catch (e) {
-      print("Error in uploadPhoto: $e");
       rethrow;
     }
   }
@@ -84,7 +74,6 @@ class AuthorProvider extends BaseProvider<Author> {
     var response = await http.get(uri, headers: headers);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       var data = jsonDecode(response.body);
-      print("Author getById response: $data");
       return fromJson(data);
     } else {
       throw Exception("Failed to get author: \\${response.statusCode} - \\${response.body}");
@@ -98,10 +87,8 @@ class AuthorProvider extends BaseProvider<Author> {
       var headers = createHeaders();
       var response = await http.delete(uri, headers: headers);
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return null; // Success, no error message
+        return null; 
       } else {
-        print("Failed to delete author: ${response.statusCode} - ${response.body}");
-        // Parse the error message from the response
         try {
           var errorData = jsonDecode(response.body);
           return errorData['message'] ?? 'Cannot delete author who is linked to one or more books.';
@@ -110,7 +97,6 @@ class AuthorProvider extends BaseProvider<Author> {
         }
       }
     } catch (e) {
-      print("Exception during author deletion: $e");
       return e.toString();
     }
   }
@@ -140,7 +126,6 @@ class AuthorProvider extends BaseProvider<Author> {
       }
       return true;
     } catch (e) {
-      print("Error checking author existence: $e");
       return false;
     }
   }

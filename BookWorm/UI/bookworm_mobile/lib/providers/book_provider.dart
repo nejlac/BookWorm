@@ -200,9 +200,18 @@ class BookProvider extends BaseProvider<Book> {
       return null;
     }
   }
+   Future<List<Book>> getAllBooks() async {
+    try {
+      final result = await get(filter: {'RetrieveAll': true});
+      return result.items ?? [];
+    } catch (e) {
+      print('Error fetching books: $e');
+      return [];
+    }
+  }
 }
 
 
 
 
-   
+ 

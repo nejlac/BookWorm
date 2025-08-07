@@ -12,6 +12,7 @@ import 'package:bookworm_mobile/screens/change_password.dart';
 import 'package:bookworm_mobile/screens/add_book.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:bookworm_mobile/utils/notification_manager.dart';
+import 'package:bookworm_mobile/screens/book_clubs.dart';
 
 
 class MasterScreen extends StatefulWidget {
@@ -40,8 +41,9 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
     });
     
     _pages = <Widget>[
-              HomePage(key: _homePageKey),
+      HomePage(key: _homePageKey),
       SearchScreen(key: GlobalKey()),
+      BookClubsScreen(currentUserId: _currentUserId ?? 0),
       MyListsScreen(key: _listsPageKey),
       ProfileScreen(),
     ];
@@ -68,6 +70,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
   List<Widget> _pages = <Widget>[
     HomePage(),
     SearchScreen(key: GlobalKey()),
+    BookClubsScreen(currentUserId: 0),
     MyListsScreen(key: GlobalKey()),
     ProfileScreen(),
   ];
@@ -75,6 +78,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
   static const List<String> _titles = [
     'Home',
     'Search',
+    'Book Clubs',
     'Lists',
     'Profile',
   ];
@@ -447,7 +451,7 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
                 }
               },
             )
-          else if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3) ...[
+          else if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3 || _selectedIndex == 4) ...[
          
             Stack(
               children: [
@@ -510,6 +514,10 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
             label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.groups),
+            label: 'Book Clubs',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.list),
