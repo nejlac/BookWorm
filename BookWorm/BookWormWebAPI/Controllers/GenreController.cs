@@ -24,6 +24,7 @@ namespace BookWormWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public override async Task<bool> Delete(int id)
         {
             try

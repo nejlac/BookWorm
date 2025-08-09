@@ -11,6 +11,7 @@ import 'package:bookworm_desktop/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import '../providers/statistics_provider.dart';
 import '../main.dart';
+import '../widgets/change_password_dialog.dart';
 
 class MasterScreen extends StatefulWidget {
   const MasterScreen({super.key, required this.child, required this.title, this.selectedIndex = 0});
@@ -132,6 +133,26 @@ class _MasterScreenState extends State<MasterScreen> {
                             ],
                           ),
                         ),
+                        IconButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const ChangePasswordDialog(),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.settings,
+                            color: Color(0xFF8D6748),
+                            size: 20,
+                          ),
+                          tooltip: 'Settings',
+                          style: IconButton.styleFrom(
+                            padding: const EdgeInsets.all(8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -190,7 +211,6 @@ class _MasterScreenState extends State<MasterScreen> {
                       child: ElevatedButton.icon(
                         onPressed: () async {
                           AuthProvider.logout();
-                          clearLoginFields();
                           if (mounted) {
                             Navigator.pushReplacement(
                               context,

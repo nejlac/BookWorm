@@ -4,6 +4,7 @@ using BookWorm.Model.SearchObjects;
 using BookWorm.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -17,6 +18,16 @@ namespace BookWormWebAPI.Controllers
         public BookClubController(IBookClubService bookClubService) : base(bookClubService)
         {
             _bookClubService = bookClubService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("User ID not found in claims");
+            }
+            return userId;
         }
 
         [HttpGet("")]
@@ -40,6 +51,16 @@ namespace BookWormWebAPI.Controllers
         [HttpPut("{id}")]
         public override async Task<BookClubResponse?> Update(int id, [FromBody] BookClubCreateUpdateRequest request)
         {
+            var bookClub = await _bookClubService.GetByIdAsync(id);
+            if (bookClub == null)
+                return null;
+
+            var currentUserId = GetCurrentUserId();
+            if (bookClub.CreatorId != currentUserId)
+            {
+                return null; 
+            }
+
             return await _bookClubService.UpdateAsync(id, request);
         }
 
@@ -55,6 +76,22 @@ namespace BookWormWebAPI.Controllers
         {
             var result = await _bookClubService.LeaveBookClubAsync(id);
             return Ok(result);
+        }
+
+        [HttpDelete("{id}")]
+        public override async Task<bool> Delete(int id)
+        {
+            var bookClub = await _bookClubService.GetByIdAsync(id);
+            if (bookClub == null)
+                return false;
+
+            var currentUserId = GetCurrentUserId();
+            if (bookClub.CreatorId != currentUserId)
+            {
+                return false; 
+            }
+
+            return await base.Delete(id);
         }
 
         [HttpGet("{id}/members")]

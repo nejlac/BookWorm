@@ -23,54 +23,210 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
   bool _isLoading = true;
   String? _errorMessage;
   bool _sortByMembers = false;
+  
+  int _allClubsCurrentPage = 0;
+  int _allClubsTotalCount = 0;
+  bool _allClubsHasMoreData = true;
+  static const int _pageSize = 10;
+  bool _isLoadingMore = false;
+  bool _isRefreshing = false;
+  
+  int _myClubsCurrentPage = 0;
+  int _myClubsTotalCount = 0;
+  bool _myClubsHasMoreData = true;
+  
+  final ScrollController _scrollController = ScrollController();
+  final ScrollController _myClubsScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    _resetPagination();
     _loadClubs();
+    _loadMyClubs(); 
+    
   }
 
-  Future<void> _loadClubs() async {
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      if (_tabController.index == 1) {
+        _loadMyClubs();
+      } else if (_tabController.index == 0) {
+        final safePage = _allClubsCurrentPage.clamp(0, double.infinity).toInt();
+        _loadClubs(page: safePage);
+      }
+    }
+  }
+
+
+  Future<void> _refreshData() async {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _isRefreshing = true;
     });
+    
+    await _loadClubs(page: 0);
+    await _loadMyClubs(); 
+    
+    setState(() {
+      _isRefreshing = false;
+    });
+  }
+
+  Future<void> _loadClubs({int? page}) async {
+    final targetPage = (page ?? _allClubsCurrentPage).clamp(0, double.infinity).toInt();
+    
+    setState(() {
+      if (targetPage == 0) {
+        _isLoading = true;
+        _errorMessage = null;
+      } else {
+        _isLoadingMore = true;
+      }
+      _allClubs.clear();
+      _filteredClubs.clear();
+    });
+    
+    _ensureValidPageNumbers();
+    
     try {
-      final allClubs = await _bookClubProvider.getAllBookClubs();
-      final myClubs = allClubs.where((club) => club.isMember || club.isCreator).toList();
+      final filter = <String, dynamic>{
+        'pageSize': _pageSize,
+        'page': targetPage,
+        'includeTotalCount': true,
+      };
       
-      myClubs.sort((a, b) {
-        if (a.isCreator && !b.isCreator) return -1;
-        if (!a.isCreator && b.isCreator) return 1;
-        return a.name.compareTo(b.name);
-      });
+      final result = await _bookClubProvider.get(filter: filter);
+      final allClubs = result.items ?? [];
       
       setState(() {
         _allClubs = allClubs;
         _filteredClubs = allClubs;
-        _myClubs = myClubs;
-        _filteredMyClubs = myClubs;
+        
+        _allClubsCurrentPage = targetPage;
+        _allClubsTotalCount = (result.totalCount ?? 0).clamp(0, double.infinity).toInt();
+        final nextPageStart = (targetPage + 1) * _pageSize;
+        _allClubsHasMoreData = nextPageStart < _allClubsTotalCount && _allClubsTotalCount > 0 && _pageSize > 0;
+        
+        if (allClubs.isEmpty && targetPage > 0) {
+          _allClubsCurrentPage = (targetPage - 1).clamp(0, double.infinity).toInt();
+          _allClubsHasMoreData = false;
+        }
+        _ensureValidPageNumbers();
+        
         _isLoading = false;
+        _isLoadingMore = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load book clubs.';
+        _errorMessage = 'Failed to load book clubs: ${e.toString()}';
         _isLoading = false;
+        _isLoadingMore = false;
       });
     }
   }
 
   void _onSearchChanged(String value) {
-    setState(() {
-      _filteredClubs = _allClubs.where((club) => club.name.toLowerCase().contains(value.toLowerCase())).toList();
-    });
+    if (value.isEmpty) {
+      setState(() {
+        _filteredClubs = _allClubs;
+      });
+      if (_allClubs.length > _pageSize) {
+        _resetPagination();
+        _loadClubs(page: 0);
+        _loadMyClubs(); 
+      }
+    } else {
+      if (_allClubs.length <= _pageSize) {
+        _loadAllClubsForSearch().then((_) {
+          setState(() {
+            _filteredClubs = _allClubs.where((club) => 
+              club.name.toLowerCase().contains(value.toLowerCase())
+            ).toList();
+          });
+        });
+      } else {
+        setState(() {
+          _filteredClubs = _allClubs.where((club) => 
+            club.name.toLowerCase().contains(value.toLowerCase())
+          ).toList();
+        });
+      }
+    }
   }
 
   void _onMyClubsSearchChanged(String value) {
+    if (value.isEmpty) {
+      setState(() {
+        _filteredMyClubs = _myClubs;
+      });
+      if (_myClubs.length > _pageSize) {
+        _resetPagination();
+        _loadMyClubs(); 
+      }
+    } else {
+      if (_myClubs.length <= _pageSize) {
+        _loadMyClubs().then((_) {
+          setState(() {
+            _filteredMyClubs = _myClubs.where((club) => 
+              club.name.toLowerCase().contains(value.toLowerCase())
+            ).toList();
+          });
+        });
+      } else {
+        setState(() {
+          _filteredMyClubs = _myClubs.where((club) => 
+            club.name.toLowerCase().contains(value.toLowerCase())
+          ).toList();
+          _allClubsHasMoreData = false; 
+        });
+      }
+    }
+  }
+
+  void _resetPagination() {
     setState(() {
-      _filteredMyClubs = _myClubs.where((club) => club.name.toLowerCase().contains(value.toLowerCase())).toList();
+      _allClubsCurrentPage = 0;
+      _allClubsHasMoreData = true;
+      _myClubsCurrentPage = 0;
+      _myClubsHasMoreData = true;
+      _errorMessage = null;
     });
+  }
+
+  void _ensureValidPageNumbers() {
+    if (_allClubsCurrentPage < 0) _allClubsCurrentPage = 0;
+    if (_myClubsCurrentPage < 0) _myClubsCurrentPage = 0;
+  }
+
+
+
+
+
+  void _handleNoMoreData() {
+    setState(() {
+      _allClubsHasMoreData = false;
+    });
+  }
+
+  Widget _buildEndOfListIndicator() {
+    if (!_allClubsHasMoreData && _filteredClubs.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: const Center(
+          child: Text(
+            'You\'ve reached the end of the list',
+            style: TextStyle(
+              color: Color(0xFF8D6748),
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   void _toggleSortByMembers() {
@@ -90,15 +246,320 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
     });
   }
 
+
+
+  void _navigateToNextPage() {
+    if (_allClubsHasMoreData && !_isLoadingMore && !_isLoading) {
+      final nextPage = (_allClubsCurrentPage + 1).clamp(0, double.infinity).toInt();
+      _loadClubs(page: nextPage);
+    }
+  }
+
+  void _navigateToPreviousPage() {
+    if (_allClubsCurrentPage > 0 && !_isLoading) {
+      final prevPage = (_allClubsCurrentPage - 1).clamp(0, double.infinity).toInt();
+      _loadClubs(page: prevPage);
+    }
+  }
+
+  void _navigateToPage(int page) {
+    final safePage = page.clamp(0, double.infinity).toInt();
+    final totalPages = _pageSize > 0 ? (_allClubsTotalCount / _pageSize).ceil() : 1;
+    if (safePage >= 0 && safePage < totalPages && !_isLoading) {
+      _loadClubs(page: safePage);
+    }
+  }
+
+  
+
+  Future<void> _loadAllClubsForSearch() async {
+    try {
+      final filter = <String, dynamic>{
+        'pageSize': 1000, 
+        'page': 0,
+        'includeTotalCount': true,
+      };
+      
+      final result = await _bookClubProvider.get(filter: filter);
+      final allClubs = result.items ?? [];
+      final myClubs = allClubs.where((club) => club.isMember || club.isCreator).toList();
+      
+      myClubs.sort((a, b) {
+        if (a.isCreator && !b.isCreator) return -1;
+        if (!a.isCreator && b.isCreator) return 1;
+        return a.name.compareTo(b.name);
+      });
+      
+      setState(() {
+        _allClubs = allClubs;
+        _filteredClubs = allClubs;
+        _myClubs = myClubs;
+        _filteredMyClubs = myClubs;
+        _allClubsCurrentPage = 0;
+        _allClubsTotalCount = (result.totalCount ?? 0).clamp(0, double.infinity).toInt();
+        _allClubsHasMoreData = false; 
+      });
+    } catch (e) {
+      _loadClubs(page: 0);
+    }
+  }
+
+  Future<void> _loadMyClubs() async {
+    try {
+      final filter = <String, dynamic>{
+        'pageSize': 1000, 
+        'page': 0,
+        'includeTotalCount': true,
+      };
+      
+      final result = await _bookClubProvider.get(filter: filter);
+      final allClubs = result.items ?? [];
+      final myClubs = allClubs.where((club) => club.isMember || club.isCreator).toList();
+      
+      myClubs.sort((a, b) {
+        if (a.isCreator && !b.isCreator) return -1;
+        if (!a.isCreator && b.isCreator) return 1;
+        return a.name.compareTo(b.name);
+      });
+      
+      setState(() {
+        _myClubs = myClubs;
+        _filteredMyClubs = myClubs;
+      });
+    } catch (e) {
+      print('Failed to load my clubs: ${e.toString()}');
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
     _myClubsSearchController.dispose();
+    _scrollController.dispose();
+    _myClubsScrollController.dispose();
+
     super.dispose();
   }
 
+  Widget _buildPaginationControls() {
+    if (_allClubsTotalCount == 0 || _filteredClubs.isEmpty || _errorMessage != null) {
+      return const SizedBox.shrink();
+    }
+    
+    final totalPages = _pageSize > 0 ? (_allClubsTotalCount / _pageSize).ceil() : 1;
+    final currentPageNumber = (_allClubsCurrentPage + 1).clamp(1, totalPages);
+    
+    if (totalPages <= 1) {
+      return const SizedBox.shrink();
+    }
+    
+    if (_isLoading || _isLoadingMore) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: const Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(
+                color: Color(0xFF8D6748),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Loading page...',
+                style: TextStyle(
+                  color: Color(0xFF8D6748),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        border: Border(
+          top: BorderSide(color: const Color(0xFFE0C9A6), width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+
+          Column(
+            children: [
+              Center(
+                child: Text(
+                  'Page $currentPageNumber of $totalPages',
+                  style: const TextStyle(
+                    color: Color(0xFF8D6748),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _isRefreshing ? null : _refreshData,
+                    icon: _isRefreshing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF8D6748),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh,
+                          color: Color(0xFF8D6748),
+                          size: 20,
+                        ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    tooltip: 'Refresh',
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  if (_allClubsCurrentPage > 0)
+                    IconButton(
+                      onPressed: _isLoading ? null : _navigateToPreviousPage,
+                      icon: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF8D6748),
+                        size: 20,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                  
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8D6748),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$currentPageNumber',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  Text(
+                    'of $totalPages',
+                    style: const TextStyle(
+                      color: Color(0xFF8D6748),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  
+                  if (_allClubsCurrentPage < totalPages - 1)
+                    IconButton(
+                      onPressed: _isLoadingMore ? null : _navigateToNextPage,
+                      icon: _isLoadingMore 
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF8D6748),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.chevron_right,
+                            color: Color(0xFF8D6748),
+                            size: 20,
+                          ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          
+          if (totalPages > 3)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Go to page: ',
+                    style: const TextStyle(
+                      color: Color(0xFF8D6748),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 60,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE0C9A6)),
+                    ),
+                    child: TextField(
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8D6748),
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        hintText: '1',
+                        hintStyle: TextStyle(
+                          color: Color(0xFF8D6748),
+                          fontSize: 12,
+                        ),
+                      ),
+                      onSubmitted: (value) {
+                        final page = int.tryParse(value);
+                        if (page != null && page > 0 && page <= totalPages) {
+                          _navigateToPage(page - 1); 
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'of $totalPages',
+                    style: const TextStyle(
+                      color: Color(0xFF8D6748),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchBar(TextEditingController controller, VoidCallback onSortPressed, bool isSorted) {
+    final isSearching = controller.text.isNotEmpty;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -123,6 +584,19 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
                   hintText: 'Search book clubs...',
                   hintStyle: TextStyle(color: Colors.grey[600]),
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF8D6748), size: 20),
+                  suffixIcon: isSearching
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Color(0xFF8D6748), size: 20),
+                        onPressed: () {
+                          controller.clear();
+                          if (controller == _searchController) {
+                            _onSearchChanged('');
+                          } else {
+                            _onMyClubsSearchChanged('');
+                          }
+                        },
+                      )
+                    : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
@@ -182,7 +656,9 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
                 builder: (context) => BookClubDetailsScreen(bookClub: club),
               ),
             );
+            _resetPagination();
             _loadClubs();
+            _loadMyClubs(); 
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -323,51 +799,141 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
                   controller: _tabController,
                   children: [
                     _filteredClubs.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.group_outlined, size: 64, color: Color(0xFF8D6748)),
-                                SizedBox(height: 16),
+                                Icon(
+                                  _isLoading ? Icons.hourglass_empty : Icons.group_outlined, 
+                                  size: 64, 
+                                  color: const Color(0xFF8D6748)
+                                ),
+                                const SizedBox(height: 16),
                                 Text(
-                                  'No book clubs found.',
-                                  style: TextStyle(
+                                  _isLoading 
+                                    ? 'Loading book clubs...'
+                                    : _errorMessage ?? 'No book clubs found.',
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     color: Color(0xFF8D6748),
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _refreshData,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF8D6748),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
                               ],
                             ),
                           )
-                        : ListView(
-                            padding: const EdgeInsets.only(top: 8, bottom: 100),
+                        : Column(
                             children: [
                               _buildSearchBar(_searchController, _toggleSortByMembers, _sortByMembers),
-                              ..._filteredClubs.map(_buildClubCard).toList(),
+                              if (_searchController.text.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Text(
+                                    '${_filteredClubs.length} book club${_filteredClubs.length == 1 ? '' : 's'} found',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: RefreshIndicator(
+                                  onRefresh: _refreshData,
+                                  color: const Color(0xFF8D6748),
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                                    itemCount: _filteredClubs.isEmpty || _isLoading || _errorMessage != null ? 0 : _filteredClubs.length + 1,
+                                    itemBuilder: (context, index) {
+                                      if (index >= _filteredClubs.length) {
+                                        if (index == _filteredClubs.length && _filteredClubs.isNotEmpty && !_isLoading && _errorMessage == null) {
+                                          return _buildPaginationControls();
+                                        }
+                                        return const SizedBox.shrink();
+                                      }
+                                      return _buildClubCard(_filteredClubs[index]);
+                                    },
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                     _filteredMyClubs.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.book_outlined, size: 64, color: Color(0xFF8D6748)),
-                                SizedBox(height: 16),
+                                Icon(
+                                  _isLoading ? Icons.hourglass_empty : Icons.book_outlined, 
+                                  size: 64, 
+                                  color: const Color(0xFF8D6748)
+                                ),
+                                const SizedBox(height: 16),
                                 Text(
-                                  'You are not a member of any book clubs.',
-                                  style: TextStyle(
+                                  _isLoading 
+                                    ? 'Loading your book clubs...'
+                                    : _errorMessage ?? 'You are not a member of any book clubs.',
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     color: Color(0xFF8D6748),
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _refreshData,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF8D6748),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
                               ],
                             ),
                           )
-                        : ListView(
-                            padding: const EdgeInsets.only(top: 8, bottom: 100),
+                        : Column(
                             children: [
                               _buildSearchBar(_myClubsSearchController, _toggleSortByMembers, _sortByMembers),
-                              ..._filteredMyClubs.map(_buildClubCard).toList(),
+                              if (_myClubsSearchController.text.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Text(
+                                    '${_filteredMyClubs.length} book club${_filteredMyClubs.length == 1 ? '' : 's'} found',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: RefreshIndicator(
+                                  onRefresh: _refreshData,
+                                  color: const Color(0xFF8D6748),
+                                  child: ListView.builder(
+                                    controller: _myClubsScrollController,
+                                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                                    itemCount: _filteredMyClubs.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildClubCard(_filteredMyClubs[index]);
+                                    },
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                   ],
@@ -477,7 +1043,9 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
           backgroundColor: Colors.green,
         ),
       );
+      _resetPagination();
       _loadClubs();
+      _loadMyClubs(); 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -581,7 +1149,9 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
           backgroundColor: Colors.green,
         ),
       );
+      _resetPagination();
       _loadClubs();
+      _loadMyClubs(); 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -627,7 +1197,9 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
           backgroundColor: Colors.green,
         ),
       );
+      _resetPagination();
       _loadClubs();
+      _loadMyClubs(); 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

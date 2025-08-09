@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../model/country.dart';
 import '../model/search_result.dart';
@@ -11,7 +10,6 @@ class CountryProvider extends BaseProvider<Country> {
   List<Country> _countries = [];
   List<Country> get countries => _countries;
 
-  // Cache for all countries (used in dropdowns)
   List<Country>? _allCountriesCache;
   DateTime? _cacheTimestamp;
   static const Duration _cacheValidDuration = Duration(minutes: 5);

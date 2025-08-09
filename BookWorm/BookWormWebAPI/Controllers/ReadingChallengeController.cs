@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using BookWormWebAPI.Requests;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -18,6 +19,16 @@ namespace BookWormWebAPI.Controllers
     {
         public ReadingChallengeController(IReadingChallengeService readingChallengeService) : base(readingChallengeService)
         {
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("User ID not found in claims");
+            }
+            return userId;
         }
 
         [HttpGet]
@@ -45,6 +56,12 @@ namespace BookWormWebAPI.Controllers
         [Authorize(Roles = "User")]
         public override async Task<ReadingChallengeResponse?> Update(int id, [FromBody] ReadingChallengeCreateUpdateRequest request)
         {
+            var currentUserId = GetCurrentUserId();
+            if (request.UserId != currentUserId)
+            {
+                return null; 
+            }
+
             return await base.Update(id, request);
         }
 
@@ -52,6 +69,18 @@ namespace BookWormWebAPI.Controllers
         [Authorize(Roles = "User")]
         public override async Task<bool> Delete(int id)
         {
+            
+            var challenge = await base.GetById(id);
+            if (challenge == null)
+                return false;
+
+            
+            var currentUserId = GetCurrentUserId();
+            if (challenge.UserId != currentUserId)
+            {
+                return false; 
+            }
+
             return await base.Delete(id);
         }
 
@@ -59,6 +88,13 @@ namespace BookWormWebAPI.Controllers
         [Authorize(Roles = "User")]
         public async Task<IActionResult> AddBookToChallenge([FromBody] AddBookToChallengeRequest request)
         {
+            
+            var currentUserId = GetCurrentUserId();
+            if (request.UserId != currentUserId)
+            {
+                return BadRequest("You can only add books to your own reading challenges");
+            }
+
             var service = (IReadingChallengeService)base._crudService;
             await service.AddBookToChallengeAsync(request.UserId, request.Year, request.BookId, request.CompletedAt);
             return Ok();
@@ -68,6 +104,13 @@ namespace BookWormWebAPI.Controllers
         [Authorize(Roles = "User")]
         public async Task<IActionResult> RemoveBookFromChallenge([FromBody] AddBookToChallengeRequest request)
         {
+            
+            var currentUserId = GetCurrentUserId();
+            if (request.UserId != currentUserId)
+            {
+                return BadRequest("You can only remove books from your own reading challenges");
+            }
+
             var service = (IReadingChallengeService)base._crudService;
             await service.RemoveBookFromChallengeAsync(request.UserId, request.Year, request.BookId);
             return Ok();

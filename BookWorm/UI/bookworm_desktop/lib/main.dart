@@ -34,13 +34,7 @@ void main() {
   ], child: const LoginPageApp()));
 }
 
-final TextEditingController usernameController = TextEditingController();
-final TextEditingController passwordController = TextEditingController();
 
-void clearLoginFields() {
-  usernameController.clear();
-  passwordController.clear();
-}
 
 class LoginPageApp extends StatelessWidget {
   const LoginPageApp({super.key});
@@ -78,12 +72,31 @@ class LoginPageApp extends StatelessWidget {
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
 
+  static void clearFields(BuildContext context) {
+    final state = context.findAncestorStateOfType<_LoginPageState>();
+    state?.clearFields();
+  }
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
   bool _isLoading = false;
+
+  void clearFields() {
+    usernameController.clear();
+    passwordController.clear();
+  }
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   void _login() async {
     try {

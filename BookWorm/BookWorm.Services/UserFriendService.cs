@@ -87,6 +87,22 @@ namespace BookWorm.Services
 
         public async Task<UserFriendResponse> SendFriendRequestAsync(UserFriendRequest request)
         {
+            
+            var existingFriendship = await _context.UserFriends
+                .FirstOrDefaultAsync(uf => 
+                    (uf.UserId == request.UserId && uf.FriendId == request.FriendId) ||
+                    (uf.UserId == request.FriendId && uf.FriendId == request.UserId));
+
+            if (existingFriendship != null)
+            {
+                
+                existingFriendship.Status = FriendshipStatus.Pending;
+                existingFriendship.RequestedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+                return MapToResponse(existingFriendship);
+            }
+
+            // If no existing friendship, create a new one
             return await CreateAsync(request);
         }
 

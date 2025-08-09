@@ -19,7 +19,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
       final result = await get(filter: {'RetrieveAll': true});
       return result.items ?? [];
     } catch (e) {
-      print('Error fetching book club events: $e');
       return [];
     }
   }
@@ -56,7 +55,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to participate in event');
       }
     } catch (e) {
-      print('Error participating in event: $e');
       rethrow;
     }
   }
@@ -75,7 +73,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to leave event');
       }
     } catch (e) {
-      print('Error leaving event: $e');
       rethrow;
     }
   }
@@ -94,7 +91,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to mark event as completed');
       }
     } catch (e) {
-      print('Error marking event as completed: $e');
       rethrow;
     }
   }
@@ -123,7 +119,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to create event');
       }
     } catch (e) {
-      print('Error creating event: $e');
       rethrow;
     }
   }
@@ -151,7 +146,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to update event');
       }
     } catch (e) {
-      print('Error updating event: $e');
       rethrow;
     }
   }
@@ -170,7 +164,6 @@ class BookClubEventProvider extends BaseProvider<BookClubEvent> {
         throw Exception(errorData['message'] ?? 'Failed to delete event');
       }
     } catch (e) {
-      print('Error deleting event: $e');
       rethrow;
     }
   }

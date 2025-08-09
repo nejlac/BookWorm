@@ -20,9 +20,7 @@ class BookProvider extends BaseProvider<Book> {
   Future<Book> insertWithCover(Map<String, dynamic> request, File? coverImage) async {
     try {
      
-      print("Request: $request");
       var book = await insert(request);
-      print("✅ Book created with ID: ${book.id}");
      
       if (coverImage != null && await coverImage.exists()) {
        
@@ -51,7 +49,6 @@ class BookProvider extends BaseProvider<Book> {
       
       return book;
     } catch (e) {
-      print(" Error in insertWithCover: $e");
       rethrow;
     }
   }
@@ -87,7 +84,6 @@ class BookProvider extends BaseProvider<Book> {
       
       return book;
     } catch (e) {
-      print("Error in updateWithCover: $e");
       rethrow;
     }
   }
@@ -119,7 +115,6 @@ class BookProvider extends BaseProvider<Book> {
         throw Exception("Failed to upload cover: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print("Error in uploadCover: $e");
       rethrow;
     }
   }
@@ -152,9 +147,7 @@ class BookProvider extends BaseProvider<Book> {
     
     if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      print("Response data: $data");
       var book = fromJson(data);
-      print("Book cover path: ${book.coverImagePath}");
       return book;
     } else {
       throw  Exception("Failed to get book: ${response.statusCode} - ${response.body}");
@@ -192,7 +185,6 @@ class BookProvider extends BaseProvider<Book> {
           'ratingCount': data['ratingCount'] ?? 0,
         };
       } else {
-        print("Failed to get book rating: ${response.statusCode} - ${response.body}");
         return null;
       }
     } catch (e) {
@@ -205,7 +197,6 @@ class BookProvider extends BaseProvider<Book> {
       final result = await get(filter: {'RetrieveAll': true});
       return result.items ?? [];
     } catch (e) {
-      print('Error fetching books: $e');
       return [];
     }
   }

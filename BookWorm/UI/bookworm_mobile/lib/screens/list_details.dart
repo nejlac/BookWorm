@@ -712,7 +712,6 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
             _loadListDetails();
           }
         } catch (e) {
-          print('Error fetching book details: $e');
         
           final bookObj = Book(
             id: book.bookId,

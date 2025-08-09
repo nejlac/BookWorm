@@ -7,9 +7,7 @@ import '../providers/base_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'package:process_run/process_run.dart' as process;
+import 'package:printing/printing.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({Key? key}) : super(key: key);
@@ -594,24 +592,19 @@ GenreStatistic? _touchedGenre;
       ),
     );
 
-    try {
-      final outputDir = await getApplicationDocumentsDirectory();
-      final filePath = '${outputDir.path}/bookworm_statistics_report.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'BookWorm Statistics Report',
+    );
 
-      if (Platform.isWindows) {
-        await process.run('explorer', [outputDir.path]);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF saved to: $filePath')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save PDF: $e')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('PDF report generated successfully!'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 }
 

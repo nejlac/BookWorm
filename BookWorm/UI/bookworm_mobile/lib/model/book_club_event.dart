@@ -41,43 +41,7 @@ class BookClubEvent {
     required this.isCreator,
   });
 
-  factory BookClubEvent.fromJson(Map<String, dynamic> json) => BookClubEvent(
-        id: json['id'],
-        title: json['title'],
-        description: json['description'],
-        deadline: DateTime.parse(json['deadline']),
-        bookId: json['bookId'],
-        bookTitle: json['bookTitle'] ?? '',
-        bookAuthorName: json['bookAuthorName'] ?? '',
-        bookCoverImagePath: json['bookCoverImagePath'] ?? '',
-        bookClubId: json['bookClubId'],
-        bookClubName: json['bookClubName'] ?? '',
-        creatorId: json['creatorId'],
-        creatorName: json['creatorName'] ?? '',
-        participantsCount: json['participantsCount'] ?? 0,
-        completedParticipantsCount: json['completedParticipantsCount'] ?? 0,
-        isParticipant: json['isParticipant'] ?? false,
-        isCompleted: json['isCompleted'] ?? false,
-        isCreator: json['isCreator'] ?? false,
-      );
+  factory BookClubEvent.fromJson(Map<String, dynamic> json) => _$BookClubEventFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'deadline': deadline.toIso8601String(),
-        'bookId': bookId,
-        'bookTitle': bookTitle,
-        'bookAuthorName': bookAuthorName,
-        'bookCoverImagePath': bookCoverImagePath,
-        'bookClubId': bookClubId,
-        'bookClubName': bookClubName,
-        'creatorId': creatorId,
-        'creatorName': creatorName,
-        'participantsCount': participantsCount,
-        'completedParticipantsCount': completedParticipantsCount,
-        'isParticipant': isParticipant,
-        'isCompleted': isCompleted,
-        'isCreator': isCreator,
-      };
+  Map<String, dynamic> toJson() => _$BookClubEventToJson(this);
 }

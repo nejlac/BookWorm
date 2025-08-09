@@ -76,7 +76,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
       final result = await get(filter: filter);
       return result.items?.isNotEmpty == true ? result.items!.first : null;
     } catch (e) {
-      print('Error getting user challenge: $e');
       return null;
     }
   }
@@ -93,7 +92,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
       final result = await get(filter: filter);
       return result.items ?? [];
     } catch (e) {
-      print('Error getting user challenges: $e');
       return [];
     }
   }
@@ -110,7 +108,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
 
       return await insert(request);
     } catch (e) {
-      print('Error creating challenge: $e');
       rethrow;
     }
   }
@@ -135,7 +132,6 @@ class ChallengeProvider extends BaseProvider<Challenge> {
 
       return await update(challengeId, request);
     } catch (e) {
-      print('Error updating challenge: $e');
       rethrow;
     }
   }

@@ -4,6 +4,7 @@ using BookWorm.Model.SearchObjects;
 using BookWorm.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -17,6 +18,16 @@ namespace BookWormWebAPI.Controllers
         public BookClubEventController(IBookClubEventService bookClubEventService) : base(bookClubEventService)
         {
             _bookClubEventService = bookClubEventService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("User ID not found in claims");
+            }
+            return userId;
         }
 
         [HttpGet("")]
@@ -40,7 +51,33 @@ namespace BookWormWebAPI.Controllers
         [HttpPut("{id}")]
         public override async Task<BookClubEventResponse?> Update(int id, [FromBody] BookClubEventCreateUpdateRequest request)
         {
+            var bookClubEvent = await _bookClubEventService.GetByIdAsync(id);
+            if (bookClubEvent == null)
+                return null;
+
+            var currentUserId = GetCurrentUserId();
+            if (bookClubEvent.CreatorId != currentUserId)
+            {
+                return null; 
+            }
+
             return await _bookClubEventService.UpdateAsync(id, request);
+        }
+
+        [HttpDelete("{id}")]
+        public override async Task<bool> Delete(int id)
+        {
+            var bookClubEvent = await _bookClubEventService.GetByIdAsync(id);
+            if (bookClubEvent == null)
+                return false;
+
+            var currentUserId = GetCurrentUserId();
+            if (bookClubEvent.CreatorId != currentUserId)
+            {
+                return false;
+            }
+
+            return await base.Delete(id);
         }
 
         [HttpPost("participate")]

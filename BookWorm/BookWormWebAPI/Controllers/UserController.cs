@@ -7,6 +7,7 @@ using BookWormWebAPI.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace BookWormWebAPI.Controllers
 {
@@ -50,9 +51,40 @@ namespace BookWormWebAPI.Controllers
             return CreatedAtAction(nameof(GetById), new { id = createdUser.Id }, createdUser);
         }
 
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new UnauthorizedAccessException("User ID not found in claims");
+            }
+            return userId;
+        }
+
         [HttpPut("{id}")]
         public async Task<ActionResult<UserResponse>> Update(int id, UserCreateUpdateRequest request)
         {
+            var isAdmin = User.IsInRole("Admin");
+            var userEntity = await _context.Users.FindAsync(id);
+            var isNewUser = userEntity != null && userEntity.CreatedAt != null && 
+                           DateTime.UtcNow.Subtract(userEntity.CreatedAt).TotalMinutes <= 5;
+            
+            if (!isNewUser && !isAdmin)
+            {
+                try
+                {
+                    var currentUserId = GetCurrentUserId();
+                    if (id != currentUserId)
+                    {
+                        return BadRequest("You can only edit your own profile");
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return BadRequest("You can only edit your own profile");
+                }
+            }
+
             var updatedUser = await _userService.UpdateAsync(id, request);
 
             if (updatedUser == null)
@@ -62,9 +94,16 @@ namespace BookWormWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult> Delete(int id)
         {
+            var currentUserId = GetCurrentUserId();
+            var isAdmin = User.IsInRole("Admin");
+            
+            if (id != currentUserId && !isAdmin)
+            {
+                return BadRequest("You can only delete your own profile");
+            }
+
             var deleted = await _userService.DeleteAsync(id);
 
             if (!deleted)
@@ -75,7 +114,6 @@ namespace BookWormWebAPI.Controllers
 
         [HttpPost("{id}/cover")]
         [RequestSizeLimit(10_000_000)]
-        [Authorize(Roles = "Admin, User")]
         public async Task<ActionResult<UserResponse>> UploadCover(int id, [FromForm] CoverUploadRequest request)
         {
             try
@@ -87,6 +125,26 @@ namespace BookWormWebAPI.Controllers
                 if (coverImage == null || coverImage.Length == 0)
                     return BadRequest("No file uploaded or file is empty.");
 
+                var isAdmin = User.IsInRole("Admin");
+                var userEntity = await _context.Users.FindAsync(id);
+                var isNewUser = userEntity != null && userEntity.CreatedAt != null && 
+                               DateTime.UtcNow.Subtract(userEntity.CreatedAt).TotalMinutes <= 5;
+                
+                if (!isNewUser && !isAdmin)
+                {
+                    try
+                    {
+                        var currentUserId = GetCurrentUserId();
+                        if (id != currentUserId)
+                        {
+                            return BadRequest("You can only upload cover for your own profile");
+                        }
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        return BadRequest("You can only upload cover for your own profile");
+                    }
+                }
 
                 var uploads = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "covers");
                 if (!Directory.Exists(uploads))
@@ -98,11 +156,10 @@ namespace BookWormWebAPI.Controllers
                     await coverImage.CopyToAsync(stream);
                 }
 
-
-                var userEntity = await _context.Users.FindAsync(id);
-                if (userEntity != null)
+                var userEntityForUpdate = await _context.Users.FindAsync(id);
+                if (userEntityForUpdate != null)
                 {
-                    userEntity.PhotoUrl = $"covers/{fileName}";
+                    userEntityForUpdate.PhotoUrl = $"covers/{fileName}";
                     await _context.SaveChangesAsync();
 
                     var updatedUser = await _userService.GetByIdAsync(id);

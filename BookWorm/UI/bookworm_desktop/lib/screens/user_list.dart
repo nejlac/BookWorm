@@ -74,8 +74,7 @@ class _UserListState extends State<UserList> {
 
  Future<void> _fetchCountries() async {
     try {
-      await countryProvider.fetchCountries();
-      var loadedCountries = countryProvider.countries;
+      var loadedCountries = await countryProvider.getAllCountriesForDropdown();
       setState(() {
         countries = [{'id': null, 'name': 'All'}];
         countries.addAll(loadedCountries.map((c) => {'id': c.id, 'name': c.name}));
@@ -91,8 +90,8 @@ class _UserListState extends State<UserList> {
 
   Future<void> _initCountries() async {
     try {
-      await countryProvider.fetchCountries();
-      countries =countryProvider.countries
+      var loadedCountries = await countryProvider.getAllCountriesForDropdown();
+      countries = loadedCountries
           .map((c) => {'id': c.id, 'name': c.name})
           .toList();  
    

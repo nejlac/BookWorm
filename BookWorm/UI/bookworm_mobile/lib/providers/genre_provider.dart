@@ -21,12 +21,10 @@ class GenreProvider extends ChangeNotifier {
 
   Future<List<Genre>> getAllGenres() async {
     final url = "${_baseUrl}Genre";
-    debugPrint('Genre API URL: $url');
     final uri = Uri.parse(url);
     final response = await http.get(uri, headers: createHeaders());
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      debugPrint('Genre API response: ' + data.toString());
 
       if (data is Map && data.containsKey('items')) {
         final items = data['items'];

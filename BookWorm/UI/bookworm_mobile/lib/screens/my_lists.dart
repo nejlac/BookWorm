@@ -26,9 +26,11 @@ class MyListsScreen extends StatefulWidget {
 
 class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserver {
   List<ReadingList> _readingLists = [];
+  List<ReadingList> _filteredReadingLists = [];
   bool _isLoading = true;
   bool _isCreating = false;
   bool _hasInitialized = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -74,7 +77,17 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     }
   }
 
-  
+  void _onSearchChanged(String value) {
+    setState(() {
+      if (value.isEmpty) {
+        _filteredReadingLists = _readingLists;
+      } else {
+        _filteredReadingLists = _readingLists
+            .where((list) => list.name.toLowerCase().contains(value.toLowerCase()))
+            .toList();
+      }
+    });
+  }
 
   Future<void> _loadReadingLists() async {
     setState(() {
@@ -100,60 +113,28 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
         targetUser = currentUser;
       }
       
-      if (targetUser == null) {
+      if (targetUser != null) {
+        final result = await provider.get(filter: {'userId': targetUser.id});
+        if (result.items != null) {
+          setState(() {
+            _readingLists = result.items!;
+            _filteredReadingLists = result.items!;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _readingLists = [];
+            _filteredReadingLists = [];
+            _isLoading = false;
+          });
+        }
+      } else {
         setState(() {
           _readingLists = [];
+          _filteredReadingLists = [];
           _isLoading = false;
         });
-        return;
       }
-      
-     
-      final lists = await provider.getUserReadingLists(targetUser.id);
-      
-      
-      List<ReadingList> filteredLists = [];
-      for (var list in lists) {
-        if (targetUser.id == currentUser?.id) {
-          
-          filteredLists.add(list);
-        } else {
-       
-          List<ReadingListBook> approvedBooks = [];
-          for (var book in list.books) {
-            try {
-           
-              final bookProvider = BookProvider();
-              final fullBook = await bookProvider.getById(book.bookId);
-           
-              if (fullBook.bookState == 'Accepted') {
-                approvedBooks.add(book);
-              }
-            } catch (e) {
-              print('Error fetching book details for filtering: $e');
-              
-            }
-          }
-          
-     
-          final filteredList = ReadingList(
-            id: list.id,
-            userId: list.userId,
-            userName: list.userName,
-            name: list.name,
-            description: list.description,
-            isPublic: list.isPublic,
-            createdAt: list.createdAt,
-            coverImagePath: list.coverImagePath,
-            books: approvedBooks,
-          );
-          filteredLists.add(filteredList);
-        }
-      }
-      setState(() {
-        _readingLists = filteredLists;
-        _isLoading = false;
-      });
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -427,6 +408,68 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Color(0xFF8D6E63).withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF5D4037),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search lists by name...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search, 
+                          color: Color(0xFF8D6748),
+                          size: 24,
+                        ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear, 
+                                color: Color(0xFF8D6748),
+                                size: 24,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ),
+                  if (_searchController.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        '${_filteredReadingLists.length} list${_filteredReadingLists.length == 1 ? '' : 's'} found',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                   _buildDefaultLists(),
                   const SizedBox(height: 24),
                  
@@ -456,7 +499,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   }
 
   Widget _buildDefaultLists() {
-    final defaultLists = _readingLists.where((list) => 
+    final defaultLists = _filteredReadingLists.where((list) => 
       list.name == 'Want to read' || 
       list.name == 'Currently reading' || 
       list.name == 'Read'
@@ -468,7 +511,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   }
 
   Widget _buildCustomLists() {
-    final customLists = _readingLists.where((list) => 
+    final customLists = _filteredReadingLists.where((list) => 
       list.name != 'Want to read' && 
       list.name != 'Currently reading' && 
       list.name != 'Read'
@@ -580,7 +623,6 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
       imageUrl = _buildImageUrl(list.books.first.coverImagePath!);
      
     } else {
-      print('No cover image available');
     }
     
     return ClipRRect(
