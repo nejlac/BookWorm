@@ -4,6 +4,7 @@ using BookWorm.Services.BookStateMachine;
 using BookWorm.Services.DataBase;
 using BookWorm.Model.Requests;
 using BookWormWebAPI.Filters;
+using BookWormWebAPI.Controllers;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication;
@@ -91,13 +92,30 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<BookWormDbContext>();
+        var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+        var readingChallengeService = scope.ServiceProvider.GetRequiredService<IReadingChallengeService>();
+        
+        // Ensure database is created (no migrations needed)
         context.Database.EnsureCreated();
         Console.WriteLine("Database connection successful and database created/verified.");
+        
+        // Seed data if database is empty
+        if (!context.Users.Any())
+        {
+            Console.WriteLine("Database is empty. Starting data seeding...");
+            var seeder = new SeedController(context, userService, readingChallengeService);
+            await seeder.SeedData();
+            Console.WriteLine("Data seeding completed successfully.");
+        }
+        else
+        {
+            Console.WriteLine("Database already contains data. Skipping seeding.");
+        }
     }
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Database connection failed: {ex.Message}");
+    Console.WriteLine($"Database connection or seeding failed: {ex.Message}");
     Console.WriteLine($"Connection string: {builder.Configuration.GetConnectionString("DefaultConnection")}");
     throw;
 }

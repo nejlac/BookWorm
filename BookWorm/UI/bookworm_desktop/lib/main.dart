@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:bookworm_desktop/providers/auth_provider.dart';
 import 'package:bookworm_desktop/providers/bookReview_provider.dart';
 import 'package:bookworm_desktop/providers/book_provider.dart';
+import 'package:bookworm_desktop/providers/book_club_provider.dart';
 import 'package:bookworm_desktop/providers/country_provider.dart';
 import 'package:bookworm_desktop/providers/genre_provider.dart';
 import 'package:bookworm_desktop/providers/author_provider.dart';
@@ -21,6 +22,8 @@ void main() {
         create: (context) => GenreProvider()),
     ChangeNotifierProvider<AuthorProvider>(
         create: (context) => AuthorProvider()),
+    ChangeNotifierProvider<BookClubProvider>(
+        create: (context) => BookClubProvider()),
     ChangeNotifierProvider<CountryProvider>(
         create: (context) => CountryProvider()),
     ChangeNotifierProvider<UserProvider>(

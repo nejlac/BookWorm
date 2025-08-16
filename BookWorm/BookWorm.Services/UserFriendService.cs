@@ -95,6 +95,12 @@ namespace BookWorm.Services
 
             if (existingFriendship != null)
             {
+                if (existingFriendship.UserId != request.UserId)
+                {
+                    var tempUserId = existingFriendship.UserId;
+                    existingFriendship.UserId = existingFriendship.FriendId;
+                    existingFriendship.FriendId = tempUserId;
+                }
                 
                 existingFriendship.Status = FriendshipStatus.Pending;
                 existingFriendship.RequestedAt = DateTime.Now;
@@ -102,7 +108,6 @@ namespace BookWorm.Services
                 return MapToResponse(existingFriendship);
             }
 
-            // If no existing friendship, create a new one
             return await CreateAsync(request);
         }
 

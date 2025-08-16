@@ -14,10 +14,12 @@ namespace BookWormWebAPI.Controllers
     public class BookClubController : BaseCRUDController<BookClubResponse, BookClubSearchObject, BookClubCreateUpdateRequest, BookClubCreateUpdateRequest>
     {
         private readonly IBookClubService _bookClubService;
+        private readonly IUserRoleService _userRoleService;
 
-        public BookClubController(IBookClubService bookClubService) : base(bookClubService)
+        public BookClubController(IBookClubService bookClubService, IUserRoleService userRoleService) : base(bookClubService)
         {
             _bookClubService = bookClubService;
+            _userRoleService = userRoleService;
         }
 
         private int GetCurrentUserId()
@@ -86,7 +88,10 @@ namespace BookWormWebAPI.Controllers
                 return false;
 
             var currentUserId = GetCurrentUserId();
-            if (bookClub.CreatorId != currentUserId)
+            var isAdmin = await _userRoleService.IsUserAdminAsync(currentUserId);
+            
+            // Allow deletion if user is the creator or if user is admin
+            if (bookClub.CreatorId != currentUserId && !isAdmin)
             {
                 return false; 
             }

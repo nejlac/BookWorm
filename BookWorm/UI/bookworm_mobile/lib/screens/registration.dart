@@ -115,7 +115,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         "lastName": formData['lastName']?.toString().trim() ?? '',
         "username": formData['username']?.toString().trim() ?? '',
         "email": formData['email']?.toString().trim() ?? '',
-        "phoneNumber": formData['phoneNumber']?.toString().trim(),
+        "phoneNumber": formData['phoneNumber']?.toString().trim().isEmpty == true ? null : formData['phoneNumber']?.toString().trim(),
         "age": int.tryParse(formData['age']?.toString() ?? '0') ?? 0,
         "countryId": country.id,
         "roleIds": [2], 
@@ -305,20 +305,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         FormBuilderTextField(
                           name: 'phoneNumber',
                           decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
+                          onChanged: (value) {
+                            // Clear the field if it only contains whitespace
+                            if (value != null && value.trim().isEmpty && value.isNotEmpty) {
+                              formKey.currentState?.fields['phoneNumber']?.reset();
+                            }
+                          },
                            validator: (val) {
-                     
+                      // Allow empty or null values
                       if (val == null || val.toString().trim().isEmpty) {
                         return null;
                       }
                       
-                   
                       final trimmedVal = val.toString().trim();
                       
+                      // If after trimming it's empty, allow it
+                      if (trimmedVal.isEmpty) {
+                        return null;
+                      }
+                      
+                      // Check length
                       if (trimmedVal.length > 20) {
                         return 'Phone number must not exceed 20 characters';
                       }
                       
-                      
+                      // Check format only if not empty
                       final phoneRegex = RegExp(r'^[\+]?[0-9\s\-\(\)]{7,20}$');
                       if (!phoneRegex.hasMatch(trimmedVal)) {
                         return 'Invalid phone number format';

@@ -673,7 +673,7 @@ Widget _buildBookCard(book) {
               );
               
               if (result == true) {
-                refreshFriendshipStatuses();
+                refreshFriendRecommendations();
               }
             },
         borderRadius: BorderRadius.circular(12),
@@ -869,19 +869,22 @@ Widget _buildBookCard(book) {
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: null,
+            onPressed: () => _addFriend(friend.id),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF6E3B4),
-              foregroundColor: const Color(0xFF8D6748),
+              backgroundColor: const Color(0xFF8D6748),
+              foregroundColor: Colors.white,
               elevation: 2,
               padding: const EdgeInsets.symmetric(vertical: 3),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
-            child: const Icon(
-              Icons.cancel,
-              size: 12,
+            child: const Text(
+              'Add',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
             ),
           ),
         );

@@ -214,6 +214,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 );
                               
                                 if (context.mounted) {
+                                  if (result == true) {
+                                    await _loadUserFriends();
+                                    setDialogState(() {});
+                                    setState(() {});
+                                  }
                                   Navigator.pop(context);
                                 }
                               } else {

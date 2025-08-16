@@ -181,7 +181,7 @@ namespace BookWorm.Services.DataBase
                 entity.HasOne(bcep => bcep.User)
                     .WithMany(u => u.BookClubEventParticipants)
                     .HasForeignKey(bcep => bcep.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(bcep => bcep.BookClubEvent)
                     .WithMany(bce => bce.Participants)

@@ -42,6 +42,5 @@ class BookClubEvent {
   });
 
   factory BookClubEvent.fromJson(Map<String, dynamic> json) => _$BookClubEventFromJson(json);
-
   Map<String, dynamic> toJson() => _$BookClubEventToJson(this);
 }

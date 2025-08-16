@@ -366,6 +366,8 @@ namespace BookWorm.Services
 
             var books = await _context.Books
                 .Include(b => b.Author)
+                .Include(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
                 .Include(b => b.BookReviews)
                 .ToListAsync();
 
@@ -533,6 +535,8 @@ namespace BookWorm.Services
             var recommendedBooks = await _context.Books
                 .Where(b => recommendedBookIds.Contains(b.Id))
                 .Include(b => b.Author)
+                .Include(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
                 .ToListAsync();
 
             return recommendedBooks.Select(b => MapToResponse(b)).ToList();

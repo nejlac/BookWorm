@@ -1,6 +1,7 @@
 import 'package:bookworm_desktop/screens/author_list.dart';
 import 'package:bookworm_desktop/screens/bookReview_list.dart';
 import 'package:bookworm_desktop/screens/book_list.dart';
+import 'package:bookworm_desktop/screens/book_club_list.dart';
 import 'package:bookworm_desktop/screens/country_list.dart';
 import 'package:bookworm_desktop/screens/genre_list.dart';
 import 'package:bookworm_desktop/screens/reading_challenge_list.dart';
@@ -29,6 +30,7 @@ class _MasterScreenState extends State<MasterScreen> {
     _NavItem(icon: Icons.menu_book_rounded, label: 'Books', screen: BookList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Users', screen: UserList()),
     _NavItem(icon: Icons.people_alt_rounded, label: 'Authors', screen: AuthorList()),
+    _NavItem(icon: Icons.group, label: 'Book Clubs', screen: BookClubList()),
     _NavItem(icon: Icons.category, label: 'Genres', screen: GenreList()),
     _NavItem(icon: Icons.flag, label: 'Countries', screen: CountryList()),
     _NavItem(icon: Icons.reviews, label: 'Reviews', screen: BookReviewList()),

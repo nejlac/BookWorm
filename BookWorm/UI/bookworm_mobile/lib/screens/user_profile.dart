@@ -231,6 +231,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
+      
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating friendship status: $e')),
@@ -949,18 +951,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           child: ElevatedButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.cancel, color: Color(0xFF8D6748)),
-            label: const Text(
-              'Request Declined',
-              style: TextStyle(
-                color: Color(0xFF8D6748),
+            onPressed: _isSendingRequest ? null : _sendFriendRequest,
+            icon: _isSendingRequest 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.person_add, color: Colors.white),
+            label: Text(
+              _isSendingRequest ? 'Sending...' : 'Send Friend Request',
+              style: const TextStyle(
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF6E3B4),
+              backgroundColor: const Color(0xFF8D6748),
               elevation: 0,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(

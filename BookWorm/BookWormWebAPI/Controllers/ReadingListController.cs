@@ -66,8 +66,12 @@ namespace BookWormWebAPI.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ReadingListResponse>> Update(int id, ReadingListCreateUpdateRequest request)
         {
+            var list = await _readingListService.GetByIdAsync(id);
+            if (list == null)
+                return NotFound();
+
             var currentUserId = GetCurrentUserId();
-            if (request.UserId != currentUserId)
+            if (list.UserId != currentUserId)
             {
                 return BadRequest("You can only edit your own reading lists");
             }
