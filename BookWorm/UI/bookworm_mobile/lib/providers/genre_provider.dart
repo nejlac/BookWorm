@@ -1,15 +1,16 @@
 import 'package:bookworm_mobile/model/genre.dart';
+import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:bookworm_mobile/providers/auth_provider.dart';
 
 class GenreProvider extends ChangeNotifier {
-  static String? _baseUrl;
+  
   GenreProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "http://10.0.2.2:7031/api/");
+  
   }
-
+  String get _baseUrl => BaseProvider.baseUrl!;
   Map<String, String> createHeaders() {
     String basicAuth = 'Basic '
         + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));

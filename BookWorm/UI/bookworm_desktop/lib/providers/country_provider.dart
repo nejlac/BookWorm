@@ -40,51 +40,46 @@ class CountryProvider extends BaseProvider<Country> {
     }
   }
 
-  // Method for country list screen - gets paginated countries
   Future<SearchResult<Country>> getCountriesPaginated({int? page, int? pageSize}) async {
     final filter = <String, dynamic>{};
     if (page != null) filter['page'] = page;
     else {
-      filter['page'] = 0; // Default to first page if not specified
+      filter['page'] = 0; 
     }
     if (pageSize != null) {
       filter['pageSize'] = pageSize;
     } else {
-      filter['pageSize'] = 10; // Default page size for list view
+      filter['pageSize'] = 10; 
     }
     
     return await get(filter: filter);
   }
 
-  // Method for country list screen - gets paginated countries with 0-based indexing
   Future<SearchResult<Country>> getCountriesForList({int? page, int? pageSize}) async {
     final filter = <String, dynamic>{};
-    if (page != null) filter['page'] = page - 1; // Convert to 0-based indexing
+    if (page != null) filter['page'] = page - 1; 
     else {
-      filter['page'] = 0; // Default to first page (0-based indexing)
+      filter['page'] = 0; 
     }
     if (pageSize != null) {
       filter['pageSize'] = pageSize;
     } else {
-      filter['pageSize'] = 10; // Default page size for list view
+      filter['pageSize'] = 10; 
     }
     
     return await get(filter: filter);
   }
 
-  // Legacy method for backward compatibility
   Future<void> fetchCountries() async {
     final result = await get();
     _countries = result.items ?? [];
     notifyListeners();
   }
 
-  // Legacy method for backward compatibility
   Future<SearchResult<Country>> getCountries({int? page, int? pageSize}) async {
     return await getCountriesPaginated(page: page, pageSize: pageSize);
   }
 
-  // Legacy method for backward compatibility
   Future<SearchResult<Country>> getAllCountries() async {
     return await get(filter: {'pageSize': 500, 'page': 0});
   }
@@ -95,7 +90,6 @@ class CountryProvider extends BaseProvider<Country> {
     };
     final result = await insert(request);
     
-    // Invalidate cache when new country is created
     _allCountriesCache = null;
     _cacheTimestamp = null;
     
@@ -108,7 +102,6 @@ class CountryProvider extends BaseProvider<Country> {
     };
     final result = await update(id, request);
     
-    // Invalidate cache when country is updated
     _allCountriesCache = null;
     _cacheTimestamp = null;
     
@@ -118,18 +111,17 @@ class CountryProvider extends BaseProvider<Country> {
   @override
   Future<String?> delete(int id) async {
     try {
-      var url = "${BaseProvider.baseUrl ?? "http://localhost:7031/api/"}Country/$id";
+      var url = "${BaseProvider.baseUrl}Country/$id";
       var uri = Uri.parse(url);
       var headers = createHeaders();
       var response = await http.delete(uri, headers: headers);
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        // Invalidate cache when country is deleted
         _allCountriesCache = null;
         _cacheTimestamp = null;
-        return null; // Success, no error message
+        return null; 
       } else {
         print("Failed to delete country: ${response.statusCode} - ${response.body}");
-        // Parse the error message from the response
+      
         try {
           var errorData = jsonDecode(response.body);
           return errorData['message'] ?? 'Cannot delete country who is linked to one or more authors or users.';
@@ -143,7 +135,6 @@ class CountryProvider extends BaseProvider<Country> {
     }
   }
 
-  // Clear cache manually if needed
   void clearCache() {
     _allCountriesCache = null;
     _cacheTimestamp = null;

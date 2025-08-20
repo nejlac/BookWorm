@@ -1,16 +1,17 @@
 
 import 'package:bookworm_desktop/model/role.dart';
+import 'package:bookworm_desktop/providers/base_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:bookworm_desktop/providers/auth_provider.dart';
 
 class RoleProvider extends ChangeNotifier {
-  static String? _baseUrl;
+ 
   RoleProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "http://localhost:7031/api");
-  }
 
+  }
+  String get _baseUrl => BaseProvider.baseUrl!;
   Map<String, String> createHeaders() {
     String basicAuth = 'Basic '
         + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));
@@ -21,7 +22,7 @@ class RoleProvider extends ChangeNotifier {
   }
 
   Future<List<Role>> getAllRoles() async {
-    final url = "$_baseUrl/Role";
+    final url = "${_baseUrl}Role";
     final uri = Uri.parse(url);
     final response = await http.get(uri, headers: createHeaders());
     if (response.statusCode == 200) {

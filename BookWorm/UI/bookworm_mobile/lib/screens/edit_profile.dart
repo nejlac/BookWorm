@@ -48,27 +48,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final countryProvider = Provider.of<CountryProvider>(context, listen: false);
-    final username = AuthProvider.username;
-    if (username == null) return;
-    await countryProvider.fetchCountries();
-    final result = await userProvider.get(filter: {'username': username, 'pageSize': 1});
-    setState(() {
-      user = result.items != null && result.items!.isNotEmpty ? result.items!.first : null;
-      countries = countryProvider.countries;
-      if (user != null) {
-        firstNameController.text = user!.firstName;
-        lastNameController.text = user!.lastName;
-        usernameController.text = user!.username;
-        emailController.text = user!.email;
-        phoneController.text = user!.phoneNumber;
-        ageController.text = user!.age.toString();
-        selectedCountry = countries.firstWhere((c) => c.id == user!.countryId, orElse: () => countries.first);
-        _existingPhotoUrl = user!.photoUrl;
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final countryProvider = Provider.of<CountryProvider>(context, listen: false);
+      final username = AuthProvider.username;
+      
+      
+      if (username == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
-      isLoading = false;
-    });
+      
+      await countryProvider.fetchCountries();
+      
+      final result = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+      
+      if (mounted) {
+        setState(() {
+          user = result.items != null && result.items!.isNotEmpty ? result.items!.first : null;
+          countries = countryProvider.countries;
+          
+          
+          if (user != null) {
+            firstNameController.text = user!.firstName;
+            lastNameController.text = user!.lastName;
+            usernameController.text = user!.username;
+            emailController.text = user!.email;
+            phoneController.text = user!.phoneNumber;
+            ageController.text = user!.age.toString();
+            
+            
+            selectedCountry = countries.firstWhere((c) => c.id == user!.countryId, orElse: () => countries.first);
+            
+            _existingPhotoUrl = user!.photoUrl;
+          } else {
+          }
+          
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   String? _getUserImageUrl() {

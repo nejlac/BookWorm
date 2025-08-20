@@ -103,7 +103,6 @@ namespace BookWorm.Services.BookStateMachine
 
             await _context.SaveChangesAsync();
 
-
             var bookWithRelations = await _context.Books
                 .Include(b => b.Author)
                 .Include(b => b.BookGenres)
@@ -111,15 +110,33 @@ namespace BookWorm.Services.BookStateMachine
                 .Include(b => b.CreatedByUser)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-            var bus = RabbitHutch.CreateBus("host=localhost");
-
-            var accepted = new BookAccepted
+            // Publish to RabbitMQ using environment variables
+            try
             {
-                Book = MapToResponse(bookWithRelations!)
-            };
+                var rabbitMqHost = Environment.GetEnvironmentVariable("RabbitMQ:HostName") ?? "localhost";
+                var rabbitMqUsername = Environment.GetEnvironmentVariable("RabbitMQ:Username") ?? "guest";
+                var rabbitMqPassword = Environment.GetEnvironmentVariable("RabbitMQ:Password") ?? "guest";
+                
+                Console.WriteLine($"Connecting to RabbitMQ at: {rabbitMqHost} with user: {rabbitMqUsername}");
+                
+                var connectionString = $"host={rabbitMqHost};username={rabbitMqUsername};password={rabbitMqPassword};timeout=10";
+                var bus = RabbitHutch.CreateBus(connectionString);
 
-            await bus.PubSub.PublishAsync(accepted);
+                var accepted = new BookAccepted
+                {
+                    Book = MapToResponse(bookWithRelations!)
+                };
 
+                await bus.PubSub.PublishAsync(accepted);
+                Console.WriteLine($"Successfully published BookAccepted message for book: {book.Title}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error publishing to RabbitMQ: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                // Don't throw the exception to avoid breaking the book acceptance flow
+                // The book is already accepted in the database
+            }
 
             return MapToResponse(bookWithRelations!);
         }

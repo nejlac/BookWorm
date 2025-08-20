@@ -1,25 +1,34 @@
 import 'dart:convert';
+import 'package:bookworm_mobile/providers/base_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../model/country.dart';
 import 'auth_provider.dart';
 
 class CountryProvider extends ChangeNotifier {
-  static String? _baseUrl;
+  
   CountryProvider() {
-    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "http://10.0.2.2:7031/api");
   }
-
+  String get _baseUrl => BaseProvider.baseUrl!;
   List<Country> _countries = [];
   List<Country> get countries => _countries;
 
   Future<void> fetchCountries() async {
     final url = Uri.parse('${_baseUrl}Country?pageSize=500');
-    final headers = <String, String>{};
-    if (AuthProvider.username != null && AuthProvider.password != null) {
-      String basicAuth = 'Basic ' + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));
-      headers['Authorization'] = basicAuth;
-    }
+    
+    // Use the same authentication pattern as BaseProvider
+    String username = AuthProvider.username ?? "";
+    String password = AuthProvider.password ?? "";
+    
+    print("CountryProvider - passed creds: $username, $password");
+    
+    String basicAuth = "Basic ${base64Encode(utf8.encode('$username:$password'))}";
+    
+    final headers = {
+      "Content-Type": "application/json",
+      "Authorization": basicAuth
+    };
+    
     final response = await http.get(url, headers: headers);
   
     if (response.statusCode == 200) {

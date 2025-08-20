@@ -1,0 +1,83 @@
+version: '3'
+
+services:
+  bookworm-sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=MySuperStrong!Pass123
+      - MSSQL_PID=Developer
+    ports:
+      - "1401:1433"
+    expose:
+      - 1433
+    networks:
+      - bookworm-network
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - bookworm-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    user: "999:999"
+  
+  bookworm-api:
+    build:
+      context: .
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings:DefaultConnection=Server=bookworm-sql,1433;Database=bookworm;User ID=sa;Password=MySuperStrong!Pass123;TrustServerCertificate=True
+      - RabbitMQ:HostName=rabbitmq
+      - RabbitMQ:Username=guest
+      - RabbitMQ:Password=guest
+    ports:
+      - "7031:7031"
+    networks:
+      - bookworm-network
+    links:
+      - bookworm-sql
+      - rabbitmq
+    depends_on:
+      bookworm-sql:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    command: sh -c "sleep 120 && dotnet BookWormWebAPI.dll"
+   
+  
+  bookworm-subscriber:
+    build:
+      context: .
+      dockerfile: BookWorm.Subscriber/Dockerfile
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - EmailSettings__FromEmail=bookwormapp23@gmail.com
+      - EmailSettings__SmtpServer=smtp.gmail.com
+      - EmailSettings__Port=587
+      - EmailSettings__Password=dpyd scqn lqdw khgt
+    networks:
+      - bookworm-network
+    links:
+      - rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    command: sh -c "sleep 90 && dotnet BookWorm.Subscriber.dll"
+
+networks:
+  bookworm-network:
+    driver: bridge
