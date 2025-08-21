@@ -44,8 +44,20 @@ namespace BookWorm.Services
 
         protected override IQueryable<Book> ApplyFilter(IQueryable<Book> query, BookSearchObject search)
         {
+            // If pageSize is 1, use exact match for title (for duplicate checking)
+            bool isDuplicateCheck = search.PageSize == 1;
+
             if (!string.IsNullOrEmpty(search.Title))
-                query = query.Where(b => b.Title.Contains(search.Title));
+            {
+                if (isDuplicateCheck)
+                {
+                    query = query.Where(b => b.Title == search.Title);
+                }
+                else
+                {
+                    query = query.Where(b => b.Title.Contains(search.Title));
+                }
+            }
             if (!string.IsNullOrEmpty(search.Author))
                 query = query.Where(b => b.Author.Name.Contains(search.Author));
             if (search.AuthorId.HasValue)

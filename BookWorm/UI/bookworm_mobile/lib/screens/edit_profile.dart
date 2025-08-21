@@ -137,9 +137,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'page': 0,
       };
       final users = await userProvider.get(filter: filter);
-      if (users.items == null || users.items!.isEmpty) return false;
-      if (user != null && users.items!.first.id == user!.id) return false;
-      return true;
+      
+      if (users.items == null || users.items!.isEmpty) {
+        return false; // Username doesn't exist
+      }
+      
+      // If it's the same user, allow it
+      if (user != null && users.items!.first.id == user!.id) {
+        return false; // Same user, allow the username
+      }
+      
+      return true; // Username exists and belongs to another user
     } catch (e) {
       return false;
     }
@@ -155,9 +163,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'page': 0,
       };
       final users = await userProvider.get(filter: filter);
-      if (users.items == null || users.items!.isEmpty) return false;
-      if (user != null && users.items!.first.id == user!.id) return false;
-      return true;
+      
+      if (users.items == null || users.items!.isEmpty) {
+        return false; // Email doesn't exist
+      }
+      
+      // If it's the same user, allow it
+      if (user != null && users.items!.first.id == user!.id) {
+        return false; // Same user, allow the email
+      }
+      
+      return true; // Email exists and belongs to another user
     } catch (e) {
       return false;
     }
@@ -254,7 +270,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
           } catch (e) {
-        setState(() { errorMsg = e.toString(); });
+        String errorMsg = e.toString();
+        
+        if (errorMsg.contains('already exists')) {
+          if (errorMsg.contains('username')) {
+            errorMsg = 'A user with this username already exists.';
+          } else if (errorMsg.contains('email')) {
+            errorMsg = 'A user with this email already exists.';
+          } else {
+            errorMsg = 'This information already exists in our system.';
+          }
+        } else if (errorMsg.contains('400') || errorMsg.contains('Bad Request')) {
+          errorMsg = 'Please check your input and try again.';
+        } else if (errorMsg.contains('401') || errorMsg.contains('Unauthorized')) {
+          errorMsg = 'You are not authorized to perform this action.';
+        } else if (errorMsg.contains('500') || errorMsg.contains('Internal Server Error')) {
+          errorMsg = 'Server error. Please try again later.';
+        } else if (errorMsg.contains('SocketException') || errorMsg.contains('Connection')) {
+          errorMsg = 'Network error. Please check your connection and try again.';
+        } else if (errorMsg.contains('TimeoutException')) {
+          errorMsg = 'Request timeout. Please try again.';
+        }
+        
+        setState(() { errorMsg = errorMsg; });
       } finally {
       setState(() { isSaving = false; });
     }
@@ -276,7 +314,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6E3B4),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFFF8E1),
+          elevation: 0,
+          automaticallyImplyLeading: true,
+          iconTheme: const IconThemeData(color: Color(0xFF8D6748)),
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              fontFamily: 'Literata',
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Color(0xFF5D4037),
+            ),
+          ),
+          centerTitle: false,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8D6748)),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Loading profile...',
+                style: TextStyle(
+                  color: Color(0xFF5D4037),
+                  fontSize: 16,
+                  fontFamily: 'Literata',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return Scaffold(
       backgroundColor: const Color(0xFFF6E3B4),
@@ -342,6 +417,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  if (errorMsg != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          border: Border.all(color: Colors.red.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          errorMsg!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+
                   TextFormField(
                     controller: firstNameController,
                     decoration: InputDecoration(
@@ -390,13 +486,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             setState(() {
                               usernameError = exists ? 'A user with the username "${value.trim()}" already exists.' : null;
                             });
+                            // Trigger form validation immediately
+                            _formKey.currentState?.validate();
                           }
                         });
-                                              } else {
-                          setState(() {
-                            usernameError = null;
-                          });
-                        }
+                      } else {
+                        setState(() {
+                          usernameError = null;
+                        });
+                        // Trigger form validation immediately
+                        _formKey.currentState?.validate();
+                      }
                     },
                                           validator: (val) {
                         if (val == null || val.isEmpty) return 'Username is required';
@@ -423,13 +523,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             setState(() {
                               emailError = exists ? 'A user with the email "${value.trim()}" already exists.' : null;
                             });
+                            // Trigger form validation immediately
+                            _formKey.currentState?.validate();
                           }
                         });
-                                              } else {
-                          setState(() {
-                            emailError = null;
-                          });
-                        }
+                      } else {
+                        setState(() {
+                          emailError = null;
+                        });
+                        // Trigger form validation immediately
+                        _formKey.currentState?.validate();
+                      }
                     },
                                           validator: (val) {
                         if (val == null || val.isEmpty) return 'Email is required';

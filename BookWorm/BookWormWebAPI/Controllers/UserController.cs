@@ -44,6 +44,20 @@ namespace BookWormWebAPI.Controllers
             return user;
         }
 
+        [HttpGet("check-username/{username}")]
+        public async Task<ActionResult<bool>> CheckUsernameExists(string username)
+        {
+            var exists = await _userService.UsernameExistsAsync(username);
+            return exists;
+        }
+
+        [HttpGet("check-email/{email}")]
+        public async Task<ActionResult<bool>> CheckEmailExists(string email)
+        {
+            var exists = await _userService.EmailExistsAsync(email);
+            return exists;
+        }
+
         [HttpPost]
         public async Task<ActionResult<UserResponse>> Create(UserCreateUpdateRequest request)
         {

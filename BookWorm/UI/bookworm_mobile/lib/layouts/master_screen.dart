@@ -452,48 +452,48 @@ class _MasterScreenState extends State<MasterScreen> with WidgetsBindingObserver
               },
             )
           else if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3 || _selectedIndex == 4) ...[
-         
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications, color: Color(0xFF8D6748), size: 28),
-                  onPressed: () => _showFriendRequestsDialog(),
-                ),
-                if (_pendingFriendRequests != null && _pendingFriendRequests!.isNotEmpty)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF44336),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 20,
-                        minHeight: 20,
-                      ),
-                      child: Text(
-                        '${_pendingFriendRequests!.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+            if (_selectedIndex != 4) ...[
+              Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications, color: Color(0xFF8D6748), size: 28),
+                    onPressed: () => _showFriendRequestsDialog(),
+                  ),
+                  if (_pendingFriendRequests != null && _pendingFriendRequests!.isNotEmpty)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF44336),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        textAlign: TextAlign.center,
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        child: Text(
+                          '${_pendingFriendRequests!.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 8),
+                ],
+              ),
+              const SizedBox(width: 8),
+            ],
             IconButton(
-              key: _selectedIndex == 3 ? _profileSettingsKey : null,
+              key: _selectedIndex == 3 || _selectedIndex == 4 ? _profileSettingsKey : null,
               icon: const Icon(Icons.settings, color: Color(0xFF8D6748), size: 28),
               onPressed: () => _showProfileMenu(context),
             ),
           ],
-          const SizedBox(width: 8),
         ],
       ),
       body: _pages[_selectedIndex],

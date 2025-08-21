@@ -1,27 +1,18 @@
 import 'package:bookworm_mobile/model/genre.dart';
 import 'package:bookworm_mobile/providers/base_provider.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:bookworm_mobile/providers/auth_provider.dart';
 
-class GenreProvider extends ChangeNotifier {
+class GenreProvider extends BaseProvider<Genre> {
+  GenreProvider() : super("Genre");
   
-  GenreProvider() {
-  
+  @override
+  Genre fromJson(dynamic json) {
+    return Genre.fromJson(json);
   }
-  String get _baseUrl => BaseProvider.baseUrl!;
-  Map<String, String> createHeaders() {
-    String basicAuth = 'Basic '
-        + base64Encode(utf8.encode('${AuthProvider.username}:${AuthProvider.password}'));
-    return {
-      "Content-Type": "application/json",
-      "Authorization": basicAuth,
-    };
-  }
-
+  String get baseUrl => BaseProvider.baseUrl!;
   Future<List<Genre>> getAllGenres() async {
-    final url = "${_baseUrl}Genre";
+    final url = "${baseUrl}Genre";
     final uri = Uri.parse(url);
     final response = await http.get(uri, headers: createHeaders());
     if (response.statusCode == 200) {

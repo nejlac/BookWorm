@@ -3,6 +3,9 @@ using BookWorm.Services;
 using BookWorm.Model.Requests;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
+using System.Security.Cryptography;
 
 
 namespace BookWormWebAPI.Controllers
@@ -13,13 +16,11 @@ namespace BookWormWebAPI.Controllers
     public class SeedController : ControllerBase
     {
         private readonly BookWormDbContext _context;
-        private readonly IUserService _userService;
         private readonly IReadingChallengeService _readingChallengeService;
 
-        public SeedController(BookWormDbContext context, IUserService userService, IReadingChallengeService readingChallengeService)
+        public SeedController(BookWormDbContext context, IReadingChallengeService readingChallengeService)
         {
             _context = context;
-            _userService = userService;
             _readingChallengeService = readingChallengeService;
         }
 
@@ -252,187 +253,156 @@ namespace BookWormWebAPI.Controllers
                 var germany = _context.Countries.First(c => c.Name == "Germany");
                 var france = _context.Countries.First(c => c.Name == "France");
 
-                // Create users using UserService to handle password hashing
-                var userRequests = new[]
+           
+                var users = new List<User>
                 {
                     // Main test user
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Test",
                         LastName = "User",
                         Email = "nejla.cajdin@gmail.com",
-                        Username = "testUser",
-                        Password = "TestTest123.",
+                        Username = "mobile",
+                        PasswordHash = HashPassword("test", out byte[] salt1),
+                        PasswordSalt = Convert.ToBase64String(salt1),
                         CountryId = bosnia.Id,
                         Age = 25,
                         IsActive = true,
                         PhoneNumber = "+38760123456",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    // Additional users
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "John",
                         LastName = "Doe",
                         Email = "john.doe@example.com",
                         Username = "john_doe",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt2),
+                        PasswordSalt = Convert.ToBase64String(salt2),
                         CountryId = usa.Id,
                         Age = 28,
                         IsActive = true,
                         PhoneNumber = "+1234567890",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Jane",
                         LastName = "Smith",
                         Email = "jane.smith@example.com",
                         Username = "jane_smith",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt3),
+                        PasswordSalt = Convert.ToBase64String(salt3),
                         CountryId = uk.Id,
                         Age = 32,
                         IsActive = true,
                         PhoneNumber = "+44123456789",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Michael",
                         LastName = "Johnson",
                         Email = "michael.johnson@example.com",
                         Username = "michael_j",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt4),
+                        PasswordSalt = Convert.ToBase64String(salt4),
                         CountryId = usa.Id,
                         Age = 24,
                         IsActive = true,
                         PhoneNumber = "+1234567891",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Sarah",
                         LastName = "Wilson",
                         Email = "sarah.wilson@example.com",
                         Username = "sarah_w",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt5),
+                        PasswordSalt = Convert.ToBase64String(salt5),
                         CountryId = uk.Id,
                         Age = 29,
                         IsActive = true,
                         PhoneNumber = "+44123456790",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "David",
                         LastName = "Brown",
                         Email = "david.brown@example.com",
                         Username = "david_brown",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt6),
+                        PasswordSalt = Convert.ToBase64String(salt6),
                         CountryId = usa.Id,
                         Age = 35,
                         IsActive = true,
                         PhoneNumber = "+1234567892",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Emma",
                         LastName = "Davis",
                         Email = "emma.davis@example.com",
                         Username = "emma_d",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt7),
+                        PasswordSalt = Convert.ToBase64String(salt7),
                         CountryId = germany.Id,
                         Age = 27,
                         IsActive = true,
                         PhoneNumber = "+49123456789",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
-                    {
-                        FirstName = "James",
-                        LastName = "Miller",
-                        Email = "james.miller@example.com",
-                        Username = "james_m",
-                        Password = "Password123!",
-                        CountryId = usa.Id,
-                        Age = 31,
-                        IsActive = true,
-                        PhoneNumber = "+1234567893",
-                        RoleIds = new List<int> { userRole.Id }
-                    },
-                    new UserCreateUpdateRequest
-                    {
-                        FirstName = "Lisa",
-                        LastName = "Garcia",
-                        Email = "lisa.garcia@example.com",
-                        Username = "lisa_g",
-                        Password = "Password123!",
-                        CountryId = france.Id,
-                        Age = 26,
-                        IsActive = true,
-                        PhoneNumber = "+33123456789",
-                        RoleIds = new List<int> { userRole.Id }
-                    },
-                    new UserCreateUpdateRequest
-                    {
-                        FirstName = "Robert",
-                        LastName = "Taylor",
-                        Email = "robert.taylor@example.com",
-                        Username = "robert_t",
-                        Password = "Password123!",
-                        CountryId = uk.Id,
-                        Age = 33,
-                        IsActive = true,
-                        PhoneNumber = "+44123456791",
-                        RoleIds = new List<int> { userRole.Id }
-                    },
-                    new UserCreateUpdateRequest
-                    {
-                        FirstName = "Maria",
-                        LastName = "Anderson",
-                        Email = "maria.anderson@example.com",
-                        Username = "maria_a",
-                        Password = "Password123!",
-                        CountryId = usa.Id,
-                        Age = 30,
-                        IsActive = true,
-                        PhoneNumber = "+1234567894",
-                        RoleIds = new List<int> { userRole.Id }
-                    },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Thomas",
                         LastName = "Thomas",
                         Email = "thomas.thomas@example.com",
                         Username = "thomas_t",
-                        Password = "Password123!",
+                        PasswordHash = HashPassword("Password123!", out byte[] salt8),
+                        PasswordSalt = Convert.ToBase64String(salt8),
                         CountryId = germany.Id,
                         Age = 34,
                         IsActive = true,
                         PhoneNumber = "+49123456790",
-                        RoleIds = new List<int> { userRole.Id }
+                        CreatedAt = DateTime.Now
                     },
-                    new UserCreateUpdateRequest
+                    new User
                     {
                         FirstName = "Admin",
                         LastName = "User",
                         Email = "admin@bookworm.com",
-                        Username = "admin",
-                        Password = "Admin123!",
+                        Username = "desktop",
+                        PasswordHash = HashPassword("test", out byte[] salt9),
+                        PasswordSalt = Convert.ToBase64String(salt9),
                         CountryId = usa.Id,
                         Age = 30,
                         IsActive = true,
                         PhoneNumber = "+1234567895",
-                        RoleIds = new List<int> { adminRole.Id }
+                        CreatedAt = DateTime.Now
                     }
                 };
 
-                // Create users using UserService
-                foreach (var userRequest in userRequests)
+                await _context.Users.AddRangeAsync(users);
+                await _context.SaveChangesAsync();
+
+                // Add user roles
+                var userRoles = new List<UserRole>();
+                foreach (var user in users)
                 {
-                    await _userService.CreateAsync(userRequest);
+                    if (user.Username == "desktop")
+                    {
+                        userRoles.Add(new UserRole { UserId = user.Id, RoleId = adminRole.Id });
+                    }
+                    else
+                    {
+                        userRoles.Add(new UserRole { UserId = user.Id, RoleId = userRole.Id });
+                    }
                 }
+                await _context.UserRoles.AddRangeAsync(userRoles);
+                await _context.SaveChangesAsync();
             }
 
 
@@ -562,8 +532,8 @@ namespace BookWormWebAPI.Controllers
 
             if (!_context.UserFriends.Any())
             {
-                var testUser = _context.Users.First(u => u.Username == "testUser");
-                var otherUsers = _context.Users.Where(u => u.Username != "testUser" && u.Username != "admin").Take(5).ToList();
+                var testUser = _context.Users.First(u => u.Username == "mobile");
+                var otherUsers = _context.Users.Where(u => u.Username != "mobile" && u.Username != "desktop").Take(5).ToList();
 
                 var friendRequests = new List<UserFriend>();
 
@@ -618,7 +588,7 @@ namespace BookWormWebAPI.Controllers
             // Add books to Read lists for different users
             if (!_context.ReadingListBooks.Any())
             {
-                var users = _context.Users.Where(u => u.Username != "admin").Take(5).ToList();
+                var users = _context.Users.Where(u => u.Username != "desktop").Take(5).ToList();
                 var books = _context.Books.Take(10).ToList();
                 var readLists = _context.ReadingLists.Where(rl => rl.Name == "Read").ToList();
 
@@ -647,7 +617,7 @@ namespace BookWormWebAPI.Controllers
 
             if (!_context.BookReviews.Any())
             {
-                var users = _context.Users.Where(u => u.Username != "admin").Take(8).ToList();
+                var users = _context.Users.Where(u => u.Username != "desktop").Take(8).ToList();
                 var books = _context.Books.Take(15).ToList();
                 var random = new Random();
 
@@ -690,8 +660,8 @@ namespace BookWormWebAPI.Controllers
             // Add book clubs (at least 15, with 3 from testUser)
             if (!_context.BookClubs.Any())
             {
-                var testUser = _context.Users.First(u => u.Username == "testUser");
-                var otherUsers = _context.Users.Where(u => u.Username != "testUser" && u.Username != "admin").Take(12).ToList();
+                var testUser = _context.Users.First(u => u.Username == "mobile");
+                var otherUsers = _context.Users.Where(u => u.Username != "mobile" && u.Username != "desktop").Take(12).ToList();
                 var random = new Random();
 
                 var bookClubs = new List<BookClub>();
@@ -756,8 +726,8 @@ namespace BookWormWebAPI.Controllers
 
             if (!_context.BookClubMembers.Any())
             {
-                var testUser = _context.Users.First(u => u.Username == "testUser");
-                var otherUsers = _context.Users.Where(u => u.Username != "testUser" && u.Username != "admin").Take(8).ToList();
+                var testUser = _context.Users.First(u => u.Username == "mobile");
+                var otherUsers = _context.Users.Where(u => u.Username != "mobile" && u.Username != "desktop").Take(8).ToList();
                 var allBookClubs = _context.BookClubs.ToList();
                 var books = _context.Books.Take(5).ToList();
                 var random = new Random();
@@ -816,7 +786,7 @@ namespace BookWormWebAPI.Controllers
 
             if (!_context.ReadingChallenges.Any())
             {
-                var users = _context.Users.Where(u => u.Username != "admin").Take(8).ToList();
+                var users = _context.Users.Where(u => u.Username != "desktop").Take(8).ToList();
                 var random = new Random();
                 var currentYear = DateTime.Now.Year;
 
@@ -867,8 +837,23 @@ namespace BookWormWebAPI.Controllers
         private int GetGenreId(string name) =>
             _context.Genres.FirstOrDefault(g => g.Name == name)?.Id
             ?? throw new InvalidOperationException($"Genre '{name}' not found.");
+
+        private const int SaltSize = 16;
+        private const int KeySize = 32;
+        private const int Iterations = 10000;
+
+        private string HashPassword(string password, out byte[] salt)
+        {
+            salt = new byte[SaltSize];
+            using (var rng = new RNGCryptoServiceProvider())
+            {
+                rng.GetBytes(salt);
+            }
+
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Iterations))
+            {
+                return Convert.ToBase64String(pbkdf2.GetBytes(KeySize));
+            }
+        }
     }
-
-
-
 }

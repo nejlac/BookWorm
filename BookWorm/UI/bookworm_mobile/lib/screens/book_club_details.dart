@@ -34,6 +34,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
   List<Book> _availableBooks = [];
   bool _isLoading = true;
   bool _isJoining = false;
+  bool _isDialogOpen = false;
   String? _errorMessage;
 
   @override
@@ -374,6 +375,10 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
     Book? selectedBook;
 
+    setState(() {
+      _isDialogOpen = true;
+    });
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -381,7 +386,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
           title: const Text('Create New Event'),
           content: SizedBox(
             width: double.maxFinite,
-            height: 500,
+            height: MediaQuery.of(context).size.height * 0.4,
             child: SingleChildScrollView(
               child: Form(
                 key: formKey,
@@ -496,13 +501,21 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _isDialogOpen = false;
+                });
+              },
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate() && selectedBook != null) {
                   Navigator.pop(context);
+                  setState(() {
+                    _isDialogOpen = false;
+                  });
                   await _createEvent(
                     titleController.text,
                     descriptionController.text,
@@ -519,7 +532,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
           ],
         ),
       ),
-    );
+    ).then((_) {
+      // This ensures _isDialogOpen is set to false when dialog is closed by any means
+      if (mounted) {
+        setState(() {
+          _isDialogOpen = false;
+        });
+      }
+    });
   }
 
   Future<void> _createEvent(String title, String description, DateTime deadline, int bookId) async {
@@ -562,7 +582,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
           title: const Text('Edit Event'),
           content: SizedBox(
             width: double.maxFinite,
-            height: 500,
+            height: MediaQuery.of(context).size.height * 0.4,
             child: SingleChildScrollView(
               child: Form(
                 key: formKey,
@@ -1432,7 +1452,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          _events.isEmpty
+                          _events.isEmpty && !_isDialogOpen
                               ? const Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,

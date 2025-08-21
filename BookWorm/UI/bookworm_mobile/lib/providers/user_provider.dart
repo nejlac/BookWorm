@@ -151,5 +151,38 @@ class UserProvider extends BaseProvider<User> {
     }
   }
 
+  Future<bool> checkUsernameExists(String username) async {
+    try {
+      final url = '${baseUrl}Users/check-username/${Uri.encodeComponent(username)}';
+      final uri = Uri.parse(url);
+      
+      final response = await http.get(uri, headers: createHeaders());
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as bool;
+      } else {
+        throw Exception('Failed to check username: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      final url = '${baseUrl}Users/check-email/${Uri.encodeComponent(email)}';
+      final uri = Uri.parse(url);
+      
+      final response = await http.get(uri, headers: createHeaders());
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as bool;
+      } else {
+        throw Exception('Failed to check email: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
  
 } 

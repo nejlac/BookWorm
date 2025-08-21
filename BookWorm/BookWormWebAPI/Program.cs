@@ -105,7 +105,7 @@ try
             if (!context.Users.Any())
             {
                 Console.WriteLine("Database is empty. Starting data seeding...");
-                var seeder = new SeedController(context, userService, readingChallengeService);
+                var seeder = new SeedController(context, readingChallengeService);
                 await seeder.SeedData();
                 Console.WriteLine("Data seeding completed successfully.");
             }

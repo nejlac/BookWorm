@@ -278,13 +278,17 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
    
     Future.delayed(const Duration(milliseconds: 500), () {
       if (_searchController.text == value) {
+        setState(() {
+          _currentPage = 0; // Reset to first page when searching
+        });
+        
         if (_selectedTab == 'Books') {
-          _loadBooks();
+          _loadBooks(page: 0);
         } else if (_selectedTab == 'Users') {
-          _loadUsers();
+          _loadUsers(page: 0);
         }
         else if (_selectedTab == 'Authors') {
-          _loadAuthors();
+          _loadAuthors(page: 0);
         }
       }
     });
@@ -298,12 +302,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     
    
     if (_selectedTab == 'Books') {
-      _loadBooks();
+      _loadBooks(page: 0);
     } else if (_selectedTab == 'Users') {
-      _loadUsers();
+      _loadUsers(page: 0);
     }
     else if (_selectedTab == 'Authors') {
-          _loadAuthors();
+      _loadAuthors(page: 0);
         }
    
   }
@@ -583,7 +587,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Any Genre'),
                     onTap: () {
-                      setState(() => _selectedGenre = null);
+                      setState(() {
+                        _selectedGenre = null;
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -591,7 +598,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ..._genres.map((genre) => ListTile(
                     title: Text(genre.name),
                     onTap: () {
-                      setState(() => _selectedGenre = genre);
+                      setState(() {
+                        _selectedGenre = genre;
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0); 
                     },
@@ -663,7 +673,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          setState(() => _selectedYear = null);
+                          setState(() {
+                            _selectedYear = null;
+                            _currentPage = 0; // Reset to first page
+                          });
                           Navigator.pop(context);
                           _loadBooks(page: 0); 
                         },
@@ -679,11 +692,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       child: ElevatedButton(
                         onPressed: () {
                           final year = yearController.text.trim();
+                          setState(() {
                           if (year.isNotEmpty) {
-                            setState(() => _selectedYear = year);
+                              _selectedYear = year;
                           } else {
-                            setState(() => _selectedYear = null);
+                              _selectedYear = null;
                           }
+                            _currentPage = 0; // Reset to first page
+                          });
                           Navigator.pop(context);
                           _loadBooks(page: 0); 
                         },
@@ -742,7 +758,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 children: _sizes.map((size) => ListTile(
                   title: Text(size),
                   onTap: () {
-                    setState(() => _selectedSize = size);
+                    setState(() {
+                      _selectedSize = size;
+                      _currentPage = 0; // Reset to first page
+                    });
                     Navigator.pop(context);
                     _loadBooks(page: 0); 
                   },
@@ -793,7 +812,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('No Sort'),
                     onTap: () {
-                      setState(() => _selectedSort = null);
+                      setState(() {
+                        _selectedSort = null;
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -801,7 +823,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Rating (High to Low)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'rating_desc');
+                      setState(() {
+                        _selectedSort = 'rating_desc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -809,7 +834,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Rating (Low to High)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'rating_asc');
+                      setState(() {
+                        _selectedSort = 'rating_asc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -817,7 +845,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Title (A-Z)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'title_asc');
+                      setState(() {
+                        _selectedSort = 'title_asc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -825,7 +856,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Title (Z-A)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'title_desc');
+                      setState(() {
+                        _selectedSort = 'title_desc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -833,7 +867,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Publication Year (Newest)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'year_desc');
+                      setState(() {
+                        _selectedSort = 'year_desc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -841,7 +878,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ListTile(
                     title: const Text('Publication Year (Oldest)'),
                     onTap: () {
-                      setState(() => _selectedSort = 'year_asc');
+                      setState(() {
+                        _selectedSort = 'year_asc';
+                        _currentPage = 0; // Reset to first page
+                      });
                       Navigator.pop(context);
                       _loadBooks(page: 0);
                     },
@@ -903,24 +943,30 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       ListTile(
                         title: const Text('Any Country'),
                         onTap: () {
-                          setState(() => _selectedCountry = null);
+                          setState(() {
+                            _selectedCountry = null;
+                            _currentPage = 0; // Reset to first page
+                          });
                           Navigator.pop(context);
                           if (_selectedTab == 'Users') {
-                            _loadUsers();
+                            _loadUsers(page: 0);
                           } else if (_selectedTab == 'Authors') {
-                            _loadAuthors();
+                            _loadAuthors(page: 0);
                           }
                         },
                       ),
                       ...countries.map((country) => ListTile(
                         title: Text(country.name),
                         onTap: () {
-                          setState(() => _selectedCountry = country);
+                          setState(() {
+                            _selectedCountry = country;
+                            _currentPage = 0; // Reset to first page
+                          });
                           Navigator.pop(context);
                           if (_selectedTab == 'Users') {
-                            _loadUsers();
+                            _loadUsers(page: 0);
                           } else if (_selectedTab == 'Authors') {
-                            _loadAuthors();
+                            _loadAuthors(page: 0);
                           }
                         },
                       )),

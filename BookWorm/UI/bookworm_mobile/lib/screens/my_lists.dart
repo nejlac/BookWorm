@@ -576,32 +576,30 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
             color: Colors.grey[600],
           ),
         ),
-        trailing: _canEditLists() ? PopupMenuButton<String>(
+        trailing: _canEditLists() && _isCustomList(list) ? PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, color: Color(0xFF8D6E63)),
           onSelected: (value) => _handleListAction(value, list),
           itemBuilder: (context) => [
-            if (_isCustomList(list))
-              PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18),
-                    SizedBox(width: 8),
-                    Text('Edit'),
-                  ],
-                ),
+            PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 18),
+                  SizedBox(width: 8),
+                  Text('Edit'),
+                ],
               ),
-            if (_isCustomList(list))
-              PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, size: 18, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
               ),
+            ),
           ],
         ) : null,
         onTap: () => _navigateToListDetails(list),

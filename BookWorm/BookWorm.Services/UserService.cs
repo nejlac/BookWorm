@@ -42,9 +42,19 @@ namespace BookWorm.Services
         {
             var query = _context.Users.AsQueryable();
 
+            // If pageSize is 1, use exact match for username and email (for duplicate checking)
+            bool isDuplicateCheck = search.PageSize == 1;
+
             if (!string.IsNullOrEmpty(search.Username))
             {
-                query = query.Where(u => u.Username.Contains(search.Username));
+                if (isDuplicateCheck)
+                {
+                    query = query.Where(u => u.Username == search.Username);
+                }
+                else
+                {
+                    query = query.Where(u => u.Username.Contains(search.Username));
+                }
             }
 
             if (!string.IsNullOrEmpty(search.FirstName))
@@ -59,7 +69,14 @@ namespace BookWorm.Services
 
             if (!string.IsNullOrEmpty(search.Email))
             {
-                query = query.Where(u => u.Email.Contains(search.Email));
+                if (isDuplicateCheck)
+                {
+                    query = query.Where(u => u.Email == search.Email);
+                }
+                else
+                {
+                    query = query.Where(u => u.Email.Contains(search.Email));
+                }
             }
 
             if (search.CountryId.HasValue)
@@ -108,6 +125,16 @@ namespace BookWorm.Services
                 Items = userResponses,
                 TotalCount = totalCount
             };
+        }
+
+        public async Task<bool> UsernameExistsAsync(string username)
+        {
+            return await _context.Users.AnyAsync(u => u.Username == username);
+        }
+
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
         }
 
         public async Task<UserResponse?> GetByIdAsync(int id)

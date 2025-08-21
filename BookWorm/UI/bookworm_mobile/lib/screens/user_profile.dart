@@ -171,9 +171,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         );
         return;
       }
-
       setState(() {
-        _isSendingRequest = true;
+        _friendshipStatus = FriendshipStatus(
+          userId: currentUser.id,
+          friendId: widget.user.id,
+          status: 0, 
+          requestedAt: DateTime.now(),
+        );
+        _isSendingRequest = false;
       });
 
       await _userFriendProvider.sendFriendRequest(currentUser.id, widget.user.id);
@@ -185,13 +190,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
       Navigator.pop(context, true);
     } catch (e) {
+      await _loadFriendshipStatus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error sending friend request: $e')),
       );
-    } finally {
-      setState(() {
-        _isSendingRequest = false;
-      });
     }
   }
 
@@ -207,7 +209,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (currentUser == null) return;
 
       setState(() {
-        _isSendingRequest = true;
+        _friendshipStatus = FriendshipStatus(
+          userId: _friendshipStatus?.userId ?? currentUser.id,
+          friendId: _friendshipStatus?.friendId ?? widget.user.id,
+          status: status,
+          requestedAt: _friendshipStatus?.requestedAt ?? DateTime.now(),
+        );
+        _isSendingRequest = false;
       });
 
       await _userFriendProvider.updateFriendshipStatus(currentUser.id, widget.user.id, status);
@@ -234,13 +242,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       
       Navigator.pop(context, true);
     } catch (e) {
+      await _loadFriendshipStatus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating friendship status: $e')),
       );
-    } finally {
-      setState(() {
-        _isSendingRequest = false;
-      });
     }
   }
 
@@ -276,16 +281,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (confirmed != true) return;
 
       setState(() {
-        _isSendingRequest = true;
+        _friendshipStatus = null; 
+        _isSendingRequest = false;
       });
 
       await _userFriendProvider.removeFriend(currentUser.id, widget.user.id);
       
       await _loadFriendshipStatus(); 
-      
-      if (mounted) {
-        setState(() {});
-      }
       
       NotificationManager().refreshNotifications();
       
@@ -294,13 +296,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
       Navigator.pop(context, true);
     } catch (e) {
+      await _loadFriendshipStatus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error removing friend: $e')),
       );
-    } finally {
-      setState(() {
-        _isSendingRequest = false;
-      });
     }
   }
 
@@ -336,7 +335,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (confirmed != true) return;
 
       setState(() {
-        _isSendingRequest = true;
+        _friendshipStatus = null; 
+        _isSendingRequest = false;
       });
 
       await _userFriendProvider.cancelFriendRequest(currentUser.id, widget.user.id);
@@ -350,13 +350,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       
       Navigator.pop(context, true);
     } catch (e) {
+      await _loadFriendshipStatus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error canceling friend request: $e')),
       );
-    } finally {
-      setState(() {
-        _isSendingRequest = false;
-      });
     }
   }
 

@@ -52,7 +52,7 @@ class _UserDetailsState extends State<UserDetails> {
     try {
       final filter = {
         'username': username.trim(),
-        'pageSize': 10,
+        'pageSize': 1,
         'page': 0,
       };
       final users = await userProvider.get(filter: filter);
@@ -71,7 +71,7 @@ class _UserDetailsState extends State<UserDetails> {
     try {
       final filter = {
         'email': email.trim(),
-        'pageSize': 10,
+        'pageSize': 1,
         'page': 0,
       };
       final users = await userProvider.get(filter: filter);

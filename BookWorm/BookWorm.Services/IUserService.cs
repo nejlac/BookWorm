@@ -22,5 +22,7 @@ namespace BookWorm.Services
         Task<List<GenreStatisticResponse>> GetUserMostReadGenres(int userId, int? year = null);
         Task<UserRatingStatisticsResponse> GetUserRatingStatistics(int userId, int? year = null);
         Task<List<UserResponse>> RecommendFriends(int userId);
+        Task<bool> UsernameExistsAsync(string username);
+        Task<bool> EmailExistsAsync(string email);
     }
 }

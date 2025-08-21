@@ -28,11 +28,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? emailError;
   Timer? _usernameDebounceTimer;
   Timer? _emailDebounceTimer;
+  bool _isLoadingCountries = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCountries();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCountries();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
   }
 
   @override
@@ -43,14 +51,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _loadCountries() async {
-    final provider = Provider.of<CountryProvider>(context, listen: false);
-    await provider.fetchCountries();
-    setState(() {
-      countries = provider.countries;
-      if (countries.isNotEmpty) {
-        selectedCountry = countries.first;
+    try {
+      final provider = Provider.of<CountryProvider>(context, listen: false);
+      await provider.fetchCountries();
+      if (mounted) {
+        setState(() {
+          countries = provider.countries;
+          if (countries.isNotEmpty) {
+            selectedCountry = countries.first;
+          }
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorMsg = 'Failed to load countries: ${e.toString()}';
+        });
+      }
+    }
   }
 
   Future<void> _pickImageFile() async {
@@ -306,30 +324,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           name: 'phoneNumber',
                           decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
                           onChanged: (value) {
-                            // Clear the field if it only contains whitespace
                             if (value != null && value.trim().isEmpty && value.isNotEmpty) {
                               formKey.currentState?.fields['phoneNumber']?.reset();
                             }
                           },
                            validator: (val) {
-                      // Allow empty or null values
                       if (val == null || val.toString().trim().isEmpty) {
                         return null;
                       }
                       
                       final trimmedVal = val.toString().trim();
                       
-                      // If after trimming it's empty, allow it
                       if (trimmedVal.isEmpty) {
                         return null;
                       }
                       
-                      // Check length
                       if (trimmedVal.length > 20) {
                         return 'Phone number must not exceed 20 characters';
                       }
                       
-                      // Check format only if not empty
                       final phoneRegex = RegExp(r'^[\+]?[0-9\s\-\(\)]{7,20}$');
                       if (!phoneRegex.hasMatch(trimmedVal)) {
                         return 'Invalid phone number format';
