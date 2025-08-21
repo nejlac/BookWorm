@@ -518,11 +518,11 @@ class _HomePageState extends State<HomePage> {
                               color: Color(0xFF5D4037),
                             ),
                           ),
-                          const Icon(
+                          /*const Icon(
                             Icons.arrow_forward_ios,
                             color: Color(0xFF8D6748),
                             size: 16,
-                          ),
+                          ),*/
                         ],
                       ),
                       const SizedBox(height: 12),
