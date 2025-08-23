@@ -627,22 +627,22 @@ namespace BookWorm.Services
             }
 
             ITransformer? model = null ;
-var modelPath = "ml_friend_model.zip";
-bool retrainModel = true;
+            var modelPath = "ml_friend_model.zip";
+            bool retrainModel = true;
 
-if (File.Exists(modelPath))
-{
-    var lastWriteTime = File.GetLastWriteTime(modelPath);
-    if ((DateTime.Now - lastWriteTime).TotalDays < 1)
-    {
-        using var fileStream = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        model = mlContext.Model.Load(fileStream, out var _);
-        retrainModel = false;
-    }
-}
+            if (File.Exists(modelPath))
+            {
+                var lastWriteTime = File.GetLastWriteTime(modelPath);
+                if ((DateTime.Now - lastWriteTime).TotalDays < 1)
+                {
+                    using var fileStream = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    model = mlContext.Model.Load(fileStream, out var _);
+                    retrainModel = false;
+                }
+            }
 
-if (retrainModel)
-{
+            if (retrainModel)
+            {
             var trainData = mlContext.Data.LoadFromEnumerable(data);
 
             var options = new MatrixFactorizationTrainer.Options
@@ -657,12 +657,12 @@ if (retrainModel)
                 C = 0.0001
             };
 
-            var estimator = mlContext.Recommendation().Trainers.MatrixFactorization(options);
-    model = estimator.Fit(trainData);
+                    var estimator = mlContext.Recommendation().Trainers.MatrixFactorization(options);
+            model = estimator.Fit(trainData);
 
-    using var fileStream = new FileStream(modelPath, FileMode.Create, FileAccess.Write, FileShare.Write);
-    mlContext.Model.Save(model, trainData.Schema, fileStream);
-}
+            using var fileStream = new FileStream(modelPath, FileMode.Create, FileAccess.Write, FileShare.Write);
+            mlContext.Model.Save(model, trainData.Schema, fileStream);
+        }
 
 
             // Get users who are already friends with the current user (either as sender or receiver)

@@ -19,8 +19,8 @@ services:
     image: rabbitmq:3-management
     restart: unless-stopped
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBIT_MQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_MQ_PASS}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -39,9 +39,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings:DefaultConnection=Server=bookworm-sql,1433;Database=bookworm;User ID=sa;Password=MySuperStrong!Pass123;TrustServerCertificate=True
-      - RabbitMQ:HostName=rabbitmq
-      - RabbitMQ:Username=guest
-      - RabbitMQ:Password=guest
+      - RabbitMQ:HostName=${RABBIT_MQ_HOST}
+      - RabbitMQ:Username=${RABBIT_MQ_USER}
+      - RabbitMQ:Password=${RABBIT_MQ_PASS}
     ports:
       - "7031:7031"
     networks:
@@ -64,10 +64,12 @@ services:
       dockerfile: BookWorm.Subscriber/Dockerfile
     environment:
       - RABBITMQ_HOST=rabbitmq
-      - EmailSettings__FromEmail=bookwormapp23@gmail.com
-      - EmailSettings__SmtpServer=smtp.gmail.com
-      - EmailSettings__Port=587
-      - EmailSettings__Password=dpyd scqn lqdw khgt
+      - RABBITMQ_USER=${RABBIT_MQ_USER}
+      - RABBITMQ_PASSWORD=${RABBIT_MQ_PASS}
+      - EmailSettings__FromEmail=${SMTP_USER}
+      - EmailSettings__SmtpServer=${SMTP_HOST}
+      - EmailSettings__Port=${SMTP_PORT}
+      - EmailSettings__Password=${SMTP_PASS}
     networks:
       - bookworm-network
     links:
