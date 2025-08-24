@@ -41,6 +41,11 @@ namespace BookWorm.Model.Requests
             {
                 yield return new ValidationResult("Page count must be a positive number.", new[] { nameof(PageCount) });
             }
+            
+            if (PageCount > 10000)
+            {
+                yield return new ValidationResult("Page count cannot exceed 10,000 pages.", new[] { nameof(PageCount) });
+            }
             if (GenreIds == null || GenreIds.Count == 0)
             {
             yield return new ValidationResult("At least one genre must be selected.", new[] { nameof(GenreIds) }); 

@@ -290,38 +290,31 @@ class _AddBookScreenState extends State<AddBookScreen> {
                     const SizedBox(height: 16),
                     _buildGenresChips(),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _publicationYearController,
-                            decoration: _inputDecoration('📅 Publication Year', Icons.calendar_today),
-                            keyboardType: TextInputType.number,
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) return 'Publication year is required';
-                              final year = int.tryParse(val);
-                              if (year == null) return 'Invalid year';
-                              if (year > DateTime.now().year) return 'Year cannot be in the future';
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _pageCountController,
-                            decoration: _inputDecoration('📄 Pages', Icons.pages),
-                            keyboardType: TextInputType.number,
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) return 'Page count is required';
-                              final count = int.tryParse(val);
-                              if (count == null) return 'Invalid page count';
-                              if (count <= 0) return 'Page count must be positive';
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
+                    TextFormField(
+                      controller: _publicationYearController,
+                      decoration: _inputDecoration('📅 Publication Year', Icons.calendar_today),
+                      keyboardType: TextInputType.number,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Publication year is required';
+                        final year = int.tryParse(val);
+                        if (year == null) return 'Invalid year';
+                        if (year > DateTime.now().year) return 'Year cannot be in the future';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _pageCountController,
+                      decoration: _inputDecoration('📄 Pages', Icons.pages),
+                      keyboardType: TextInputType.number,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Page count is required';
+                        final count = int.tryParse(val);
+                        if (count == null) return 'Invalid page count';
+                        if (count <= 0) return 'Page count must be positive';
+                        if (count > 10000) return 'Page count cannot exceed 10,000 pages';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
                     SizedBox(

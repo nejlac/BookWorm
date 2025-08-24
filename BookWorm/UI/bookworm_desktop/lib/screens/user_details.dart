@@ -42,6 +42,9 @@ class _UserDetailsState extends State<UserDetails> {
   bool rolesLoading = true;
   String? usernameError;
   String? emailError;
+  bool showPasswordFields = false;
+  String? passwordError;
+  String? confirmPasswordError;
   
   
   Timer? _usernameDebounceTimer;
@@ -338,6 +341,22 @@ class _UserDetailsState extends State<UserDetails> {
                         style: const TextStyle(color: Colors.red, fontSize: 12),
                       ),
                     ),
+                  if (passwordError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        passwordError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  if (confirmPasswordError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        confirmPasswordError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                   SizedBox(height: 16),
                   FormBuilderTextField(
                     name: 'phoneNumber',
@@ -463,6 +482,95 @@ class _UserDetailsState extends State<UserDetails> {
                             },
                           ),
                         SizedBox(height: 16),
+                        if (widget.isEditMode)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CheckboxListTile(
+                                title: Text(
+                                  'Change Password',
+                                  style: TextStyle(
+                                    color: Color(0xFF4E342E),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                value: showPasswordFields,
+                                onChanged: (value) {
+                                  setState(() {
+                                    showPasswordFields = value ?? false;
+                                    passwordError = null;
+                                    confirmPasswordError = null;
+                                  });
+                                },
+                                activeColor: Color(0xFF8D6748),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              if (showPasswordFields) ...[
+                                SizedBox(height: 16),
+                                FormBuilderTextField(
+                                  name: 'newPassword',
+                                  decoration: InputDecoration(
+                                    labelText: 'New Password',
+                                    prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF8D6748), size: 20),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    filled: true,
+                                    fillColor: Color(0xFFFFF8E1),
+                                  ),
+                                  obscureText: true,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      passwordError = null;
+                                      confirmPasswordError = null;
+                                    });
+                                  },
+                                  validator: (val) {
+                                    if (val == null || val.isEmpty) {
+                                      return 'New password is required';
+                                    }
+                                    if (val.length < 8) return 'Password must be at least 8 characters long.';
+                                    final regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$');
+                                    if (!regex.hasMatch(val)) {
+                                      return 'Password must contain uppercase, lowercase, number, and special character.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: 16),
+                                FormBuilderTextField(
+                                  name: 'confirmPassword',
+                                  decoration: InputDecoration(
+                                    labelText: 'Confirm New Password',
+                                    prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF8D6748), size: 20),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    filled: true,
+                                    fillColor: Color(0xFFFFF8E1),
+                                  ),
+                                  obscureText: true,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      confirmPasswordError = null;
+                                    });
+                                  },
+                                  validator: (val) {
+                                    if (val == null || val.isEmpty) {
+                                      return 'Please confirm your new password';
+                                    }
+                                    final newPassword = formKey.currentState?.fields['newPassword']?.value?.toString();
+                                    if (val != newPassword) {
+                                      return 'Passwords do not match';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        SizedBox(height: 16),
                         if (!widget.isEditMode && !widget.isAddMode)
                           FormBuilderTextField(
                             name: 'lastLoginAt',
@@ -573,7 +681,7 @@ class _UserDetailsState extends State<UserDetails> {
     if (!formKey.currentState!.saveAndValidate()) {
       return;
     }
-    setState(() { isSaving = true; usernameError = null; emailError = null; });
+    setState(() { isSaving = true; usernameError = null; emailError = null; passwordError = null; confirmPasswordError = null; });
     final formData = formKey.currentState!.value;
     final firstName = formData['firstName']?.toString().trim() ?? '';
     final lastName = formData['lastName']?.toString().trim() ?? '';
@@ -583,6 +691,8 @@ class _UserDetailsState extends State<UserDetails> {
     final age = int.tryParse(formData['age']?.toString() ?? '0') ?? 0;
     final roles = selectedRoles;
     final password = formData['password']?.toString();
+    final newPassword = formData['newPassword']?.toString();
+    final confirmPassword = formData['confirmPassword']?.toString();
 
   
     try {
@@ -614,6 +724,46 @@ class _UserDetailsState extends State<UserDetails> {
         return;
       }
       
+      // Validate password change if checkbox is checked
+      if (widget.isEditMode && showPasswordFields) {
+        if (newPassword == null || newPassword.isEmpty) {
+          setState(() {
+            passwordError = 'New password is required when changing password.';
+            isSaving = false;
+          });
+          return;
+        }
+        if (confirmPassword == null || confirmPassword.isEmpty) {
+          setState(() {
+            confirmPasswordError = 'Please confirm your new password.';
+            isSaving = false;
+          });
+          return;
+        }
+        if (newPassword != confirmPassword) {
+          setState(() {
+            confirmPasswordError = 'Passwords do not match.';
+            isSaving = false;
+          });
+          return;
+        }
+        if (newPassword.length < 8) {
+          setState(() {
+            passwordError = 'Password must be at least 8 characters long.';
+            isSaving = false;
+          });
+          return;
+        }
+        final regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$');
+        if (!regex.hasMatch(newPassword)) {
+          setState(() {
+            passwordError = 'Password must contain uppercase, lowercase, number, and special character.';
+            isSaving = false;
+          });
+          return;
+        }
+      }
+      
       final request = {
         "firstName": firstName,
         "lastName": lastName,
@@ -625,6 +775,11 @@ class _UserDetailsState extends State<UserDetails> {
         "roleIds": roles.map((r) => r.id).toList(),
         "photoUrl": _existingPhotoUrl,
       };
+      
+      // Add password to request if changing password
+      if (widget.isEditMode && showPasswordFields && newPassword != null && newPassword.isNotEmpty) {
+        request['password'] = newPassword;
+      }
 
       if (widget.isAddMode) {
         if (password == null || password.isEmpty) {
@@ -749,6 +904,8 @@ class _UserDetailsState extends State<UserDetails> {
                       usernameError = specificError;
                     } else if (specificError.toLowerCase().contains('email')) {
                       emailError = specificError;
+                    } else if (specificError.toLowerCase().contains('password')) {
+                      passwordError = specificError;
                     } else {
                       usernameError = specificError;
                     }

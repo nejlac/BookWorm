@@ -2774,18 +2774,26 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                           ElevatedButton(
                             onPressed: () async {
                               List<String> alreadyInLists = [];
+                              List<int> validDefaultListIds = [];
+                              List<int> validCustomListIds = [];
                               
+                              // Check default list
                               if (selectedDefaultListId != null) {
                                 final defaultList = lists.firstWhere((l) => l.id == selectedDefaultListId);
                                 if (defaultList.books.any((book) => book.bookId == widget.book.id)) {
                                   alreadyInLists.add(defaultList.name);
+                                } else {
+                                  validDefaultListIds.add(selectedDefaultListId!);
                                 }
                               }
                               
+                              // Check custom lists
                               for (final listId in selectedCustomListIds) {
                                 final customList = lists.firstWhere((l) => l.id == listId);
                                 if (customList.books.any((book) => book.bookId == widget.book.id)) {
                                   alreadyInLists.add(customList.name);
+                                } else {
+                                  validCustomListIds.add(listId);
                                 }
                               }
                              
@@ -2797,22 +2805,16 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 }
                               }
                               
-                              if (alreadyInLists.isNotEmpty) {
+                              // If no valid lists to add to, show error and return
+                              if (validDefaultListIds.isEmpty && validCustomListIds.isEmpty) {
                                 showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: Text('Book Already in Lists'),
-                                    content: Text('This book is already in: ${alreadyInLists.join(', ')}'),
+                                    content: Text('This book is already in all selected lists: ${alreadyInLists.join(', ')}'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.of(context).pop(),
-                                        child: Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          Navigator.of(context).pop(); 
-                                        },
                                         child: Text('OK'),
                                       ),
                                     ],
@@ -2821,7 +2823,33 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 return;
                               }
                               
-                              if (selectedDefaultListId != null && inOtherDefaultLists.isNotEmpty) {
+                              // Show warning for lists where book is already present
+                              if (alreadyInLists.isNotEmpty) {
+                                final shouldContinue = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Book Already in Some Lists'),
+                                    content: Text('This book is already in: ${alreadyInLists.join(', ')}\n\nIt will be added to the other selected lists.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: Text('Continue'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (shouldContinue != true) {
+                                  return;
+                                }
+                              }
+                              
+                              // Handle default list moving logic
+                              if (validDefaultListIds.isNotEmpty && inOtherDefaultLists.isNotEmpty) {
                                 final shouldContinue = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
@@ -2848,11 +2876,13 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                               final readingListProvider = Provider.of<ReadingListProvider>(context, listen: false);
                               bool hasError = false;
                               String errorMessage = '';
+                              List<String> successfullyAddedLists = [];
                               
-                              if (selectedDefaultListId != null) {
-                               
+                              // Add to valid default lists
+                              for (final defaultListId in validDefaultListIds) {
+                                // Remove from other default lists if moving
                                 for (final defaultList in defaultLists) {
-                                  if (defaultList.id != selectedDefaultListId && 
+                                  if (defaultList.id != defaultListId && 
                                       defaultList.books.any((book) => book.bookId == widget.book.id)) {
                                     await readingListProvider.removeBookFromList(defaultList.id, widget.book.id);
                                   }
@@ -2860,7 +2890,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 
                                 // Check if this is the "Read" list and ask for read date
                                 DateTime? readAt;
-                                if (defaultLists.any((list) => list.id == selectedDefaultListId && list.name.toLowerCase() == "read")) {
+                                if (defaultLists.any((list) => list.id == defaultListId && list.name.toLowerCase() == "read")) {
                                   readAt = await _showReadDateDialog(context);
                                   if (readAt == null) {
                                     // User cancelled the date selection
@@ -2868,13 +2898,18 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                   }
                                 }
                                 
-                                final result = await readingListProvider.addBookToList(selectedDefaultListId!, widget.book.id, readAt: readAt);
+                                final result = await readingListProvider.addBookToList(defaultListId, widget.book.id, readAt: readAt);
                                 if (result == null) {
                                   hasError = true;
                                   errorMessage = 'Failed to add book to default list';
+                                } else {
+                                  final listName = lists.firstWhere((l) => l.id == defaultListId).name;
+                                  successfullyAddedLists.add(listName);
                                 }
                               }
-                              for (final listId in selectedCustomListIds) {
+                              
+                              // Add to valid custom lists
+                              for (final listId in validCustomListIds) {
                                 // Check if this is a "Read" list and ask for read date
                                 DateTime? readAt;
                                 final customList = customLists.firstWhere((list) => list.id == listId);
@@ -2890,13 +2925,14 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 if (result == null) {
                                   hasError = true;
                                   errorMessage = 'Failed to add book to custom list';
-                                  break;
+                                } else {
+                                  successfullyAddedLists.add(customList.name);
                                 }
                               }
                               
                               Navigator.of(context).pop();
                               
-                           
+                              // Show appropriate message based on results
                               if (hasError) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -2904,15 +2940,31 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                     backgroundColor: Colors.red,
                                   ),
                                 );
-                              } else {
+                              } else if (successfullyAddedLists.isNotEmpty) {
+                                String message;
+                                if (alreadyInLists.isNotEmpty) {
+                                  message = 'Book added to: ${successfullyAddedLists.join(', ')}\nAlready in: ${alreadyInLists.join(', ')}';
+                                } else {
+                                  message = 'Book added to: ${successfullyAddedLists.join(', ')}';
+                                }
+                                
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Book added to selected lists successfully!'),
+                                    content: Text(message),
                                     backgroundColor: Colors.green,
+                                    duration: Duration(seconds: 4),
                                   ),
                                 );
-                               
+                                
                                 Navigator.of(context).pop(true);
+                              } else {
+                                // This shouldn't happen, but just in case
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('No lists were selected or all selected lists already contain this book.'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -3017,6 +3069,8 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     File? selectedImage;
+    String? nameError;
+    String? descriptionError;
     
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -3073,16 +3127,20 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                     hintText: 'Enter list name',
                   ),
                   maxLength: 100,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Name is required.';
-                    }
-                    if (value.length > 100) {
-                      return 'Name must not exceed 100 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setCreateDialogState(() {
+                      nameError = null;
+                    });
                   },
                 ),
+                if (nameError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      nameError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
                 SizedBox(height: 16),
                 
                 TextFormField(
@@ -3094,16 +3152,20 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                   ),
                   maxLength: 300,
                   maxLines: 3,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Description is required.';
-                    }
-                    if (value.length > 300) {
-                      return 'Description must not exceed 300 characters.';
-                    }
-                    return null;
+                  onChanged: (value) {
+                    setCreateDialogState(() {
+                      descriptionError = null;
+                    });
                   },
                 ),
+                if (descriptionError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      descriptionError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -3114,41 +3176,29 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
             ),
             ElevatedButton(
               onPressed: () {
-              
-                String? nameError;
-                String? descriptionError;
-               
-                if (nameController.text.trim().isEmpty) {
-                  nameError = 'Name is required.';
-                } else if (nameController.text.length > 100) {
-                  nameError = 'Name must not exceed 100 characters.';
-                } else {
-                  // Check for default list names
-                  final defaultNames = ['Want to read', 'Currently reading', 'Read'];
-                  final inputName = nameController.text.trim();
-                  if (defaultNames.any((defaultName) => 
-                      defaultName.toLowerCase() == inputName.toLowerCase())) {
-                    nameError = 'This name is reserved for default lists. Please choose a different name.';
+                setCreateDialogState(() {
+                  if (nameController.text.trim().isEmpty) {
+                    nameError = 'Name is required.';
+                  } else if (nameController.text.length > 100) {
+                    nameError = 'Name must not exceed 100 characters.';
+                  } else {
+                    // Check for default list names
+                    final defaultNames = ['Want to read', 'Currently reading', 'Read'];
+                    final inputName = nameController.text.trim();
+                    if (defaultNames.any((defaultName) => 
+                        defaultName.toLowerCase() == inputName.toLowerCase())) {
+                      nameError = 'This name is reserved for default lists. Please choose a different name.';
+                    }
                   }
-                }
-               
-                if (descriptionController.text.trim().isEmpty) {
-                  descriptionError = 'Description is required.';
-                } else if (descriptionController.text.length > 300) {
-                  descriptionError = 'Description must not exceed 300 characters.';
-                }
+                  
+                  if (descriptionController.text.trim().isEmpty) {
+                    descriptionError = 'Description is required.';
+                  } else if (descriptionController.text.length > 300) {
+                    descriptionError = 'Description must not exceed 300 characters.';
+                  }
+                });
                 
                 if (nameError != null || descriptionError != null) {
-                  String errorMessage = '';
-                  if (nameError != null) errorMessage += nameError + '\n';
-                  if (descriptionError != null) errorMessage += descriptionError;
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(errorMessage.trim()),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
                   return;
                 }
                 

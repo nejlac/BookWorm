@@ -466,6 +466,7 @@ class _BookDetails extends State<BookDetails> {
                          final count = int.tryParse(val);
                          if (count == null) return "Invalid page count";
                          if (count <= 0) return "Page count must be positive";
+                         if (count > 10000) return "Page count cannot exceed 10,000 pages";
                          return null;
                        },
                      ),

@@ -52,8 +52,32 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
       if (_tabController.index == 1) {
+        if (_searchController.text.isNotEmpty) {
+          _searchController.clear();
+          setState(() {
+            _filteredClubs = _allClubs;
+          });
+        }
+        if (_myClubsSearchController.text.isNotEmpty) {
+          _myClubsSearchController.clear();
+          setState(() {
+            _filteredMyClubs = _myClubs;
+          });
+        }
         _loadMyClubs();
       } else if (_tabController.index == 0) {
+        if (_searchController.text.isNotEmpty) {
+          _searchController.clear();
+          setState(() {
+            _filteredClubs = _allClubs;
+          });
+        }
+        if (_myClubsSearchController.text.isNotEmpty) {
+          _myClubsSearchController.clear();
+          setState(() {
+            _filteredMyClubs = _myClubs;
+          });
+        }
         final safePage = _allClubsCurrentPage.clamp(0, double.infinity).toInt();
         _loadClubs(page: safePage);
       }
@@ -198,6 +222,16 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
   void _ensureValidPageNumbers() {
     if (_allClubsCurrentPage < 0) _allClubsCurrentPage = 0;
     if (_myClubsCurrentPage < 0) _myClubsCurrentPage = 0;
+    
+    if (_searchController.text.isNotEmpty) {
+      _allClubsCurrentPage = 0;
+      return;
+    }
+    
+    final totalPages = (_pageSize > 0) ? (_allClubsTotalCount / _pageSize).ceil() : 1;
+    if (_allClubsCurrentPage >= totalPages && totalPages > 0) {
+      _allClubsCurrentPage = totalPages - 1;
+    }
   }
 
 
@@ -249,6 +283,10 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
 
 
   void _navigateToNextPage() {
+    if (_searchController.text.isNotEmpty) {
+      return;
+    }
+    
     if (_allClubsHasMoreData && !_isLoadingMore && !_isLoading) {
       final nextPage = (_allClubsCurrentPage + 1).clamp(0, double.infinity).toInt();
       _loadClubs(page: nextPage);
@@ -256,6 +294,10 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
   }
 
   void _navigateToPreviousPage() {
+    if (_searchController.text.isNotEmpty) {
+      return;
+    }
+    
     if (_allClubsCurrentPage > 0 && !_isLoading) {
       final prevPage = (_allClubsCurrentPage - 1).clamp(0, double.infinity).toInt();
       _loadClubs(page: prevPage);
@@ -263,6 +305,10 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
   }
 
   void _navigateToPage(int page) {
+    if (_searchController.text.isNotEmpty) {
+      return;
+    }
+    
     final safePage = page.clamp(0, double.infinity).toInt();
     final totalPages = _pageSize > 0 ? (_allClubsTotalCount / _pageSize).ceil() : 1;
     if (safePage >= 0 && safePage < totalPages && !_isLoading) {
@@ -347,7 +393,12 @@ class _BookClubsScreenState extends State<BookClubsScreen> with SingleTickerProv
       return const SizedBox.shrink();
     }
     
-    final totalPages = _pageSize > 0 ? (_allClubsTotalCount / _pageSize).ceil() : 1;
+    if (_searchController.text.isNotEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    final effectiveTotalCount = _allClubsTotalCount;
+    final totalPages = _pageSize > 0 ? (effectiveTotalCount / _pageSize).ceil() : 1;
     final currentPageNumber = (_allClubsCurrentPage + 1).clamp(1, totalPages);
     
     if (totalPages <= 1) {
