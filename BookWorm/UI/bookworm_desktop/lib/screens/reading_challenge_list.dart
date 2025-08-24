@@ -28,6 +28,7 @@ class ReadingChallengeList extends StatefulWidget {
 class _ReadingChallengeListState extends State<ReadingChallengeList> {
   late BookChallengeProvider _provider;
   late UserProvider _userProvider;
+  ScrollController _horizontalScrollController = ScrollController();
   List<BookChallenge> _challenges = [];
   List<BookChallenge> _allChallenges = [];
   Map<int, String> _usernames = {};
@@ -139,17 +140,28 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
     if (_loading) {
       return Center(child: CircularProgressIndicator());
     }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      child: SingleChildScrollView(
+        controller: _horizontalScrollController,
+        scrollDirection: Axis.horizontal,
+                          child: Container(
+          width: 1000, // Fiksna širina da scrollbar bude uvek tu
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: DataTable(
+            columnSpacing: 16,
+            horizontalMargin: 12,
         columns: [
-          DataColumn(label: Text('User', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('Goal', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('Books Read', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('Year', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('Progress', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('Status', style: TextStyle(fontSize: 13))),
-          DataColumn(label: Text('View', style: TextStyle(fontSize: 13))), 
+          DataColumn(label: Container(width: 140, child: Text('User', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 100, child: Text('Goal', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 140, child: Text('Books Read', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 100, child: Text('Year', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 120, child: Text('Progress', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 140, child: Text('Status', style: TextStyle(fontSize: 13)))),
+          DataColumn(label: Container(width: 100, child: Text('View', style: TextStyle(fontSize: 13)))), 
         ],
         rows: _challenges.map((challenge) {
           final progress = challenge.goal > 0
@@ -157,12 +169,12 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
               : 0;
           final username = _usernames[challenge.userId] ?? 'Unknown';
           return DataRow(cells: [
-            DataCell(Text(username, style: TextStyle(fontSize: 13))),
-            DataCell(Text('${challenge.goal}', style: TextStyle(fontSize: 13))),
-            DataCell(Text('${challenge.numberOfBooksRead}', style: TextStyle(fontSize: 13))),
-            DataCell(Text('${challenge.year}', style: TextStyle(fontSize: 13))),
-            DataCell(Text('$progress%', style: TextStyle(fontSize: 13))),
-            DataCell(Row(
+            DataCell(Container(width: 140, child: Text(username, style: TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
+            DataCell(Container(width: 100, child: Text('${challenge.goal}', style: TextStyle(fontSize: 13)))),
+            DataCell(Container(width: 140, child: Text('${challenge.numberOfBooksRead}', style: TextStyle(fontSize: 13)))),
+            DataCell(Container(width: 100, child: Text('${challenge.year}', style: TextStyle(fontSize: 13)))),
+            DataCell(Container(width: 120, child: Text('$progress%', style: TextStyle(fontSize: 13)))),
+            DataCell(Container(width: 140, child: Row(
               children: [
                 Icon(
                   challenge.isCompleted ? Icons.check_circle : Icons.circle,
@@ -170,20 +182,21 @@ class _ReadingChallengeListState extends State<ReadingChallengeList> {
                   size: 14,
                 ),
                 SizedBox(width: 2),
-                Text(challenge.isCompleted ? 'Completed' : 'In progress', style: TextStyle(fontSize: 13)),
+                Expanded(child: Text(challenge.isCompleted ? 'Completed' : 'In progress', style: TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
               ],
-            )),
-            DataCell(
-              IconButton(
-                icon: Icon(Icons.remove_red_eye, color: Colors.brown),
-                tooltip: 'View books read',
-                onPressed: () async {
-                  await _showBooksReadDialog(context, challenge);
-                },
-              ),
-            ),
+            ))),
+            DataCell(Container(width: 100, child: IconButton(
+              icon: Icon(Icons.remove_red_eye, color: Colors.brown),
+              tooltip: 'View books read',
+              onPressed: () async {
+                await _showBooksReadDialog(context, challenge);
+              },
+            ))),
           ]);
         }).toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -749,7 +762,6 @@ void _generateReport() async {
                 Expanded(
                   child: Center(
                     child: Container(
-                      constraints: BoxConstraints(maxWidth: 1200),
                       child: isSmallScreen
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,10 +769,7 @@ void _generateReport() async {
                                 // Small screen: Give table more height
                                 Expanded(
                                   flex: 3, // Give table more space
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.vertical,
-                                    child: _buildTable(),
-                                  ),
+                                  child: _buildTable(),
                                 ),
                                 Align(
                                   alignment: Alignment.centerLeft,
@@ -838,5 +847,11 @@ void _generateReport() async {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 }

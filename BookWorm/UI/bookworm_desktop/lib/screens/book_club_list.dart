@@ -1,7 +1,9 @@
 import 'package:bookworm_desktop/layouts/master_screen.dart';
 import 'package:bookworm_desktop/model/book_club.dart';
 import 'package:bookworm_desktop/model/search_result.dart';
+import 'package:bookworm_desktop/model/user.dart';
 import 'package:bookworm_desktop/providers/book_club_provider.dart';
+import 'package:bookworm_desktop/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,9 +16,13 @@ class BookClubList extends StatefulWidget {
 
 class _BookClubListState extends State<BookClubList> {
   late BookClubProvider bookClubProvider;
+  late UserProvider userProvider;
   
   TextEditingController searchController = TextEditingController();
   TextEditingController creatorController = TextEditingController();
+  ScrollController _horizontalScrollController = ScrollController();
+  
+  Map<int, String> userUsernames = {}; // Cache za username-ove
 
   String sortMode = 'members_desc'; 
   
@@ -30,7 +36,30 @@ class _BookClubListState extends State<BookClubList> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     bookClubProvider = context.read<BookClubProvider>();
+    userProvider = UserProvider();
     _fetchAllBookClubs();
+  }
+
+  Future<String> _getUsername(int userId) async {
+    if (userUsernames.containsKey(userId)) {
+      return userUsernames[userId]!;
+    }
+    
+    try {
+      final filter = {
+        'id': userId.toString(),
+        'pageSize': 1,
+      };
+      final result = await userProvider.get(filter: filter);
+      if (result.items != null && result.items!.isNotEmpty) {
+        final username = result.items!.first.username;
+        userUsernames[userId] = username;
+        return username;
+      }
+    } catch (e) {
+      // Ako ne možemo da dohvatimo username, vraćamo ID
+    }
+    return userId.toString();
   }
 
   void _fetchAllBookClubs({int? page}) async {
@@ -388,63 +417,81 @@ class _BookClubListState extends State<BookClubList> {
                             ],
                           ),
                         )
-                                             : SingleChildScrollView(
-                           child: SingleChildScrollView(
-                             scrollDirection: Axis.horizontal,
-                             child: DataTable(
-                               headingTextStyle: TextStyle(
-                                 fontWeight: FontWeight.bold,
-                                 color: Color(0xFF5D4037),
-                               ),
+                                                                                                : Container(
+                            height: 600, // Ograničavam visinu tabele
+                            child: Scrollbar(
+                              controller: _horizontalScrollController,
+                              thumbVisibility: true,
+                              trackVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: _horizontalScrollController,
+                                scrollDirection: Axis.horizontal,
+                                child: Container(
+                                  constraints: BoxConstraints(minWidth: 1000),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.vertical,
+                                    child: DataTable(
+                                  columnSpacing: 16,
+                                  horizontalMargin: 12,
+                                  headingTextStyle: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF5D4037),
+                                  ),
                                columns: [
-                                 DataColumn(label: Text('ID')),
-                                 DataColumn(label: Text('Name')),
-                                 DataColumn(label: Text('Description')),
-                                 DataColumn(label: Text('Creator ID')),
-                                 DataColumn(label: Text('Members')),
-                                 DataColumn(label: Text('Events')),
-                                 DataColumn(label: Text('Created')),
-                                 DataColumn(label: Text('Delete')),
+                                 DataColumn(label: Container(width: 80, child: Text('ID'))),
+                                 DataColumn(label: Container(width: 150, child: Text('Name'))),
+                                 DataColumn(label: Container(width: 200, child: Text('Description'))),
+                                 DataColumn(label: Container(width: 100, child: Text('Creator'))),
+                                 DataColumn(label: Container(width: 100, child: Text('Members'))),
+                                 DataColumn(label: Container(width: 100, child: Text('Events'))),
+                                 DataColumn(label: Container(width: 120, child: Text('Created'))),
+                                 DataColumn(label: Container(width: 80, child: Text('Delete'))),
                                ],
                             rows: bookClubs!.items!.map((bookClub) {
                               return DataRow(
                                 cells: [
-                                  DataCell(Text(bookClub.id.toString())),
-                                  DataCell(
-                                    Text(
-                                      bookClub.name,
-                                      style: TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Container(
-                                      width: 200,
-                                      child: Text(
-                                        bookClub.description,
+                                  DataCell(Container(width: 80, child: Text(bookClub.id.toString()))),
+                                  DataCell(Container(width: 150, child: Text(
+                                    bookClub.name,
+                                    style: TextStyle(fontWeight: FontWeight.w500),
+                                    overflow: TextOverflow.ellipsis,
+                                  ))),
+                                  DataCell(Container(width: 200, child: Text(
+                                    bookClub.description,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                  ))),
+                                  DataCell(Container(width: 100, child: FutureBuilder<String>(
+                                    future: _getUsername(bookClub.creatorId),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                        return Text('Loading...', style: TextStyle(fontSize: 12));
+                                      }
+                                      return Text(
+                                        snapshot.data ?? bookClub.creatorId.toString(),
                                         overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(Text(bookClub.creatorId.toString())),
-                                  DataCell(Text(bookClub.membersCount.toString())),
-                                  DataCell(Text(bookClub.eventsCount.toString())),
-                                  DataCell(Text(
+                                      );
+                                    },
+                                  ))),
+                                  DataCell(Container(width: 100, child: Text(bookClub.membersCount.toString()))),
+                                  DataCell(Container(width: 100, child: Text(bookClub.eventsCount.toString()))),
+                                  DataCell(Container(width: 120, child: Text(
                                     '${bookClub.createdAt.day}/${bookClub.createdAt.month}/${bookClub.createdAt.year}',
-                                  )),
-                                                                     DataCell(
-                                     IconButton(
-                                       icon: Icon(Icons.delete, color: Colors.red),
-                                       onPressed: () => _confirmDeleteBookClub(bookClub),
-                                       tooltip: 'Delete Book Club',
-                                     ),
-                                   ),
+                                  ))),
+                                  DataCell(Container(width: 80, child: IconButton(
+                                    icon: Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _confirmDeleteBookClub(bookClub),
+                                    tooltip: 'Delete Book Club',
+                                  ))),
                                 ],
                               );
-                            }).toList(),
+                                                        }).toList(),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-            ),
           ),
 
                    ),         
@@ -480,5 +527,11 @@ class _BookClubListState extends State<BookClubList> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 }

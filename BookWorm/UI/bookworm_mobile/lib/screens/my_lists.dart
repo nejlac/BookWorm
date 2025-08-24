@@ -80,7 +80,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
   void _onSearchChanged(String value) {
     setState(() {
       if (value.isEmpty) {
-        _filteredReadingLists = _readingLists;
+        _filteredReadingLists = List.from(_readingLists);
       } else {
         _filteredReadingLists = _readingLists
             .where((list) => list.name.toLowerCase().contains(value.toLowerCase()))
@@ -266,6 +266,12 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                     if (defaultNames.any((defaultName) => 
                         defaultName.toLowerCase() == inputName.toLowerCase())) {
                       nameError = 'This name is reserved for default lists. Please choose a different name.';
+                    } else {
+                      // Check for duplicate names
+                      if (_readingLists.any((list) => 
+                          list.name.toLowerCase() == inputName.toLowerCase())) {
+                        nameError = 'A reading list with this name already exists.';
+                      }
                     }
                   }
                   
@@ -338,6 +344,11 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
 
             setState(() {
               _readingLists.add(newList);
+              // Also add to filtered lists if search is empty or if it matches the search
+              if (_searchController.text.isEmpty || 
+                  newList.name.toLowerCase().contains(_searchController.text.toLowerCase())) {
+                _filteredReadingLists.add(newList);
+              }
               _isLoading = false;
             });
 
@@ -872,6 +883,13 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
                     if (defaultNames.any((defaultName) => 
                         defaultName.toLowerCase() == inputName.toLowerCase())) {
                       nameError = 'This name is reserved for default lists. Please choose a different name.';
+                    } else {
+                      // Check for duplicate names (excluding the current list being edited)
+                      if (_readingLists.any((existingList) => 
+                          existingList.id != list.id && 
+                          existingList.name.toLowerCase() == inputName.toLowerCase())) {
+                        nameError = 'A reading list with this name already exists.';
+                      }
                     }
                   }
                   
@@ -911,39 +929,57 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
         final updateData = {
           'name': result['name'],
           'description': result['description'],
+          'bookIds': list.books.map((book) => book.bookId).toList(),
         };
 
         final updatedList = await provider.update(list.id, updateData);
         
-                 if (updatedList != null) {
+        if (updatedList != null) {
+          // After updating, refresh the list to get the latest data with books
+          final refreshedList = await provider.getById(list.id);
           
-           if (result['image'] != null) {
-             final updatedListWithImage = await provider.uploadCover(updatedList.id, result['image']);
-             if (updatedListWithImage != null) {
-               setState(() {
-                 final index = _readingLists.indexWhere((l) => l.id == list.id);
-                 if (index != -1) {
-                   _readingLists[index] = updatedListWithImage;
-                 }
-               });
-             } else {
-              
-               setState(() {
-                 final index = _readingLists.indexWhere((l) => l.id == list.id);
-                 if (index != -1) {
-                   _readingLists[index] = updatedList;
-                 }
-               });
-             }
-           } else {
-           
-             setState(() {
-               final index = _readingLists.indexWhere((l) => l.id == list.id);
-               if (index != -1) {
-                 _readingLists[index] = updatedList;
-               }
-             });
-           }
+          if (refreshedList != null) {
+            if (result['image'] != null) {
+              final updatedListWithImage = await provider.uploadCover(refreshedList.id, result['image']);
+              if (updatedListWithImage != null) {
+                setState(() {
+                  final index = _readingLists.indexWhere((l) => l.id == list.id);
+                  if (index != -1) {
+                    _readingLists[index] = updatedListWithImage;
+                  }
+                  // Also update filtered lists
+                  final filteredIndex = _filteredReadingLists.indexWhere((l) => l.id == list.id);
+                  if (filteredIndex != -1) {
+                    _filteredReadingLists[filteredIndex] = updatedListWithImage;
+                  }
+                });
+              } else {
+                setState(() {
+                  final index = _readingLists.indexWhere((l) => l.id == list.id);
+                  if (index != -1) {
+                    _readingLists[index] = refreshedList;
+                  }
+                  // Also update filtered lists
+                  final filteredIndex = _filteredReadingLists.indexWhere((l) => l.id == list.id);
+                  if (filteredIndex != -1) {
+                    _filteredReadingLists[filteredIndex] = refreshedList;
+                  }
+                });
+              }
+            } else {
+              setState(() {
+                final index = _readingLists.indexWhere((l) => l.id == list.id);
+                if (index != -1) {
+                  _readingLists[index] = refreshedList;
+                }
+                // Also update filtered lists
+                final filteredIndex = _filteredReadingLists.indexWhere((l) => l.id == list.id);
+                if (filteredIndex != -1) {
+                  _filteredReadingLists[filteredIndex] = refreshedList;
+                }
+              });
+            }
+          }
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1024,6 +1060,7 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
         if (success) {
           setState(() {
             _readingLists.removeWhere((l) => l.id == list.id);
+            _filteredReadingLists.removeWhere((l) => l.id == list.id);
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1059,6 +1096,11 @@ class _MyListsScreenState extends State<MyListsScreen> with WidgetsBindingObserv
     );
     
     if (mounted && !_isLoading) {
+      // Clear search text when returning from list details
+      _searchController.clear();
+      setState(() {
+        _filteredReadingLists = List.from(_readingLists);
+      });
       _loadReadingLists();
     }
   }

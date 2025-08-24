@@ -21,6 +21,7 @@ class _BookListState extends State<BookList> {
   TextEditingController authorController = TextEditingController();
   TextEditingController searchController = TextEditingController();
   TextEditingController yearController = TextEditingController();
+  ScrollController _horizontalScrollController = ScrollController();
 
   List<Map<String, dynamic>> genres = [];
   Map<String, dynamic>? selectedGenre;
@@ -521,31 +522,32 @@ class _BookListState extends State<BookList> {
                     ),
                   ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+                  child: Scrollbar(
+                    controller: _horizontalScrollController,
+                    thumbVisibility: true,
+                    trackVisibility: true,
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: constraints.maxWidth - 32,
-                        ),
+                      controller: _horizontalScrollController,
+                      scrollDirection: Axis.horizontal,
+                                              child: Container(
+                          constraints: BoxConstraints(minWidth: 1000),
                         child: DataTable(
-                          showCheckboxColumn: false,
-                          headingRowHeight: 48,
-                          dataRowHeight: 44,
-                          dividerThickness: 0.5,
-                          columnSpacing: isTableSmallScreen ? 16 : 32,
-                          horizontalMargin: 16,
+                            showCheckboxColumn: false,
+                            headingRowHeight: 48,
+                            dataRowHeight: 44,
+                            dividerThickness: 0.5,
+                            columnSpacing: isTableSmallScreen ? 16 : 32,
+                            horizontalMargin: 16,
                           columns: [
-                            DataColumn(label: Text("Title", style: _tableHeaderStyle())),
-                            DataColumn(label: Text("Author", style: _tableHeaderStyle())),
-                            DataColumn(label: Text("Genre", style: _tableHeaderStyle())),
-                            DataColumn(label: Text("Pages", style: _tableHeaderStyle())),
-                            DataColumn(label: Text("Year", style: _tableHeaderStyle())),
-                            DataColumn(label: Text("State", style: _tableHeaderStyle())),
-                            DataColumn(label: Icon(Icons.info_outline, color: Color(0xFF8D6748))),
-                            DataColumn(label: Icon(Icons.edit, color: Color(0xFF8D6748))),
-                            DataColumn(label: Icon(Icons.delete, color: Colors.red)),
+                            DataColumn(label: Container(width: 200, child: Text("Title", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 150, child: Text("Author", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 120, child: Text("Genre", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 80, child: Text("Pages", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 80, child: Text("Year", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 100, child: Text("State", style: _tableHeaderStyle()))),
+                            DataColumn(label: Container(width: 60, child: Icon(Icons.info_outline, color: Color(0xFF8D6748)))),
+                            DataColumn(label: Container(width: 60, child: Icon(Icons.edit, color: Color(0xFF8D6748)))),
+                            DataColumn(label: Container(width: 60, child: Icon(Icons.delete, color: Colors.red))),
                           ],
                           dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
                             if (states.contains(MaterialState.selected)) {
@@ -559,7 +561,7 @@ class _BookListState extends State<BookList> {
                             cells: [
                               DataCell(
                                 Container(
-                                  constraints: BoxConstraints(maxWidth: isTableSmallScreen ? 100 : 150),
+                                  width: 200,
                                   child: Text(
                                     e.title,
                                     style: _tableCellStyle(),
@@ -569,7 +571,7 @@ class _BookListState extends State<BookList> {
                               ),
                               DataCell(
                                 Container(
-                                  constraints: BoxConstraints(maxWidth: isTableSmallScreen ? 80 : 120),
+                                  width: 150,
                                   child: Text(
                                     e.authorName,
                                     style: _tableCellStyle(),
@@ -579,7 +581,7 @@ class _BookListState extends State<BookList> {
                               ),
                               DataCell(
                                 Container(
-                                  constraints: BoxConstraints(maxWidth: isTableSmallScreen ? 80 : 120),
+                                  width: 120,
                                   child: Text(
                                     e.genres.join(', '),
                                     style: _tableCellStyle(),
@@ -815,5 +817,11 @@ class _BookListState extends State<BookList> {
       fontSize: 15,
       color: Color(0xFF4E342E),
     );
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 }

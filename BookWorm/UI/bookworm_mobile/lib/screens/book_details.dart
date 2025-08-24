@@ -2638,11 +2638,12 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     if (currentUser == null) return;
     final lists = await readingListProvider.getUserReadingLists(currentUser.id);
     final defaultListNames = ['Read', 'Want to read', 'Currently reading'];
-    final defaultLists = lists.where((l) => defaultListNames.contains(l.name)).toList();
-    final customLists = lists.where((l) => !defaultListNames.contains(l.name)).toList();
+    List<dynamic> defaultLists = lists.where((l) => defaultListNames.contains(l.name)).toList();
+    List<dynamic> customLists = lists.where((l) => !defaultListNames.contains(l.name)).toList();
 
     int? selectedDefaultListId;
     Set<int> selectedCustomListIds = {};
+    Set<int> newlyCreatedListIds = {}; // To store the IDs of all newly created lists
 
     if (widget.preselectedListId != null) {
       final preselected = lists.firstWhere((l) => l.id == widget.preselectedListId, orElse: () => defaultLists.isNotEmpty ? defaultLists.first : lists.first);
@@ -2736,7 +2737,48 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                         child: InkWell(
                           borderRadius: BorderRadius.circular(24),
                           onTap: () async {
-                            await _showCreateListDialog(context, setDialogState);
+                            print('DEBUG: Creating new list...');
+                            final newListId = await _showCreateListDialog(context, setDialogState);
+                            print('DEBUG: New list created with ID: $newListId');
+                            
+                            if (newListId != null) {
+                              print('DEBUG: Refreshing lists...');
+                              // Refresh the lists to include the newly created one
+                              final userProvider = Provider.of<UserProvider>(context, listen: false);
+                              final readingListProvider = Provider.of<ReadingListProvider>(context, listen: false);
+                              final username = AuthProvider.username;
+                              
+                              if (username != null) {
+                                final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+                                final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+                                
+                                if (currentUser != null) {
+                                  final updatedLists = await readingListProvider.getUserReadingLists(currentUser.id);
+                                  final defaultListNames = ['Read', 'Want to read', 'Currently reading'];
+                                  final updatedDefaultLists = updatedLists.where((l) => defaultListNames.contains(l.name)).toList();
+                                  final updatedCustomLists = updatedLists.where((l) => !defaultListNames.contains(l.name)).toList();
+                                  
+                                  print('DEBUG: Updated custom lists count: ${updatedCustomLists.length}');
+                                  print('DEBUG: Updated custom lists: ${updatedCustomLists.map((l) => '${l.id}:${l.name}').join(', ')}');
+                                  
+                                  setDialogState(() {
+                                    // Update the lists in the dialog
+                                    defaultLists.clear();
+                                    defaultLists.addAll(updatedDefaultLists);
+                                    customLists.clear();
+                                    customLists.addAll(updatedCustomLists);
+                                    
+                                    // Add the newly created list ID to the set and select it
+                                    newlyCreatedListIds.add(newListId);
+                                    selectedCustomListIds.add(newListId);
+                                    
+                                    print('DEBUG: After setDialogState - customLists count: ${customLists.length}');
+                                    print('DEBUG: After setDialogState - selectedCustomListIds: $selectedCustomListIds');
+                                    print('DEBUG: newlyCreatedListIds: $newlyCreatedListIds');
+                                  });
+                                }
+                              }
+                            }
                           },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -2830,15 +2872,42 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 }
                               }
                               
+
+                              
+                              print('DEBUG: Checking custom lists...');
+                              print('DEBUG: selectedCustomListIds: $selectedCustomListIds');
+                              print('DEBUG: Available lists: ${lists.map((l) => '${l.id}:${l.name}').join(', ')}');
+                              
                               // Check custom lists
                               for (final listId in selectedCustomListIds) {
-                                final customList = lists.firstWhere((l) => l.id == listId);
-                                if (customList.books.any((book) => book.bookId == widget.book.id)) {
-                                  alreadyInLists.add(customList.name);
-                                } else {
+                                print('DEBUG: Checking list ID: $listId');
+                                
+                                // Handle newly created lists
+                                if (newlyCreatedListIds.contains(listId)) {
+                                  // Newly created lists won't have the book yet, so they're valid
                                   validCustomListIds.add(listId);
+                                  print('DEBUG: Added newly created list to validCustomListIds: $listId');
+                                } else {
+                                  // Handle existing custom lists
+                                  try {
+                                    final customList = lists.firstWhere((l) => l.id == listId);
+                                    print('DEBUG: Found list: ${customList.name} (ID: $listId)');
+                                    if (customList.books.any((book) => book.bookId == widget.book.id)) {
+                                      alreadyInLists.add(customList.name);
+                                      print('DEBUG: Book already in list: ${customList.name}');
+                                    } else {
+                                      validCustomListIds.add(listId);
+                                      print('DEBUG: Added to validCustomListIds: $listId');
+                                    }
+                                  } catch (e) {
+                                    print('DEBUG: Error finding list $listId: $e');
+                                  }
                                 }
                               }
+                              
+                              print('DEBUG: validCustomListIds: $validCustomListIds');
+                              
+
                              
                               List<String> inOtherDefaultLists = [];
                               for (final defaultList in defaultLists) {
@@ -2951,25 +3020,45 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                                 }
                               }
                               
+
+                              
+                              print('DEBUG: Starting to add books to custom lists: $validCustomListIds');
+                              print('DEBUG: Available custom lists: ${customLists.map((l) => '${l.id}:${l.name}').join(', ')}');
+                              
                               // Add to valid custom lists
                               for (final listId in validCustomListIds) {
-                                // Check if this is a "Read" list and ask for read date
-                                DateTime? readAt;
-                                final customList = customLists.firstWhere((list) => list.id == listId);
-                                if (customList.name.toLowerCase() == "read") {
-                                  readAt = await _showReadDateDialog(context);
-                                  if (readAt == null) {
-                                    // User cancelled the date selection
-                                    return;
-                                  }
-                                }
+                                print('DEBUG: Processing list ID: $listId');
                                 
-                                final result = await readingListProvider.addBookToList(listId, widget.book.id, readAt: readAt);
-                                if (result == null) {
+                                try {
+                                  // Check if this is a "Read" list and ask for read date
+                                  DateTime? readAt;
+                                  final customList = customLists.firstWhere((list) => list.id == listId);
+                                  final listName = customList.name;
+                                  
+                                  print('DEBUG: Found list: $listName (ID: $listId)');
+                                  
+                                  if (customList.name.toLowerCase() == "read") {
+                                    readAt = await _showReadDateDialog(context);
+                                    if (readAt == null) {
+                                      // User cancelled the date selection
+                                      return;
+                                    }
+                                  }
+                                  
+                                  print('DEBUG: Adding book ${widget.book.id} to list $listId ($listName)');
+                                  final result = await readingListProvider.addBookToList(listId, widget.book.id, readAt: readAt);
+                                  if (result == null) {
+                                    hasError = true;
+                                    errorMessage = 'Failed to add book to custom list';
+                                    print('DEBUG: Failed to add book to list $listId');
+                                  } else {
+                                    successfullyAddedLists.add(listName);
+                                    print('DEBUG: Successfully added book to list $listId ($listName)');
+                                  }
+                                } catch (e) {
+                                  print('DEBUG: Error processing list $listId: $e');
                                   hasError = true;
-                                  errorMessage = 'Failed to add book to custom list';
-                                } else {
-                                  successfullyAddedLists.add(customList.name);
+                                  errorMessage = 'Error processing list: $e';
                                 }
                               }
                               
@@ -3108,7 +3197,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     );
   }
 
-  Future<void> _showCreateListDialog(BuildContext context, StateSetter setDialogState) async {
+  Future<int?> _showCreateListDialog(BuildContext context, StateSetter setDialogState) async {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     File? selectedImage;
@@ -3218,7 +3307,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 setCreateDialogState(() {
                   if (nameController.text.trim().isEmpty) {
                     nameError = 'Name is required.';
@@ -3243,6 +3332,33 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                 
                 if (nameError != null || descriptionError != null) {
                   return;
+                }
+                
+                // Check for duplicate names by fetching user's existing lists
+                try {
+                  final userProvider = Provider.of<UserProvider>(context, listen: false);
+                  final readingListProvider = Provider.of<ReadingListProvider>(context, listen: false);
+                  final username = AuthProvider.username;
+                  
+                  if (username != null) {
+                    final userResult = await userProvider.get(filter: {'username': username, 'pageSize': 1});
+                    final currentUser = userResult.items != null && userResult.items!.isNotEmpty ? userResult.items!.first : null;
+                    
+                    if (currentUser != null) {
+                      final existingLists = await readingListProvider.getUserReadingLists(currentUser.id);
+                      final inputName = nameController.text.trim();
+                      
+                      if (existingLists.any((list) => list.name.toLowerCase() == inputName.toLowerCase())) {
+                        setCreateDialogState(() {
+                          nameError = 'A reading list with this name already exists.';
+                        });
+                        return;
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // If we can't check for duplicates, continue anyway
+                  print('Could not check for duplicate names: $e');
                 }
                 
                 Navigator.of(context).pop({
@@ -3284,23 +3400,12 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               }
             }
 
-            // Check if this is a "Read" list and ask for read date
-            DateTime? readAt;
-            if (result['name'].toString().toLowerCase() == "read") {
-              readAt = await _showReadDateDialog(context);
-              if (readAt == null) {
-                // User cancelled the date selection
-                return;
-              }
-            }
+            // Don't ask for read date here - it will be asked in the main dialog if needed
+            // Just create the list and return its ID
             
-            await provider.addBookToList(newList.id, widget.book.id, readAt: readAt);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Reading list created and book added successfully!')),
-            );
-
-            Navigator.of(context).pop(true);
+            // Don't add the book here - it will be added in the main dialog
+            // Return the newly created list ID so it can be added to the selected lists
+            return newList.id;
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -3308,6 +3413,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                 backgroundColor: Colors.red,
               ),
             );
+            return null;
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -3316,6 +3422,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
               backgroundColor: Colors.red,
             ),
           );
+          return null;
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3324,8 +3431,11 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
             backgroundColor: Colors.red,
           ),
         );
+        return null;
       }
     }
+    
+    return null; // Return null if no list was created
   }
 
   String _buildImageUrl(String imagePath) {

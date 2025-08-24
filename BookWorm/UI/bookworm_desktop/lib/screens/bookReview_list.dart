@@ -22,6 +22,7 @@ class _BookReviewListState extends State<BookReviewList> {
 
   TextEditingController bookTitle = TextEditingController();
   TextEditingController username = TextEditingController();
+  ScrollController _horizontalScrollController = ScrollController();
  
   SearchResult<BookReview>? bookReviews;
 
@@ -265,230 +266,238 @@ class _BookReviewListState extends State<BookReviewList> {
             ),
           ],
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (totalCount > 0)
-                Container(
-                  margin: const EdgeInsets.only(left: 12, bottom: 8, top: 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFF6E3B4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Color(0xFF8D6748), width: 1),
-                  ),
-                  child: Text(
-                    'Total: $totalCount review${totalCount == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                      fontFamily: 'Literata',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Color(0xFF4E342E),
-                    ),
-                  ),
-                ),
-              DataTable(
-              showCheckboxColumn: false,
-              headingRowHeight: 48,
-              dataRowHeight: 44,
-              dividerThickness: 0.5,
-              columnSpacing: 32,
-              horizontalMargin: 16,
-              columns: [
-                DataColumn(label: Text("Review id", style: _tableHeaderStyle())),
-                DataColumn(label: Text("Book title", style: _tableHeaderStyle())),
-                DataColumn(label: Text("Username", style: _tableHeaderStyle())),
-                DataColumn(label: Text("Rating", style: _tableHeaderStyle())),
-                DataColumn(label: Text("Review", style: _tableHeaderStyle())),
-                DataColumn(label: Text("Status", style: _tableHeaderStyle())),
-                DataColumn(label: Icon(Icons.info_outline, color: Color(0xFF8D6748))),
-                DataColumn(label: Icon(Icons.delete, color: Colors.red)),
-              ],
-              dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return const Color(0xFFFFF8E1);
-                }
-                return Colors.white;
-              }),
-              headingRowColor: MaterialStateProperty.all(const Color(0xFFF6E3B4)),
-              rows: sortedItems?.map((e) => DataRow(
-                onSelectChanged: (value) {},
-                cells: [
-                  DataCell(Text(e.id.toString(), style: _tableCellStyle())),
-                  DataCell(Text(e.bookTitle, style: _tableCellStyle())),
-                   
-                  DataCell(Text(e.userName, style: _tableCellStyle())),
-                  DataCell(Row(
-                    children: List.generate(
-                      e.rating,
-                      (index) => Icon(Icons.star, color: Color(0xFFFFC107), size: 20),
-                    ),
-                  )),
-                  DataCell(
-                    Text(
-                      truncateReview(e.review),
-                      style: _tableCellStyle().copyWith(
-                        color: e.review != null ? Color(0xFF4E342E) : Color(0xFFBCAAA4),
-                      ),
-                    ),
-                  ),
-                  DataCell(
+        child: Scrollbar(
+          controller: _horizontalScrollController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              constraints: BoxConstraints(minWidth: 1000),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (totalCount > 0)
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin: const EdgeInsets.only(left: 12, bottom: 8, top: 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
-                        color: e.isChecked ? Color(0xFFE8F5E9) : Color(0xFFFFEBEE),
+                        color: Color(0xFFF6E3B4),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: e.isChecked ? Color(0xFF388E3C) : Color(0xFFC62828),
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: Color(0xFF8D6748), width: 1),
                       ),
                       child: Text(
-                        e.isChecked ? 'Checked' : 'Not checked',
-                        style: TextStyle(
-                          color: e.isChecked ? Color(0xFF388E3C) : Color(0xFFC62828),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                        'Total: $totalCount review${totalCount == 1 ? '' : 's'}',
+                        style: const TextStyle(
                           fontFamily: 'Literata',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF4E342E),
                         ),
                       ),
                     ),
-                  ),
-  DataCell(IconButton(
-    icon: const Icon(Icons.info_outline, color: Color(0xFF8D6748)),
-    onPressed: () async {
-    
-      if (!e.isChecked) {
-        try {
-          await bookReviewProvider.checkReview(e.id);
-        } catch (err) {
-        }
-      }
-      await showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            width: 400,
-            padding: EdgeInsets.all(0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF8D6748),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Text(
-                    'Full Review',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      e.review ?? 'No review',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF4E342E),
-                        fontFamily: 'Literata',
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF8D6748),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text('Close', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      await _fetchAllBookReviews(page: currentPage);
-    },
-    splashRadius: 20,
-    tooltip: 'Details',
-  )),
-                 
-                  DataCell(IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Delete Review'),
-                          content: const Text('Are you sure you want to delete this review?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () async {
-                                  try {
-                                    await bookReviewProvider.delete(e.id);
-                                    Navigator.pop(context);
-                                    _fetchAllBookReviews();
-                                  } catch (error) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Row(
-                                          children: [
-                                            Icon(Icons.error, color: Colors.white),
-                                            SizedBox(width: 12),
-                                            Text("Failed to delete review: "+error.toString()),
-                                          ],
+                  DataTable(
+                    showCheckboxColumn: false,
+                    headingRowHeight: 48,
+                    dataRowHeight: 44,
+                    dividerThickness: 0.5,
+                    columnSpacing: 32,
+                    horizontalMargin: 16,
+                    columns: [
+                      DataColumn(label: Container(width: 100, child: Text("Review id", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 150, child: Text("Book title", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 120, child: Text("Username", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 100, child: Text("Rating", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 200, child: Text("Review", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 120, child: Text("Status", style: _tableHeaderStyle()))),
+                      DataColumn(label: Container(width: 80, child: Icon(Icons.info_outline, color: Color(0xFF8D6748)))),
+                      DataColumn(label: Container(width: 80, child: Icon(Icons.delete, color: Colors.red))),
+                    ],
+                    dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return const Color(0xFFFFF8E1);
+                      }
+                      return Colors.white;
+                    }),
+                    headingRowColor: MaterialStateProperty.all(const Color(0xFFF6E3B4)),
+                    rows: sortedItems?.map((e) => DataRow(
+                      onSelectChanged: (value) {},
+                      cells: [
+                        DataCell(Text(e.id.toString(), style: _tableCellStyle())),
+                        DataCell(Text(e.bookTitle, style: _tableCellStyle())),
+                         
+                        DataCell(Text(e.userName, style: _tableCellStyle())),
+                        DataCell(Row(
+                          children: List.generate(
+                            e.rating,
+                            (index) => Icon(Icons.star, color: Color(0xFFFFC107), size: 20),
+                          ),
+                        )),
+                        DataCell(
+                          Text(
+                            truncateReview(e.review),
+                            style: _tableCellStyle().copyWith(
+                              color: e.review != null ? Color(0xFF4E342E) : Color(0xFFBCAAA4),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: e.isChecked ? Color(0xFFE8F5E9) : Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: e.isChecked ? Color(0xFF388E3C) : Color(0xFFC62828),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              e.isChecked ? 'Checked' : 'Not checked',
+                              style: TextStyle(
+                                color: e.isChecked ? Color(0xFF388E3C) : Color(0xFFC62828),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                fontFamily: 'Literata',
+                              ),
+                            ),
+                          ),
+                        ),
+                        DataCell(IconButton(
+                          icon: const Icon(Icons.info_outline, color: Color(0xFF8D6748)),
+                          onPressed: () async {
+                            if (!e.isChecked) {
+                              try {
+                                await bookReviewProvider.checkReview(e.id);
+                              } catch (err) {
+                              }
+                            }
+                            await showDialog(
+                              context: context,
+                              builder: (context) => Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Container(
+                                  width: 400,
+                                  padding: EdgeInsets.all(0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFF8D6748),
+                                          borderRadius: BorderRadius.only(
+                                            topLeft: Radius.circular(20),
+                                            topRight: Radius.circular(20),
+                                          ),
                                         ),
-                                        backgroundColor: Color(0xFFF44336),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                        child: Text(
+                                          'Full Review',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.1,
+                                          ),
                                         ),
                                       ),
-                                    );
-                                  }
-                              },
-                              child: const Text('Delete'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    splashRadius: 20,
-                    tooltip: 'Delete',
-                  )),
+                                      Padding(
+                                        padding: const EdgeInsets.all(24.0),
+                                        child: SingleChildScrollView(
+                                          child: Text(
+                                            e.review ?? 'No review',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Color(0xFF4E342E),
+                                              fontFamily: 'Literata',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Color(0xFF8D6748),
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            padding: EdgeInsets.symmetric(vertical: 12),
+                                          ),
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: Text('Close', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                            await _fetchAllBookReviews(page: currentPage);
+                          },
+                          splashRadius: 20,
+                          tooltip: 'Details',
+                        )),
+                       
+                        DataCell(IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Review'),
+                                content: const Text('Are you sure you want to delete this review?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () async {
+                                      try {
+                                        await bookReviewProvider.delete(e.id);
+                                        Navigator.pop(context);
+                                        _fetchAllBookReviews();
+                                      } catch (error) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Row(
+                                              children: [
+                                                Icon(Icons.error, color: Colors.white),
+                                                SizedBox(width: 12),
+                                                Text("Failed to delete review: "+error.toString()),
+                                              ],
+                                            ),
+                                            backgroundColor: Color(0xFFF44336),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: const Text('Delete'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          splashRadius: 20,
+                          tooltip: 'Delete',
+                        )),
+                      ],
+                    )).toList() ?? [],
+                  ),
                 ],
-              )).toList() ?? [],
+              ),
             ),
-            ],
           ),
         ),
       ),
@@ -610,6 +619,12 @@ class _BookReviewListState extends State<BookReviewList> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 } 
  

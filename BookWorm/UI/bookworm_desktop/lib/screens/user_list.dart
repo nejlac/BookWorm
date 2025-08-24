@@ -20,6 +20,7 @@ class _UserListState extends State<UserList> {
   late CountryProvider countryProvider;
 
   TextEditingController nameController = TextEditingController();
+  ScrollController _horizontalScrollController = ScrollController();
   List<Map<String, dynamic>> countries = [];
   Map<String, dynamic>? selectedCountry;
   SearchResult<User>? users;
@@ -287,9 +288,16 @@ class _UserListState extends State<UserList> {
             ),
           ],
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Column(
+        child: Scrollbar(
+          controller: _horizontalScrollController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              constraints: BoxConstraints(minWidth: 1000),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (totalCount > 0)
@@ -319,16 +327,16 @@ class _UserListState extends State<UserList> {
                 columnSpacing: 32,
                 horizontalMargin: 16,
                 columns: [
-                   DataColumn(label: Text("User id", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("First name", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Last name", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Username", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Country", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Age", style: _tableHeaderStyle())),
-                  DataColumn(label: Text("Email", style: _tableHeaderStyle())),
-                  DataColumn(label: Icon(Icons.info_outline, color: Color(0xFF8D6748))),
-                  DataColumn(label: Icon(Icons.edit, color: Color(0xFF8D6748))),
-                  DataColumn(label: Icon(Icons.delete, color: Colors.red)),
+                   DataColumn(label: Container(width: 80, child: Text("User id", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 120, child: Text("First name", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 120, child: Text("Last name", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 120, child: Text("Username", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 120, child: Text("Country", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 80, child: Text("Age", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 200, child: Text("Email", style: _tableHeaderStyle()))),
+                  DataColumn(label: Container(width: 80, child: Icon(Icons.info_outline, color: Color(0xFF8D6748)))),
+                  DataColumn(label: Container(width: 80, child: Icon(Icons.edit, color: Color(0xFF8D6748)))),
+                  DataColumn(label: Container(width: 80, child: Icon(Icons.delete, color: Colors.red))),
                 ],
                 dataRowColor: MaterialStateProperty.resolveWith<Color?>((states) {
                   if (states.contains(MaterialState.selected)) {
@@ -441,7 +449,7 @@ class _UserListState extends State<UserList> {
           ),
         ),
       ),
-    );
+      )));
   }
 
    Widget _buildPaginationControls() {
@@ -561,6 +569,12 @@ class _UserListState extends State<UserList> {
       fontSize: 15,
       color: Color(0xFF4E342E),
     );
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
   
 }

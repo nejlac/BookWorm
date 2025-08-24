@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   bookworm-sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -14,6 +12,8 @@ services:
       - 1433
     networks:
       - bookworm-network
+    volumes:
+      - bookworm-sql-data:/var/opt/mssql
   
   rabbitmq:
     image: rabbitmq:3-management
@@ -26,6 +26,8 @@ services:
       - "15672:15672"
     networks:
       - bookworm-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 5s
@@ -46,16 +48,10 @@ services:
       - "7031:7031"
     networks:
       - bookworm-network
-    links:
+    depends_on:
       - bookworm-sql
       - rabbitmq
-    depends_on:
-      bookworm-sql:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
     restart: unless-stopped
-    command: sh -c "sleep 120 && dotnet BookWormWebAPI.dll"
    
   
   bookworm-subscriber:
@@ -72,14 +68,16 @@ services:
       - EmailSettings__Password=${SMTP_PASS}
     networks:
       - bookworm-network
-    links:
-      - rabbitmq
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      - rabbitmq
     restart: unless-stopped
-    command: sh -c "sleep 90 && dotnet BookWorm.Subscriber.dll"
 
 networks:
   bookworm-network:
     driver: bridge
+
+volumes:
+  bookworm-sql-data:
+    driver: local
+  rabbitmq-data:
+    driver: local

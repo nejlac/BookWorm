@@ -374,6 +374,8 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
     final formKey = GlobalKey<FormState>();
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
     Book? selectedBook;
+    String? titleError;
+    String? descriptionError;
 
     setState(() {
       _isDialogOpen = true;
@@ -382,7 +384,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: const Text('Create New Event'),
           content: SizedBox(
             width: double.maxFinite,
@@ -409,6 +411,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                         return null;
                       },
                     ),
+                    if (titleError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          titleError!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: descriptionController,
@@ -427,6 +437,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                         return null;
                       },
                     ),
+                    if (descriptionError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          descriptionError!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     ListTile(
                       title: const Text('Deadline'),
@@ -443,7 +461,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                           lastDate: DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date != null) {
-                          setState(() {
+                          setDialogState(() {
                             selectedDeadline = DateTime(
                               date.year,
                               date.month,
@@ -458,7 +476,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () => _showBookSelectionDialog(context, selectedBook, (book) {
-                        setState(() {
+                        setDialogState(() {
                           selectedBook = book;
                         });
                       }),
@@ -511,6 +529,20 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
             ),
             ElevatedButton(
               onPressed: () async {
+                // Clear previous errors
+                setDialogState(() {
+                  titleError = null;
+                  descriptionError = null;
+                });
+                
+                // Check for duplicate event titles within the same book club
+                if (_events.any((event) => event.title.toLowerCase() == titleController.text.toLowerCase())) {
+                  setDialogState(() {
+                    titleError = 'An event with this title already exists in this book club';
+                  });
+                  return;
+                }
+                
                 if (formKey.currentState!.validate() && selectedBook != null) {
                   Navigator.pop(context);
                   setState(() {
@@ -568,6 +600,8 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
     final formKey = GlobalKey<FormState>();
     DateTime selectedDeadline = event.deadline;
     Book? selectedBook;
+    String? titleError;
+    String? descriptionError;
 
     try {
       selectedBook = _availableBooks.firstWhere((book) => book.id == event.bookId);
@@ -578,7 +612,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: const Text('Edit Event'),
           content: SizedBox(
             width: double.maxFinite,
@@ -605,6 +639,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                         return null;
                       },
                     ),
+                    if (titleError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          titleError!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: descriptionController,
@@ -623,6 +665,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                         return null;
                       },
                     ),
+                    if (descriptionError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          descriptionError!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     ListTile(
                       title: const Text('Deadline'),
@@ -639,7 +689,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                           lastDate: DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date != null) {
-                          setState(() {
+                          setDialogState(() {
                             selectedDeadline = DateTime(
                               date.year,
                               date.month,
@@ -654,7 +704,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () => _showBookSelectionDialog(context, selectedBook, (book) {
-                        setState(() {
+                        setDialogState(() {
                           selectedBook = book;
                         });
                       }),
@@ -702,6 +752,22 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
             ),
             ElevatedButton(
               onPressed: () async {
+                // Clear previous errors
+                setDialogState(() {
+                  titleError = null;
+                  descriptionError = null;
+                });
+                
+                // Check for duplicate event titles within the same book club (excluding current event)
+                if (_events.any((otherEvent) => 
+                    otherEvent.id != event.id && 
+                    otherEvent.title.toLowerCase() == titleController.text.toLowerCase())) {
+                  setDialogState(() {
+                    titleError = 'An event with this title already exists in this book club';
+                  });
+                  return;
+                }
+                
                 if (formKey.currentState!.validate() && selectedBook != null) {
                   Navigator.pop(context);
                   await _updateEvent(
@@ -1354,18 +1420,7 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                           ),
                         ),
                       ),
-                      if (_currentBookClub.isCreator) ...[
-                        IconButton(
-                          onPressed: _editBookClub,
-                          icon: const Icon(Icons.edit, color: Color(0xFF8D6748)),
-                          tooltip: 'Edit Book Club',
-                        ),
-                        IconButton(
-                          onPressed: _deleteBookClub,
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          tooltip: 'Delete Book Club',
-                        ),
-                      ],
+                      // Edit and delete buttons removed from details view
                     ],
                   ),
                 ),
@@ -1482,10 +1537,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                                     ],
                                   ),
                                 )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.only(top: 8, bottom: 100),
-                                  itemCount: _events.length,
-                                  itemBuilder: (context, index) => _buildEventCard(_events[index]),
+                              : Scrollbar(
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.only(top: 8, bottom: 100),
+                                    itemCount: _events.length,
+                                    itemBuilder: (context, index) => _buildEventCard(_events[index]),
+                                  ),
                                 ),
                           _members.isEmpty
                               ? const Center(
@@ -1517,10 +1576,14 @@ class _BookClubDetailsScreenState extends State<BookClubDetailsScreen> with Sing
                                     ],
                                   ),
                                 )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.only(top: 8, bottom: 100),
-                                  itemCount: _members.length,
-                                  itemBuilder: (context, index) => _buildMemberCard(_members[index]),
+                              : Scrollbar(
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.only(top: 8, bottom: 100),
+                                    itemCount: _members.length,
+                                    itemBuilder: (context, index) => _buildMemberCard(_members[index]),
+                                  ),
                                 ),
                         ],
                       ),
