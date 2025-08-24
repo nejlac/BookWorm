@@ -45,6 +45,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   int _selectedRating = 0;
   final TextEditingController _reviewTextController = TextEditingController();
   bool _isSubmittingReview = false;
+  bool _isLoadingUserReview = false;
   BookReview? _userReview; 
   final TextEditingController _quoteTextController = TextEditingController();
   bool _isSubmittingQuote = false;
@@ -115,6 +116,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
     try {
       setState(() {
         _isLoadingReviews = true;
+        _isLoadingUserReview = true;
       });
       
       final reviewProvider = Provider.of<BookReviewProvider>(context, listen: false);
@@ -135,36 +137,10 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       
       
       await _loadUsersForReviews(reviews);
-      
-      final currentUsername = AuthProvider.username;
-      if (currentUsername != null) {
-        _reviews.sort((a, b) {
-          final userA = _users[a.userId];
-          final userB = _users[b.userId];
-          final isUserA = userA?.username == currentUsername;
-          final isUserB = userB?.username == currentUsername;
-          
-          if (isUserA && !isUserB) return -1;
-          if (!isUserA && isUserB) return 1;
-          
-        
-          return b.createdAt.compareTo(a.createdAt);
-        });
-        
-        _userReview = _reviews.firstWhere(
-          (review) {
-            final user = _users[review.userId];
-            return user?.username == currentUsername;
-          },
-          orElse: () => null as BookReview,
-        );
-        
-        setState(() {
-        });
-      }
     } catch (e) {
       setState(() {
         _isLoadingReviews = false;
+        _isLoadingUserReview = false;
       });
     }
   }
@@ -186,8 +162,43 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       setState(() {
         _users = users;
       });
+      
+      // Now that users are loaded, find the current user's review
+      final currentUsername = AuthProvider.username;
+      if (currentUsername != null) {
+        _reviews.sort((a, b) {
+          final userA = _users[a.userId];
+          final userB = _users[b.userId];
+          final isUserA = userA?.username == currentUsername;
+          final isUserB = userB?.username == currentUsername;
+          
+          if (isUserA && !isUserB) return -1;
+          if (!isUserA && isUserB) return 1;
+          
+          return b.createdAt.compareTo(a.createdAt);
+        });
+        
+        try {
+          _userReview = _reviews.firstWhere(
+            (review) {
+              final user = _users[review.userId];
+              return user?.username == currentUsername;
+            },
+            orElse: () => null as BookReview,
+          );
+        } catch (e) {
+          _userReview = null;
+        }
+      }
+      
+      setState(() {
+        _isLoadingUserReview = false;
+      });
     } catch (e) {
       print('Error loading users for reviews: $e');
+      setState(() {
+        _isLoadingUserReview = false;
+      });
     }
   }
 
@@ -400,7 +411,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: _isLoadingUserReview ? null : () {
                         _handleRateButton();
                       },
                       style: ElevatedButton.styleFrom(
@@ -411,7 +422,16 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(_userReview != null ? 'Edit Rating' : 'Rate'),
+                      child: _isLoadingUserReview 
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(_userReview != null ? 'Edit Rating' : 'Rate'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -954,6 +974,12 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   }
 
   void _showAddReviewDialog() {
+    // Double-check that user doesn't already have a review
+    if (_userReview != null) {
+      _showEditReviewDialog(_userReview!);
+      return;
+    }
+    
     _selectedRating = 0;
     _reviewTextController.clear();
     
@@ -1635,10 +1661,13 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
   }
 
   void _handleRateButton() {
+    if (_isLoadingUserReview) {
+      return; // Prevent action while loading
+    }
+    
     if (_userReview != null) {
       _showEditReviewDialog(_userReview!);
     } else {
-  
       _showAddReviewDialog();
     }
   }
@@ -1712,9 +1741,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
    
       await _loadReviews();
       await _loadBookRating();
-      
-     
-      _userReview = null;
       
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1813,23 +1839,26 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
       await _loadReviews();
       await _loadBookRating();
       
-    
-      final currentUsername = AuthProvider.username;
-      if (currentUsername != null) {
-        _userReview = _reviews.firstWhere(
-          (review) {
-            final user = _users[review.userId];
-            return user?.username == currentUsername;
-          },
-          orElse: () => null as BookReview,
-        );
+    } catch (e) {
+      final errorMessage = e.toString().toLowerCase();
+      String displayMessage;
+      
+      if (errorMessage.contains('already exists') || 
+          errorMessage.contains('duplicate') || 
+          errorMessage.contains('already reviewed') ||
+          errorMessage.contains('user has already reviewed')) {
+        displayMessage = 'You have already reviewed this book. You can only leave one review per book.';
+        
+        // Refresh the user review state to show the existing review
+        await _loadReviews();
+      } else {
+        displayMessage = 'Error submitting review: ${e.toString()}';
       }
       
-    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Error submitting review: ${e.toString()}',
+            displayMessage,
             style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red,
@@ -1837,6 +1866,20 @@ class _BookDetailsScreenState extends State<BookDetailsScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          action: errorMessage.contains('already exists') || 
+                  errorMessage.contains('duplicate') || 
+                  errorMessage.contains('already reviewed') ||
+                  errorMessage.contains('user has already reviewed')
+            ? SnackBarAction(
+                label: 'Edit',
+                textColor: Colors.white,
+                onPressed: () {
+                  if (_userReview != null) {
+                    _showEditReviewDialog(_userReview!);
+                  }
+                },
+              )
+            : null,
         ),
       );
     } finally {
