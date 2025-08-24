@@ -1,140 +1,130 @@
-# \# BookWorm\_RS2
+\# BookWorm\_RS2 
 
-# 
 
-# &nbsp;\*\*Seminarski rad iz predmeta Razvoj softvera 2\*\*  
 
-# 📍 Fakultet informacijskih tehnologija, Mostar  
+\*\*Seminarski rad iz predmeta Razvoj softvera 2\*\*   
 
+📍 Fakultet informacijskih tehnologija, Mostar   
 
 
-# \## 📖 O projektu
 
-# 
+\## 📖 O projektu 
 
-# BookWorm je aplikacija za sve ljubitelje knjiga. ✨  
 
-# Omogućava korisnicima da:  
 
-# 
+BookWorm je aplikacija kreirana za sve ljubitelje knjiga koji žele da podjele svoju strast prema čitanju! ✨   
 
-# \- 📖 kreiraju liste sa svojim knjigama 
 
-# \- 👯‍♀️ povežu se sa prijateljima i knjiškim ubovima  
 
-# \- 🎯 učestvuju u izazovima i prate statistiku čitanja  
+Omogućava korisnicima da:   
 
-# \- 🤝 dobijaju preporuke knjiga i novih prijatelja  
+\- 📚 kreiraju personalne biblioteke sa svojim knjigama  
 
-# 
+\- 🤝 povezuju se sa prijateljima i drugim čitaocima   
 
-# \## 🚀 Upute za pokretanje
+\- 🏆 učestvuju u zabavnim izazovima i prate svoju statistiku čitanja   
 
-# 
+\- 💡 dobijaju pametne preporuke za nove knjige i prijatelje   
 
-# \### Backend setup
 
-# 
 
-# 1\. Otvoriti `BookWorm` repozitorij
+\## 🚀 Upute za pokretanje 
 
-# 2\. Nakon toga ponovno otvoriti folder `Bookworm`, te locirati arhivu fit-build-2025\_env.rar4. 
 
-# 3\. Iz te arhive uraditi extract `.env` file-a u isti folder (`BookWorm/BookWorm`) koristeći šifru: \*\*fit\*\*
 
-# 4\. Poslije toga u tom folderu (`BookWorm/BookWorm`) otvoriti terminal i pokrenuti sljedeće:
+\### Backend setup 
 
-# &nbsp;  ```bash
 
-# &nbsp;  docker compose up --build
 
-# &nbsp;  ```
+1\. Otvoriti `BookWorm` repozitorij 
 
-# &nbsp;  Te sačekati da se sve uspješno build-a
+2\. Nakon toga ponovno otvoriti folder `Bookworm`, te locirati arhivu \*\*fit-build-2025\_env.rar\*\*.  
 
-# 
+3\. Iz te arhive uraditi extract `.env` file-a u isti folder (`BookWorm/BookWorm`) koristeći šifru: \*\*fit\*\* 
 
-# \### Desktop aplikacija
+4\. U tom folderu (`BookWorm/BookWorm`) otvoriti terminal i pokrenuti: 
 
+&nbsp;  ```bash 
 
+&nbsp;  docker compose up --build 
 
+&nbsp;  ``` 
 
+&nbsp;  Sačekati da se sve uspješno build-a ⏳
 
-# 1\. \*\*Uključiti developer ode, ukoliko već nije\*\*
 
-# 2\. \*\*Vratiti se u Bookworm folder i locirati `fit-build-2025-08-24.zip` arhivu\*\*
 
-# 2\. \*\*Iz te arhive uraditi extract, gdje biste trebali dobiti dva foldera: `Release` i `flutter-apk`\*\*
+\### Desktop aplikacija 
 
-# 3\. \*\*Otvoriti `Release` folder i iz njega otvoriti `bookworm\_desktop.exe`\*\*
 
 
+1\. \*\*Uključiti developer mode, ukoliko već nije aktiviran\*\* 
 
+2\. \*\*Locirati `fit-build-2025-08-24.zip` arhivu u Bookworm folderu\*\* 
 
+3\. \*\*Ekstraktovati arhivu - trebali biste dobiti `Release` i `flutter-apk` foldere\*\* 
 
+4\. \*\*Otvoriti `Release` folder i pokrenuti `bookworm\_desktop.exe`\*\* 
 
 
 
+\### Mobilna aplikacija 
 
-# \### Mobilna aplikacija
 
 
+1\. \*\*Otvoriti `flutter-apk` folder\*\* 
 
+2\. \*\*Prenijeti `app-release.apk` file na emulator i sačekati instalaciju\*\* 
 
+&nbsp;  > ⚠️ \*Deinstalirati prethodnu verziju aplikacije sa emulatora ukoliko postoji!\* 
 
-# 1\. \*\*Otvoriti `flutter-apk` folder\*\*
+3\. \*\*Prijaviti se koristeći kredencijale ispod\*\* 
 
-# 2\. \*\*File `app-release.apk` prenijeti na emulator i sačekati da se instalira\*\* \*(Deinstalirati aplikaciju sa emulatora ukoliko je prije bila instalirana!)\*
 
-# 3\. \*\*Nakon instaliranja obje aplikacije, na iste se možete prijaviti koristeći kredencijale ispod\*\*
 
-# 
+\## 🔐 Kredencijali za prijavu 
 
-# \## 🔐 Kredencijali za prijavu
 
-# 
 
-# \### Administrator
+\### 👑 Administrator 
 
-# \- \*\*Korisničko ime:\*\* `dekstop`
+\- \*\*Korisničko ime:\*\* `dekstop` 
 
-# \- \*\*Lozinka:\*\* `test`
+\- \*\*Lozinka:\*\* `test` 
 
-# 
 
-# \### Korisnik
 
-# \- \*\*Korisničko ime:\*\* `mobile`
+\### 👤 Korisnik 
 
-# \- \*\*Lozinka:\*\* `test`
+\- \*\*Korisničko ime:\*\* `mobile` 
 
-# 
+\- \*\*Lozinka:\*\* `test` 
 
-# \## 🔧 Mikroservis funkcionalnosti
 
-# 
 
-# BookWorm koristi \*\*RabbitMQ\*\* mikroservis za automatsko slanje email obaveštenja korisniku kada admin prihvati knjigu koju je on kreirao. Kada korisnik kreira knjigu, ona se nalazi u submitted stanju, te odobravanjem iz tog stanja prelazi u accepted, što je okidač za slanje maila.
+\## 🔧 Mikroservis funkcionalnosti 
 
 
 
+BookWorm koristi \*\*RabbitMQ\*\* mikroservis arhitekturu za automatsko slanje email obaveštenja! 📧 
 
 
 
+Kada korisnik kreira knjigu, ona se postavlja u `submitted` stanje. Administrator zatim može odobriti knjigu, što je menja u `accepted` stanje - i upravo to je okidač za automatsko slanje email potvrde korisniku! 
 
-# \## 🛠️ Tehnologije
 
-# 
 
-# \- \*\*Backend:\*\* ASP.NET Core
+\## 🛠️ Tehnologije 
 
-# \- \*\*Frontend:\*\* Flutter (desktop i mobilna aplikacija)
 
-# \- \*\*Baza podataka:\*\* SQL Server
 
-# \- \*\*Message Broker:\*\* RabbitMQ
+\- \*\*Backend:\*\* ASP.NET Core 🔧
 
-# \- \*\*Containerization:\*\* Docker
+\- \*\*Frontend:\*\* Flutter (desktop i mobilna aplikacija) 🎯
 
-# 
+\- \*\*Baza podataka:\*\* SQL Server 🗄️
+
+\- \*\*Message Broker:\*\* RabbitMQ 🐰
+
+\- \*\*Containerization:\*\* Docker 🐳
 
