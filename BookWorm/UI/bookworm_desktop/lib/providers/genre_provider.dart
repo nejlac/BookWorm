@@ -66,8 +66,8 @@ class GenreProvider extends BaseProvider<Genre> {
     return await get(filter: filter);
   }
 
-  Future<List<Genre>> getAllGenres() async {
-    return await getAllGenresForDropdown();
+  Future<SearchResult<Genre>> getAllGenres() async {
+    return await get(filter: {'pageSize': 1000, 'page': 0});
   }
 
   Future<SearchResult<Genre>> getGenres({int? page, int? pageSize}) async {

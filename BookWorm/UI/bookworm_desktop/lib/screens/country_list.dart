@@ -111,6 +111,43 @@ class _CountryListState extends State<CountryList> {
                         nameError = 'Name must not exceed 255 characters';
                       });
                       hasError = true;
+                    } else {
+                      // Check for duplicate name - fetch all countries to check
+                      try {
+                        final allCountries = await countryProvider.getAllCountries();
+                        final items = allCountries.items;
+                        if (items != null) {
+                          final existingCountry = items.firstWhere(
+                            (c) => c.name.toLowerCase() == nameController.text.trim().toLowerCase() && 
+                                   (!isEditing || c.id != country!.id),
+                            orElse: () => Country(id: -1, name: ''),
+                          );
+                          
+                          if (existingCountry.id != -1) {
+                            setDialogState(() {
+                              nameError = 'A country with this name already exists';
+                            });
+                            hasError = true;
+                          }
+                        }
+                      } catch (e) {
+                        // If we can't fetch all countries, fall back to current page check
+                        final items = countries?.items;
+                        if (items != null) {
+                          final existingCountry = items.firstWhere(
+                            (c) => c.name.toLowerCase() == nameController.text.trim().toLowerCase() && 
+                                   (!isEditing || c.id != country!.id),
+                            orElse: () => Country(id: -1, name: ''),
+                          );
+                          
+                          if (existingCountry.id != -1) {
+                            setDialogState(() {
+                              nameError = 'A country with this name already exists';
+                            });
+                            hasError = true;
+                          }
+                        }
+                      }
                     }
 
                     if (hasError) return;
@@ -412,37 +449,95 @@ class _CountryListState extends State<CountryList> {
                               ),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red[400]),
-                                onPressed: () {
-                                  showDialog(
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: Text('Delete Country'),
-                                      content: Text('Are you sure you want to delete "${country.name}"?'),
+                                      title: Row(
+                                        children: [
+                                          Icon(Icons.warning, color: Color(0xFFC62828)),
+                                          SizedBox(width: 8),
+                                          Text('Delete Country'),
+                                        ],
+                                      ),
+                                      content: Text('Are you sure you want to delete "${country.name}"? This action cannot be undone.'),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
                                           child: Text('Cancel'),
+                                          onPressed: () => Navigator.of(context).pop(false),
                                         ),
-                                        TextButton(
-                                          onPressed: () async {
-                                            Navigator.of(context).pop();
-                                            try {
-                                              await countryProvider.delete(country.id);
-                                              _fetchCountries(page: 1);
-                                            } catch (e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Failed to delete country: ${e.toString()}'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          },
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Color(0xFFC62828),
+                                            foregroundColor: Colors.white,
+                                          ),
                                           child: Text('Delete'),
+                                          onPressed: () => Navigator.of(context).pop(true),
                                         ),
                                       ],
                                     ),
                                   );
+                                  if (confirm == true) {
+                                    final errorMessage = await countryProvider.delete(country.id);
+                                    if (errorMessage == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              Icon(Icons.check_circle, color: Colors.white),
+                                              SizedBox(width: 12),
+                                              Text('Country deleted successfully.'),
+                                            ],
+                                          ),
+                                          backgroundColor: Color(0xFF4CAF50),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      );
+                                      _fetchCountries(page: 1);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              Icon(Icons.error, color: Colors.white),
+                                              SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      'Cannot Delete Country',
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      errorMessage,
+                                                      style: TextStyle(fontSize: 12),
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      'Please remove or change the country from all authors and users first.',
+                                                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          backgroundColor: Color(0xFFFF9800),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          duration: Duration(seconds: 8),
+                                        ),
+                                      );
+                                    }
+                                  }
                                 },
                               ),
                             ],

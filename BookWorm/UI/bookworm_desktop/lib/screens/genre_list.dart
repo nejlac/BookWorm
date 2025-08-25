@@ -135,6 +135,43 @@ class _GenreListState extends State<GenreList> {
                         nameError = 'Name must not exceed 255 characters';
                       });
                       hasError = true;
+                    } else {
+                      // Check for duplicate name - fetch all genres to check
+                      try {
+                        final allGenres = await genreProvider.getAllGenres();
+                        final items = allGenres.items;
+                        if (items != null) {
+                          final existingGenre = items.firstWhere(
+                            (g) => g.name.toLowerCase() == nameController.text.trim().toLowerCase() && 
+                                   (!isEditing || g.id != genre!.id),
+                            orElse: () => Genre(id: -1, name: '', description: ''),
+                          );
+                          
+                          if (existingGenre.id != -1) {
+                            setDialogState(() {
+                              nameError = 'A genre with this name already exists';
+                            });
+                            hasError = true;
+                          }
+                        }
+                      } catch (e) {
+                        // If we can't fetch all genres, fall back to current page check
+                        final items = genres?.items;
+                        if (items != null) {
+                          final existingGenre = items.firstWhere(
+                            (g) => g.name.toLowerCase() == nameController.text.trim().toLowerCase() && 
+                                   (!isEditing || g.id != genre!.id),
+                            orElse: () => Genre(id: -1, name: '', description: ''),
+                          );
+                          
+                          if (existingGenre.id != -1) {
+                            setDialogState(() {
+                              nameError = 'A genre with this name already exists';
+                            });
+                            hasError = true;
+                          }
+                        }
+                      }
                     }
 
                     if (descriptionController.text.trim().length > 1000) {
