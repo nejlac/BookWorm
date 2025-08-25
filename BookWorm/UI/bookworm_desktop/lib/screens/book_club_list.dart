@@ -19,7 +19,6 @@ class _BookClubListState extends State<BookClubList> {
   late UserProvider userProvider;
   
   TextEditingController searchController = TextEditingController();
-  TextEditingController creatorController = TextEditingController();
   ScrollController _horizontalScrollController = ScrollController();
   
   Map<int, String> userUsernames = {}; // Cache za username-ove
@@ -46,16 +45,10 @@ class _BookClubListState extends State<BookClubList> {
     }
     
     try {
-      final filter = {
-        'id': userId.toString(),
-        'pageSize': 1,
-      };
-      final result = await userProvider.get(filter: filter);
-      if (result.items != null && result.items!.isNotEmpty) {
-        final username = result.items!.first.username;
-        userUsernames[userId] = username;
-        return username;
-      }
+      final user = await userProvider.getById(userId);
+      final username = user.username;
+      userUsernames[userId] = username;
+      return username;
     } catch (e) {
       // Ako ne možemo da dohvatimo username, vraćamo ID
     }
@@ -65,7 +58,6 @@ class _BookClubListState extends State<BookClubList> {
   void _fetchAllBookClubs({int? page}) async {
     var filter = {
       "name": searchController.text,
-      "creatorId": creatorController.text.isNotEmpty ? int.tryParse(creatorController.text) : null,
       "pageSize": pageSize,
       "page": (page ?? currentPage) - 1,
       "includeTotalCount": true,
@@ -227,24 +219,7 @@ class _BookClubListState extends State<BookClubList> {
                             ),
                             SizedBox(width: 16),
 
-                            Expanded(
-                              child: TextField(
-                                controller: creatorController,
-                                decoration: InputDecoration(
-                                  labelText: 'Creator ID',
-                                  hintText: 'Enter creator ID...',
-                                  prefixIcon: Icon(Icons.person, color: Color(0xFF8D6748)),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Color(0xFF8D6748)),
-                                  ),
-                                ),
-                                onChanged: (value) => _fetchAllBookClubs(),
-                              ),
-                            ),
+
                             SizedBox(width: 16),
 
                             Container(
@@ -304,22 +279,7 @@ class _BookClubListState extends State<BookClubList> {
                             ),
                             SizedBox(height: 16),
 
-                            TextField(
-                              controller: creatorController,
-                              decoration: InputDecoration(
-                                labelText: 'Creator ID',
-                                hintText: 'Enter creator ID...',
-                                prefixIcon: Icon(Icons.person, color: Color(0xFF8D6748)),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Color(0xFF8D6748)),
-                                ),
-                              ),
-                              onChanged: (value) => _fetchAllBookClubs(),
-                            ),
+
                             SizedBox(height: 16),
 
                             Align(
