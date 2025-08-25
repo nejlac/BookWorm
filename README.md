@@ -54,7 +54,7 @@ Omogućava korisnicima da:
 
 BookWorm koristi **RabbitMQ** mikroservis arhitekturu za automatsko slanje email obavještenja! 📧
 
-Kada korisnik kreira knjigu, ona se postavlja u `submitted` stanje. Administrator zatim može odobriti knjigu, što je mijenja u `accepted` stanje - i upravo to je okidač za automatsko slanje email potvrde korisniku!
+Kada korisnik kreira knjigu, ona se postavlja u `submitted` stanje. Administrator zatim može odobriti knjigu, što je mijenja u `accepted` stanje - i upravo to je okidač za automatsko slanje email potvrde korisniku! Dugmić za odobravanje se nalazi na admin dijelu u dijelu sa knjigama-> Details.
 
 ## 🛠️ Tehnologije
 
